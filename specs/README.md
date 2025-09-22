@@ -12,16 +12,10 @@ This directory contains the formal specifications for the **Agents Shared Cognit
 | ------------ | ----------- |
 | [`the-agents-shared-cognition-protocol.md`](./the-agents-shared-cognition-protocol.md) | Master specification outlining the ASCP architecture, layered model, and coordination primitives |
 | [`ascp-artipoint-grammar.md`](./ascp-artipoint-grammar.md) | Defines the grammar for immutable, addressable Artipoints — the atomic units of shared cognition |
-| [`building-the-missing-cortex-layer.md`](./building-the-missing-cortex-layer.md) | High-level whitepaper introducing the Cortex Layer concept and its role in agent/human collaboration |
-
-## 🧱 Upcoming Specifications
-
-These documents will be added as the protocol evolves:
-
-- `ascp-channels.md` – Secure distribution of Artipoints using encrypted channels
-- `ascp-logsync.md` – Transport and synchronization layer for distributed logs
-- `ascp-identity-and-trust.md` – Cryptographic identity, key management, and trust anchoring
-- `ascp-bootstrap-and-discovery.md` – Replica initialization and channel discovery
+| [`ascp-channels.md`](./ascp-channels.md) | Secure distribution of Artipoints using encrypted channels |
+| [`ascp-logsync.md`](./ascp-logsync.md) | Transport and synchronization layer for distributed logs |
+| [`ascp-identity-and-trust.md`](./ascp-identity-and-trust.md) | Cryptographic identity, key management, and trust anchoring |
+| [`ascp-bootstrap-and-discovery.md`](./ascp-bootstrap-and-discovery.md) | Replica initialization and channel discovery |
 
 ---
 
@@ -31,8 +25,9 @@ Implementers should follow the layered reading order:
 
 1. **Master Spec** – Start with `the-agents-shared-cognition-protocol.md`
 2. **Grammar** – Understand `ascp-artipoint-grammar.md` to parse/create coordination statements
-3. **Distribution** – Integrate secure channels and synchronization (coming soon)
-4. **Identity** – Build identity and trust into your ASCP instance (coming soon)
+3. **Distribution** – Integrate secure channels and synchronization via `ascp-channels.md` and `ascp-logsync.md`
+4. **Identity** – Defines how identity and trust comes together into your ASCP instance
+5. **Bootstrapping** - How everything comes together into a coherent operating protocol stack including rooting trust, confirming identities, etc.
 
 ---
 
