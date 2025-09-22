@@ -10,8 +10,6 @@ Beyond establishing organizational trust, the bootstrap process also governs how
 
 This specification defines the structures, conventions, and operational procedures for establishing and maintaining the root of trust that enables robust ASCP operation across distributed replicas.
 
-> *This specification operates alongside the **ASCP LogSync Protocol (ALSP)**, which defines the transport, authentication handshake, and channel authorization mechanisms at Layer 0, and the **ASCP Trust and Identity Architecture**, which defines the root trust model, cryptographic identity structures, and PKI anchoring procedures. Implementers should read these in parallel to fully understand the security and trust context in which bootstrap operates.*
-
 ## **Overview**
 
 Bootstrapping brings together all layers of ASCP (Layers 0-3) into a coherent system, enabling new replicas to discover, authenticate, and maintain their view of an ASCP organization. The bootstrap process logically operates at **Layer 3** by leveraging the facilities of all lower ASCP layers to solve a fundamental chicken-and-egg problem: we cannot validate articulation statements until we have the trust graph, but we need validated statements to build that graph.

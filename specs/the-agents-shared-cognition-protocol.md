@@ -2,7 +2,7 @@
 
 **The Implementation of a Cortex Layer for Humans and AI**
 
-Version 0.1 - August 2025
+Version 0.2 - August 2025
 
 Jeffrey Szczepanski, Founder and CEO, Reframe Technologies, Inc.
 
@@ -14,7 +14,7 @@ This scene plays out millions of times daily because we lack a foundational Cort
 
 What's missing is a protocol for context itself.
 
-The Agents Shared Cognition Protocol (ASCP) introduces this missing layer through a universal coordination grammar rooted in Artipoints: structured, immutable, addressable statements that form a distributed graph of articulated context. ASCP enables secure, decentralized, and composable collaboration between humans and agents—finally giving both shared memory and coordinated intent.
+The **Agents Shared Cognition Protocol (ASCP)** introduces this missing layer through a universal coordination grammar rooted in Artipoints: structured, immutable, addressable statements that form a distributed graph of articulated context. ASCP enables secure, decentralized, and composable collaboration between humans and agents—finally giving both shared memory and coordinated intent.
 
 # Introduction
 
@@ -57,14 +57,14 @@ Readers already familiar with the strategic context from the companion white pap
 
 This section provides a complete reference to the ASCP specification suite, showing how each document fits into the layered architecture and where to look for specific implementation details.
 
-| **Layer / Scope**                       | **Document**                                                 | **Purpose**                                                                                     | **Key Contents**                                                                                                                                                          |
-| --------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Top-Level Overview**                  | **The Agents Shared Cognition Protocol**(this document)      | Architectural overview and unifying narrative for ASCP.                                         | Vision, problem statement, core concepts (Artipoints, Streams, Spaces, Channels), four-layer architecture, governance/security principles, normative compliance appendix. |
-| **Layer 2 – Articulation Layer**        | **ASCP Artipoint Grammar: A Structure for Shared Cognition** | Defines the formal grammar for immutable, addressable coordination statements.                  | Four articulation patterns (Instantiation, Annotation, Connection, Construction), operator taxonomy, payload formats, attributes, ABNF grammar.                           |
-| **Layer 1 – Secure Distribution Layer** | **ASCP Channels: Secure Distribution Layer Specification**   | Cryptographic envelope and membership model for distributing Artipoints.                        | Signing/encryption with JOSE (JWS/JWE), channel membership governance, keyframe rotation, channel key envelope format, trust model.                                       |
-| **Layer 0 – Log and Transport Layer**   | **ASCP LogSync Protocol (ALSP)**                             | Transport-agnostic append-only log synchronization across replicas.                             | Lamport ordering, push/pull sync models, message formats, channel access proofs (CAKs), deduplication rules, error handling.                                              |
-| **Identity & Trust**                    | **ASCP Identity & Trust**                                    | Establishes cryptographic identity, Root CA anchoring, and trust verification for participants. | Key provisioning, PKI anchoring, identity binding via JWTs/JWKs, recovery strategies, certificate-related Artipoints.                                                     |
-| **Bootstrap & Discovery**               | **ASCP: Bootstrap Process and Channel Discovery**            | First-time replica provisioning and channel discovery process.                                  | Bootstrapping trust root, retrieving Bootstrap channels, validating trust graph, discovering channel manifests.                                                           |
+| **Layer / Scope**                       | **Document**                                                 | **Purpose**                                                                                  | **Key Contents**                                                                                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Top-Level Overview**                  | **The Agents Shared Cognition Protocol**(this document)      | Architectural overview and unifying narrative for ASCP.                                      | Vision, problem statement, core concepts (Artipoints, Streams, Spaces, Channels), four-layer architecture, governance/security principles, normative compliance appendix. |
+| **Layer 2 – Articulation Layer**        | **ASCP Artipoint Grammar: A Structure for Shared Cognition** | Defines the formal grammar for immutable, addressable coordination statements.               | Four articulation patterns (Instantiation, Annotation, Connection, Construction), operator taxonomy, payload formats, attributes, ABNF grammar.                           |
+| **Layer 1 – Secure Distribution Layer** | **ASCP Channels: Secure Distribution Layer Specification**   | Cryptographic envelope and membership model for distributing Artipoints.                     | Signing/encryption with JOSE (JWS/JWE), channel membership governance, keyframe rotation, channel key envelope format, trust model.                                       |
+| **Layer 0 – Log and Transport Layer**   | **ASCP LogSync Protocol (ALSP)**                             | Transport-agnostic append-only log synchronization across replicas.                          | Lamport ordering, push/pull sync models, message formats, channel access proofs (CAKs), deduplication rules, error handling.                                              |
+| **Identity & Trust**                    | **ASCP Identity & Trust**                                    | Establishes cryptographic identity, Root anchoring, and trust verification for participants. | Key provisioning, PKI anchoring, identity binding via JWTs/JWKs, recovery strategies, certificate-related Artipoints.                                                     |
+| **Bootstrap & Discovery**               | **ASCP: Bootstrap Process and Channel Discovery**            | First-time replica provisioning and channel discovery process.                               | Bootstrapping trust root, retrieving Bootstrap channels, validating trust graph, discovering channel manifests.                                                           |
 
 ### Reading Order for Implementers
 
@@ -107,7 +107,7 @@ ASCP addresses the context fragmentation problem through a fundamental shift: in
 
 ## The Missing Cortex Layer
 
-Today's AI agents operate in isolation, lacking memory and context continuity. Current agent protocols like MCP provide plugin access and A2A enables messaging, but what's missing is the persistent substrate for shared cognition itself.
+Today's AI agents operate in isolation, lacking coherent memory and context continuity. Current agent protocols like MCP provide plugin access and A2A enables messaging between agents, but what's missing is the persistent substrate for shared cognition itself available for both humans or agent actions alike.
 
 ASCP implements this missing Cortex Layer through a grammar that agents can read and write, a shared log of articulated coordination, and addressable context scoped by task, person, or goal. This foundation enables agents to contribute meaningfully to workflows, evaluate and adjust plans dynamically, and collaborate transparently with both humans and other agents—finally bridging the gap between stateless tools and true collaborative partners.
 
@@ -175,6 +175,7 @@ Every Artipoint has four fundamental components:
 - **UUID**: A unique identifier that makes each Artipoint permanently addressable and referenceable
 - **Source**: Who or what created this cognitive statement (human, AI agent, system)
 - **Timestamp**: When this cognitive decision was made (for ordering and auditability)
+- **Payload**: The static content associated with the Artipoint or, more commonly, a reference to dynamic content.
 - **Expression** (optional): The actual cognitive statement being made
 
 ## Expression Types and Immutable Patterns
@@ -203,7 +204,7 @@ This creates a persistent **shared cognitive substrate**—a permanent record of
 
 ## Articulation Statements: Formal Encoding
 
-An **Articulation Statement** is the formal encoding of an Articulation via one or more Artipoints bundled into an immutable, atomic, timestamped, and cryptographically signed statement. When we say someone has "articulated something," we mean an Articulation Statement has been generated and persisted.
+An **Articulation Sequence** is the formal encoding of one or more **Articulation Statements** formed from **Artipoints** bundled into an immutable, atomic, timestamped, and cryptographically signed sequence. When we say someone has "articulated something," we mean an Articulation Sequence of one or more Articulations Statements has been generated and persisted.
 
 This system prioritizes the human and agent capacity to make statements about work—not to overwrite it, but to evolve it through an append-only coordination log.
 
@@ -221,7 +222,7 @@ ASCP solves this through a three-layer governance model that separates orthogona
 
 ### Channels: Cryptographically Scoped Knowledge Base
 
-Articulation Statements are distributed via **Channels**, which work like group chats for coordination among humans and AI agents. Channel membership directly controls privacy—who receives a copy of the Articulation Statement and has it available in their working context.
+Articulation Sequences are distributed via **Channels**, which work like group chats for coordination among humans and AI agents. Channel membership directly controls privacy—who receives a copy of the Articulation Statement and has it available in their working context.
 
 Channels establish the **shared knowledge base** for everyone participating in a scope of work—the common context and information that all channel members can access when needed, similar to long-term memory that doesn't actively compete for attention. This scope can range from large collaborative teams to an audience of one, enabling private personal context that remains connected to nodes in the broader coordination graph.
 
@@ -231,7 +232,7 @@ Channels establish the **shared knowledge base** for everyone participating in a
 
 ### Flagging: Working Memory as Social Contract
 
-Beyond the shared knowledge base, each individual needs different items in their active working memory. While everyone in a channel shares the same broader context, what belongs in each person's day-to-day focus varies based on their role and responsibilities.
+Beyond the shared knowledge base, each individual and agent needs different items in their active working memory. While everyone in a channel shares the same broader context, what belongs in each person's day-to-day focus varies based on their role and responsibilities.
 
 **Flagging** serves as a transparent social contract mechanism for managing individual working memory within shared cognition:
 
@@ -257,7 +258,7 @@ Scope:
 
 # Contextual Architecture
 
-Once we have Artipoints and Articulation Statements with the notions of addressability, we have the mechanisms for coordination and collaboration within a specific scope of work. But now the question becomes: what structures do we have to organize each scope of work? To solve for this, ASCP defines two levels of scoping.
+Once we have Artipoints and Articulation Statements with the notions of addressability, we have the mechanisms for coordination and collaboration within a specific scope of work. But now the question becomes: what structures do we have to organize each scope of work? To solve for this, ASCP defines three types of scoping.
 
 ### Piles: Thematic Groups of Artipoints
 
@@ -273,11 +274,11 @@ For example, one might have a Stream for hiring a new IT Manager, implementing a
 
 **Spaces** serve as top-level accountability containers that may encapsulate other Spaces and Streams. They represent "Accountability Bubbles"—organizational structures that create distinctions between who is accountable for outcomes and who is responsible for tasks.
 
-Each Space has a "Stream Zero"—a special coordination Stream for managing all other Streams within that Space. Spaces can be hierarchically organized into trees representing both organizational structure and strategic priorities, with full administrative flexibility for managing complex collaborative work.
+Each Space has a "Stream Zero"—a special coordination Stream for managing all other Streams within that Space. Spaces can be hierarchically organized into trees representing both organizational structure or strategic priorities, with full administrative flexibility for managing complex collaborative work.
 
 ### Integration: A Unified Grammar
 
-All structures includes Piles, Streams and Spaces are implemented using the same Articulation Statement grammar and treated as addressable Artipoints. This means:
+All structures including Piles, Streams and Spaces are implemented using the same Articulation Statement grammar and are implemented as addressable Artipoints. This means:
 
 - You can reference Piles, Streams and Spaces in coordination statements
 - They can be flagged, shared, and organized like any other Artipoint
@@ -388,20 +389,6 @@ Unless otherwise specified, governance attributes (writer, member, owner) follow
 
 As we delve deeper into ASCP, now we need to shift our mental model of Artipoints from being "fancy bookmarks" to being **statements about things**. An Artipoint is fundamentally someone saying something specific about something—a point of articulation where context becomes explicit and shareable.
 
-When Jeff creates an Artipoint linking a document to a project stream, he's not just bookmarking—he's making the statement "this document is relevant to this project context." When Sarah flags that same Artipoint for review, she's stating "I need to maintain awareness of this." These aren't just organizational actions; they're declarative statements that become part of the coordination record.
-
-## Immutable Statements: The Foundation of Trust
-
-Consider this scenario: Jeff creates a project stream with documents for Scott to review. Scott syncs before a flight to London, then articulates discussion points into an agenda. Meanwhile, Jeff adds his own points. When Scott lands and syncs, Jeff reorganizes the agenda. Scott adds another topic, inspiring Jeff to invite Chance to the discussion.
-
-What should Chance see? The "current" agenda? A merged version?
-
-The answer reveals why ASCP prioritizes immutable statements over mutable state. There likely isn't a single "correct" agenda—the participants need to coordinate based on the full context of what everyone actually said and when they said it. Like a court stenographer recording sworn testimony, ASCP captures statements as they were made, creating an auditable trail that supports coordination rather than enforcing a single version of truth.
-
-This is why **Artipoints are immutable**. We record what people actually articulated—their statements as made, when made, and by whom. Any apparent conflicts become coordination opportunities for the humans and agents involved, not technical problems for the system to resolve.
-
-## The Coordination Language
-
 Drawing from programming language design, ASCP implements a context-free grammar where **Articulation Statements** contain **Artipoint expressions** using **verb operators**, and can be combined into **compound statements**. However, we deliberately avoid Turing completeness—we're not trying to compute or iterate, just make declarative statements about coordination context.
 
 ### Basic Statement Forms
@@ -472,7 +459,7 @@ This grammatical foundation transforms ad-hoc coordination into structured, mach
 
 The complete ABNF specification of this coordination grammar—including detailed syntax rules, operator semantics, and parsing requirements—is provided in the accompanying Artipoint Grammar specification document. This formal definition serves as the authoritative reference for implementers building ASCP-compatible systems.
 
-# ASP Architectural Layered Model
+# ASCP Architectural Layered Model
 
 ASCP's technical architecture is organized into four distinct layers, each serving a specific role in the coordination infrastructure. This separation enables modular implementation while maintaining clear boundaries between protocol concerns.
 
@@ -502,20 +489,20 @@ This layer handles key management, member enrollment/removal, and the cryptograp
 
 ## Layer 0 - Log and Transport (ALSP)
 
-The foundational layer provides local storage and peer-to-peer synchronization for encrypted articulation messages. Using conflict-free replicated data type (CRDT) principles, Layer 0 ensures that all participants eventually converge on the same coordination state despite network partitions, offline work, and concurrent modifications.
+The foundational layer provides local storage and peer-to-peer synchronization for encrypted articulation messages. Using conflict-free replicated data type (CRDT) like principles, Layer 0 ensures that all participants eventually converge on the same coordination state despite network partitions, offline work, and concurrent modifications.
 
 The ASCP Log Sync Protocol (ALSP) handles the mechanics of distributing append-only logs across peers, managing backfill for new channel members, and maintaining consistency guarantees without requiring central coordination infrastructure.
 
-**Technical specification:** Synchronization algorithms, conflict resolution, and transport protocols are defined in the *ASCP Log Sync Protocol (ALSP)* specification document.
+**Technical specification:** Synchronization algorithms, logical log management, conflict resolution, and transport protocols are defined in the *ASCP Log Sync Protocol (ALSP)* specification document.
 
 ## Data Flow
 
 The interaction between layers follows a clear data flow pattern:
 
 1. **Articulation Creation:** Users or agents author coordination statements using the Layer 2 grammar
-2. **Channel Encoding:** Layer 1 wraps statements in cryptographic envelopes and distributes them to channel members
-3. **Local Storage and Sync:** Layer 0 stores encrypted messages locally and synchronizes with peers via ALSP
-4. **Decryption and Indexing:** Recipients decrypt and index statements they have access to
+2. **Channel Encoding:** Layer 1 wraps statements in cryptographic envelopes and manages payload distribution for channel members
+3. **Local Storage and Sync:** Layer 0 stores (optionally) encrypted articulation statements locally in channel log files and synchronizes with peers via ALSP
+4. **Decryption and Indexing:** Recipients decrypt and index articulation statements they have access to
 5. **View Materialization:** Layer 3 applications render personalized views from the coordination graph
 
 This architecture ensures that coordination context remains persistent, secure, and eventually consistent across all participants while allowing flexible presentation and interaction patterns at the application layer.

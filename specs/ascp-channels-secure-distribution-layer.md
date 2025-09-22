@@ -10,26 +10,28 @@ This document specifies Layer 1 of the ASCP protocol stack: **ASCP Channels**—
 
 ASCP Channels unify cryptographic security with human-centric collaboration semantics through a foundational principle: **everything is an Artipoint**. All forms of structure—identity, membership, policies, and content—are expressed as atomic, signed statements distributed through secure logical groups. This approach creates group chat-like distribution mechanisms, but for structured, computable forms of context rather than simple messages.
 
-Layer 1 operates between the Artipoint Grammar (Layer 2) above and the distributed, local-first storage and transport layer (Layer 0) below, providing the cryptographic envelope and distribution logic that transforms individual articulations into secure, collaborative shared cognition.
+Layer 1 operates between the Articulations Sequence Grammar (Layer 2) above and the distributed, local-first storage and transport mechanisms (Layer 0) below, providing the cryptographic envelope and distribution logic that transforms individual articulations into secure, collaborative shared cognition.
 
 ### Unified Cryptographic Model
 
 Each Channel operates as a logical distribution group with its own membership, encryption keys, and access control policies. All articulations are cryptographically signed for authenticity and integrity using JOSE standards (JWS), with optional encryption for privacy (JWE). Channel membership directly controls who receives copies of articulation statements and can decrypt their payloads.
 
-The encryption and signing model draws inspiration from S/MIME, adapting its core principles—per-recipient symmetric key encryption, X.509 certificate-based identity, and durable message signing—for ASCP's append-only articulation log structure. However, it uses modern JOSE (JWS+JWE) constructs for standards compliance and simplified implementation. Note: Neither S/MIME nor X.509 is actually used within the ASCP protocol—these systems provided design inspiration only.
+The encryption and signing model draws inspiration from S/MIME, adapting its core principles—per-recipient symmetric key encryption, public key based identity, and durable message signing—for ASCP's append-only articulation log structure. However, it uses modern JOSE (JWS+JWE) constructs for standards compliance and simplified implementation. Note: Neither S/MIME nor X.509 is actually used within the ASCP protocol—these systems provided design inspiration only.
 
 This unified approach creates a simple yet powerful messaging model where cryptographic primitives align naturally with human-centric collaboration patterns, ultimately unifying structure, policy, identity, and privacy under a single model—structured articulations distributed through secure, append-only Channels.
 
 ## **Glossary**
 
 - **ALSP (ASCP LogSync Protocol)**: The Layer 0 protocol that handles distributed storage and synchronization of Channel logs across a network clients/peers.
-- **Artipoint**: The atomic unit of context and articulation. Immutable, signed, and optionally encrypted statements that can represent anything from bookmarks to permissions to policy declarations.
-- **ASCP (Agent Shared Cognition Protocol)**: This very multi-layer protocol stack that enables secure collaboration between humans and AI agents through structured articulations.
-- **Bootstrapping Channel**: The initial Channel used to create and configure the root of trust for a Reframe organization. This Channel operates unencrypted to enable initial key distribution.
-- **Channel**: A named group communication pathway used for distribution and optional encryption of Artipoints. Each Channel has a universally unique identifier (UUID) for clear identification and also a friendly name for user selection (e.g., @Org, @HiringTeam).
+- **Artipoint**: The fundamental building block of the ASCP grammar - a single, immutable, addressable statement that captures one complete cognitive decision or piece of structured thinking. Think of it as a "cognitive atom." Every Artipoint has a UUID, Source, Timestamp and an optional Expression that can represent anything from bookmarks to permissions to policy declarations.
+- **Articulation Sequence**: The formal encoding of one or more Articulation Statements bundled into an immutable, atomic, timestamped, and cryptographically signed sequence. This is what actually gets persisted and distributed via a Channel.
+- **Articulation Statement** is the formal encoding of one or more cognitive actions using Artipoints. It represents what gets recorded when someone "articulates something" using a structured expression that captures coordination decisions using one the grammar's four patterns: Instantiation, Connection, Construction or an Annotation.
+- **ASCP (Agent Shared Cognition Protocol)**: This very layer of the protocol stack that enables secure collaboration between humans and AI agents through structured articulations.
+- **Bootstrapping Channel**: The initial Channel used to create and configure the root of trust for a Reframe organization. This Channel SHOULD operate encrypted to enable initial key distribution.
+- **Channel**: A named group communication pathway used for distribution and optional encryption of Articulation Sequences. Each Channel has a universally unique identifier (UUID) for clear identification and also a friendly name for user selection (e.g., @Org, @HiringTeam).
 - **Channel Access Key (CAK)**: A shared cryptographic credential used by Channel members to authenticate replication requests in the Layer 0 storage protocol. While Ed25519 is the current default implementation, the protocol supports flexible key types through JWS mechanisms to accommodate future cryptographic requirements.
 - **Control Artipoint**: A class of Artipoint types used to manage governance, membership, key rotations, or other administrative actions within a Channel. Syntactically they are no different than any other type of Artipoint.
-- **Identity Key**: The JWK-encoded elliptic curve key pair used by ASCP participants (humans and AI agents) for cryptographic identity, signing, and key agreement. Unlike X.509 certificates with centralized CAs, ASCP identity keys are self-generated and exchanged in JOSE-compliant JWK format, with key binding proven through JWT-based identity claim bundles that establish the connection between identity (like an email address or agent URN) and the public key.
+- **Identity Key**: The JWK-encoded elliptic curve key pair used by ASCP participants (humans and AI agents) for cryptographic identity, signing, and key agreement. Unlike X.509 certificates with centralized CAs, ASCP identity keys are typically self-generated and exchanged in JOSE-compliant JWK format, with key binding proven through JWT-based identity claim bundles that establish the connection between identity (like an email address or agent URN) and the public key.
 - **JWE (JSON Web Encryption)**: The JOSE standard used by ASCP to encrypt Artipoint payloads for privacy within Channels.
 - **JWK (JSON Web Key)**: The JOSE standard format used to represent cryptographic keys, including Channel symmetric keys and participant certificates.
 - **JWS (JSON Web Signature)**: The JOSE standard used by ASCP to cryptographically sign all Artipoints for authenticity and integrity.
@@ -61,7 +63,7 @@ Channels are fundamentally about *who gets what*—secure distribution and priva
 - **Distribution scope**: Which participants receive copies of Artipoints (controlled by Channel membership)
 - **Work structure**: How Artipoints relate semantically within Streams, Spaces, and organizational hierarchies (defined in Layer 2)
 
-A single Artipoint can be distributed across multiple Channels while belonging to one Stream, or multiple Artipoints from different Streams can share the same Channel for distribution. This decoupling enables flexible collaboration patterns without conflating security boundaries with organizational structure.
+Articulation Sequences can be distributed across multiple Channels while belonging to one Stream, or multiple Artipoints from different Streams can share the same Channel for distribution. This decoupling enables flexible collaboration patterns without conflating security boundaries with organizational structure.
 
 **Channel Identity and Naming**
 
@@ -75,7 +77,7 @@ Every Channel is identified by both a UUID for system-level uniqueness and a fri
 
 ### **Cryptographic Foundation: Identity and Trust**
 
-The security model begins with identity. All Artipoints entering a Channel are cryptographically signed by their originator using a long-term private key associated with a JWK encoded identity key. This approach supports flexible trust models—where keys are anchored to a root of trust for the ASCP organization, but then that may be self-signed for informal collaboration, issued by local organizational authorities, or anchored in traditional PKI chains via established certificate authorities. This design ensures that both humans and AI agents can participate as first-class cryptographic identities within the same trust framework.
+The security model begins with identity. All Articulation Sequences entering a Channel are cryptographically signed by their originator using a long-term private key associated with a JWK encoded identity key. This approach supports flexible trust models—where keys are anchored to a root of trust for the ASCP organization, but then that may be self-signed for informal collaboration, issued by local organizational authorities, or anchored in traditional PKI chains via established certificate authorities. This design ensures that both humans and AI agents can participate as first-class cryptographic identities within the same trust framework.
 
 ### **Privacy Through Channel-Level Encryption**
 
@@ -93,12 +95,12 @@ Keyframes are themselves signed Artipoints, ensuring that cryptographic changes 
 
 ### **Complete Message Lifecycle**
 
-The complete lifecycle of an Artipoint through ASCP Channels demonstrates how these cryptographic layers work together:
+The complete lifecycle of an Articulation Sequence through ASCP Channels demonstrates how these cryptographic layers work together
 
-1. **Authoring**: A user or agent creates an immutable Artipoint statement containing their articulation
-2. **Signing**: The Artipoint is cryptographically signed using the author's private key, establishing authenticity and integrity
-3. **Encryption**: If the target Channel has encryption enabled, the signed Artipoint is encrypted using the Channel's current symmetric key, ensuring privacy
-4. **Distribution**: The resulting cryptographic envelope—containing the signed and optionally encrypted Artipoint—is appended to the Channel's dedicated ALSP (ASCP LogSync Protocol) log for replication to all authorized participants
+1. **Authoring**: A user or agent creates an immutable Articulation Sequence containing one or more Articulation Statements built from Artipoints
+2. **Signing**: The Articulation Sequence is cryptographically signed using the author's private key, establishing authenticity and integrity
+3. **Encryption**: If the target Channel has encryption enabled, the signed Articulation Sequence is encrypted using the Channel's current symmetric key, ensuring privacy
+4. **Distribution**: The resulting cryptographic envelope—containing the signed and optionally encrypted Articulation Sequence—is appended to the Channel's dedicated ALSP (ASCP LogSync Protocol) log for replication to all authorized participants
 
 This multi-layered approach creates a secure, auditable, and human-centric messaging system where cryptographic envelopes are distributed through Layer 0's ALSP protocol, while trust validation operates through an immutable log-anchored model detailed below.
 
@@ -146,7 +148,7 @@ This unified approach aligns with ASCP's articulation-based model while enabling
 
 ## **Cryptographic Implementation**
 
-ASCP uses JOSE (JavaScript Object Signing and Encryption) standards—specifically JWS, JWE, and JWK—to secure all data across its lifecycle. This implementation accomplishes five core security functions:
+ASCP uses JOSE (JSON Object Signing and Encryption) standards—specifically JWS (JSON Web Signature), JWE (JSON Web Encryption), and JWK (JSON Web Key)—to secure all data across its lifecycle. This implementation accomplishes five core security functions:
 
 - **Sign immutable Artipoint statements** using JWS
 - **Encrypt messages in ASCP Channels** using JWE
@@ -156,15 +158,15 @@ ASCP uses JOSE (JavaScript Object Signing and Encryption) standards—specifical
 
 The design emphasizes standards compliance, long-term durability, agent compatibility, and separation of message vs. key state.
 
-All signed and encrypted message formats in ASCP **MUST use JSON Serialization** of JWS and JWE as specified in [RFC 7515 §7.2](https://datatracker.ietf.org/doc/html/rfc7515#section-7.2) and [RFC 7516 §7.2](https://datatracker.ietf.org/doc/html/rfc7516#section-7.2).
+All signed and encrypted message formats in ASCP **MUST use Compact Serialization** of JWS and JWE as specified in [RFC 7515 §7.1](https://datatracker.ietf.org/doc/html/rfc7515#section-7.1) and [RFC 7516 §7.1](https://datatracker.ietf.org/doc/html/rfc7516#section-7.1).
 
-### Channel Level Signing of Artipoints
+### Channel Level Signing of Articulation Sequences
 
-Artipoints going into the Channel’s log are first signed:
+Articulation Sequences going into the Channel's log are first signed:
 
 - Protocol: **JWS** (JSON Web Signature)
-- Payload: Canonical UTF-8 Artipoint statement string
-- Format: JWS **JSON Serialization** (not compact)
+- Payload: Canonical UTF-8 Articulation Sequence string
+- Format: JWS **Compact Serialization**
 - Signing Algorithm: **ECDSA P-256** (validated using JWK encoded identity keys)
 
 The message signing key comes from the signer's own private identity key. The public identity key needed for validation is accessed via the JWK representation of the signer's EC public key, which is referenced in the `kid` field of the JWS header and distributed **out-of-band** via articulation statements related to the signer's identity. This simplifies message JWS headers and reduces communication and log size overhead. This approach also facilitates key vaulting and other mechanisms for long-term storage and validation of messages, even if the sender's key expires at some point in the future. Both the JWK for validation and the message itself are part of the articulation log, but are maintained independently.
@@ -177,42 +179,38 @@ The following is the **JWS protected header**:
   "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440001",
   "typ": "ascp+jws"
 }
-
 ```
 
-Complete JOSE **JWS flattened JSON serialization** example:
+Complete JOSE **JWS compact serialization** example:
 
 ```
-{
-  "protected": "<base64url-encoded protected header JSON>",
-  "payload": "<base64url-encoded literal UTF-8 string>",
-  "signature": "<base64url-encoded ECDSA P-256 signature>"
-}
-
+<header>.<payload>.<signature>
 ```
 
-- protected is a base64url-encoded version of the protected header JSON.
-- payload is the base64url-encoded Artipoint Articuation Statement UTF-8 string.
-- signature is base64url-encoded digital signature.
+This compact format consists of three base64url-encoded components separated by periods:
 
-We use the **flattened JWS JSON serialization format** (RFC 7515 §7.2.2) because:
+- **Header**: Base64url-encoded JWS protected header JSON
+- **Payload**: Base64url-encoded Articulation Sequence UTF-8 string
+- **Signature**: Base64url-encoded ECDSA P-256 signature
 
-- Only one signer is allowed
-- It is simpler and more compact than general JSON serialization
-- It keeps the structure consistent across all messages (e.g., from a certificate registry or DID document).
+We use the **JWS compact serialization format** (RFC 7515 §7.1) because:
 
-### Channel-Level Encryption of Artipoints
+- It provides maximum space efficiency for ALSP log storage
+- It aligns with standard JWT implementations and tooling
+- It maintains consistency with space-constrained environments where ASCP may be deployed
+
+### Channel-Level Encryption of Articulation Sequences
 
 After the required JWS signing, then things are *optionally* encrypted:
 
 - Protocol: **JWE** (JSON Web Encryption)
-- Payload: A complete **JWS object** (signed Artipoint)
+- Payload: A complete **JWS compact string** (signed Articulation Sequence)
 - Content Encryption: **AES-256-GCM**
 - Key Management Mode: **Direct (alg: dir)**
 
 This Channel AES key is generated and distributed **out-of-band** via encrypted key envelopes established via the Keyframe articulation statements related to the channel's own definition in the log. No key agreement or wrapping is performed at the message level and only the key-id (kid) is needed to identify the proper Keyframe for decoding. This simplifies message JWE headers and reduces communication and log size overhead. This approach also facilitates key vaulting and other mechanisms for key recovery.
 
-**Format: JWE JSON Serialization (not compact)**
+**Format: JWE Compact Serialization**
 
 Example JWE protected header:
 
@@ -221,53 +219,66 @@ Example JWE protected header:
   "alg": "dir",
   "enc": "A256GCM",
   "typ": "ascp+jws+jwe",
-  "kid": "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002"  
+  "kid": "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002"
 }
-
 ```
 
-Complete JOSE **JWE flattened JSON serialization** example:
+Complete JOSE **JWE compact serialization** example:
 
 ```
-{
-  "protected": "<base64url-encoded protected header JSON>",
-  "iv": "<base64url-encoded initialization vector>",
-  "ciphertext": "<base64url-encoded ciphertext>",
-  "tag": "<base64url-encoded authentication tag>"
-}
-
+<header>.<key>.<init-vector>.<ciphertext>.<auth-tag>
 ```
 
-- `protected` is a base64url-encoded version of the protected header JSON.
-- `ciphertext` is the encrypted JWS payload (i.e., a complete signed Artipoint).
-- `iv` and `tag` are required for AES-GCM integrity and decryption.
+This compact format consists of five base64url-encoded components separated by periods:
 
-**Note:** When using direct encryption (`alg: "dir"`), the `encrypted_key` field is omitted from the JWE structure as the JWE Encrypted Key is an empty octet sequence. This is correct for ASCP's direct encryption approach where the symmetric key is distributed out-of-band via Keyframes.
+- **Header**: Base64url-encoded JWE protected header JSON
+- **Key**: Encryption Key is always Empty (omitted due to direct encryption mode)
+- **init-vector**: Base64url-encoded initialization vector for AES-GCM
+- **Ciphertext**: Base64url-encoded encrypted JWS payload
+- **Auth-Tag**: Base64url-encoded AES-GCM authentication tag
 
-We use the **flattened JWE JSON serialization format** (RFC 7516 §7.2.2) because:
+**Note:** When using direct encryption (`alg: "dir"`), the second component (JWE Encrypted Key) is an empty string, resulting in two consecutive periods in the compact serialization. This is correct per RFC 7516 for ASCP's direct encryption approach where the symmetric key is distributed out-of-band via Keyframes.
 
-- There is only one recipient (due to direct encryption mode)
-- It is simpler and lighter than general JWE JSON serialization
-- It aligns with the structure and signing model used in JWS
+We use the **JWE compact serialization format** (RFC 7516 §7.1) because:
+
+- It provides maximum space efficiency for encrypted message storage
+- It is URL-safe and suitable for constrained transmission environments
+- It aligns with the JWS compact format for consistency
+- It maintains compatibility with standard JOSE libraries and tooling
 
 However, when implementing this encryption approach, proper IV handling is absolutely critical.
 
 ### Critical: Initialization Vector (IV) Requirements for AES-GCM
 
-When encrypting ASCP Channel messages using **AES-256-GCM**, the iv (Initialization Vector) parameter is critical to the **confidentiality and integrity** of the encrypted payload. ASCP use of JWE enforces the following requirements for IV handling:
+When encrypting ASCP Channel messages using **AES-256-GCM**, the init-vector (Initialization Vector) parameter is critical to the **confidentiality and integrity** of the encrypted payload. ASCP use of JWE enforces the following requirements for IV handling:
 
 - **A new IV MUST be generated for each encryption operation**. This is especially important in ASCP as the AES key is durable and encrypted payloads remain at rest in the ASCP channel logs.
 - IVs MUST be **cryptographically random** using a secure entropy source and **at least 96 bits (12 bytes)** in length, as recommended by [NIST SP 800-38D](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf) and [RFC 7516 §5.3](https://datatracker.ietf.org/doc/html/rfc7516#section-5.3).
 - Reuse of an IV under the same AES key can lead to catastrophic compromise of message security, including plaintext recovery and authentication bypass.
 
-This strict IV management protects all encrypted Artipoints against nonce reuse vulnerabilities that could expose both message content and authentication materials.
+This strict IV management protects all encrypted Articulation Sequences against nonce reuse vulnerabilities that could expose both message content and authentication materials.
+
+### **Compression of JWS Compact Serialization via JWE**
+
+The plaintext input to JWE in this application is the JWS Compact Serialization string (header.payload.signature). JOSE defines an optional DEFLATE compression step ("zip":"DEF") that may be applied to the plaintext before encryption.
+
+Implementations **SHOULD** apply DEFLATE compression to the JWS Compact Serialization string whenever the uncompressed string length exceeds **200 bytes**.
+
+This requirement is justified by the following considerations:
+
+- **Payload characteristics**: Artipoint payloads are UTF-8 encoded Unicode text drawn from the ASCP Grammar. The grammar is highly ASCII text centric, with recurring structural elements such as UUIDs, timestamps, keywords, and bracketed constructs.
+- **Serialization form**: Signing first produces a JWS Compact Serialization string, which base64url-encodes both header and payload and appends a base64url signature. This introduces a 33% expansion relative to the raw payload plus fixed delimiter overhead.
+- **Compression behavior**: Empirical analysis demonstrates that DEFLATE with dynamic Huffman coding reliably recovers not only the base64url overhead but also achieves significant additional reduction by exploiting repeated ASCII patterns. Compression consistently outperforms the raw JWS string once the full JWS exceeds \~150 bytes (≈32 bytes of raw Articulation Statement payload).
+- **Trip point selection**: To provide a conservative safety margin across different JOSE headers and signature algorithms, the normative threshold is set at **200 bytes total JWS Compact string length**. Below this size, compression overhead can slightly outweigh savings; above it, compression consistently yields net reductions, reaching 40–60% of raw ASCP grammar as we reach into multiple KiB payloads.
+
+Therefore, when encapsulating a JWS Compact Serialization in JWE, implementations **SHOULD** set the "zip":"DEF" parameter and apply DEFLATE compression whenever the plaintext JWS string length exceeds 200 bytes.
 
 ## Channel Key Management: Out-of-Band Wrapping
 
 Each ASCP channel has two shared keys distributed via keyframes:
 
-- **Channel AES Key** — used for symmetric encryption of signed Artipoints.
-- **Channel Replication Auth Key (Ed25519)** — used by all channel participants to authenticate replication requests to other nodes holding channel logs.
+- **Channel AES Key** — used for symmetric encryption of signed Articulation Sequences.
+- **Channel Access Key (CAK, Ed25519)** — used by all channel participants to authenticate replication requests to other nodes holding channel logs.
 
 > **Note:** This Ed25519 key is **not** used to sign Artipoints. Artipoints are always signed by the originator’s personal identity key (typically ECDSA P-256 private key). The replication key functions as a shared *token* to authorize log access, not authorship.
 
@@ -289,7 +300,7 @@ These are **NOT included in messages**. Instead, they are:
 
 ```
 
-### Ed25519 Private Key JWK Format:
+### Ed25519 Channel Access Key (CAK) JWK Format:
 
 ```
 {
@@ -300,7 +311,6 @@ These are **NOT included in messages**. Instead, they are:
   "alg": "EdDSA",
   "use": "sig"
 }
-
 ```
 
 ### EC Public Identity Key in JWK Format:
@@ -364,7 +374,7 @@ The following structure defines the JSON format for channel key envelopes that a
 - `replaces`: References the prior Keyframe if this envelope is specifically replacing a different prior Keyframe envelope after a rotation of one or both keys. This is non-functional and informational only for each back tracing. (optional)
 - `rotation_interval_days`: Recommended rotation interval in days (optional)
 
-Each key in the envelope (aes\_key\_jwe and auth\_key\_jwe) is a standard **flattened JWE JSON object**, where the payload is a serialized **JWK** representing the symmetric AES key or the Ed25519 private key, respectively. These are encrypted for the intended recipient using their EC public identity key additionally pointed to by the `recipient_cert` within the envelope. This key reference MUST be the same as the `kid` used for wrapping both of the contained keys.
+Each key in the envelope (aes\_key\_jwe and auth\_key\_jwe) is a standard **flattened JWE JSON object**, where the payload is a serialized **JWK** representing the symmetric AES key or the Ed25519 private key, respectively. These are encrypted to the intended recipient using their EC public identity key additionally pointed to by the `recipient_cert` within the envelope. This key reference MUST be the same as the `kid` used for wrapping both of the contained keys.
 
 ### Example JWE protected header (used in each wrapped key):
 
@@ -438,7 +448,13 @@ Where:
 
 - Used in JWE protected headers for message encryption/decryption
 - Points to a Keyframe articulation statement containing channel keys for authorized recipients
-- The referenced keyframe must be the newest / active keyframe at the time of message encoding
+- The referenced keyframe must be the newest / active keyframe at the time of message encoding. That is, one must never use a key that has been rotated out already.
+
+`alsp:bck:<index>` - References a Bootstrap channel key index.
+
+- Used in JWE protected headers for message encryption/decryption of the Bootstrap channel messages specifically.
+- The index indicates which JWK encoded key was used for this Bootstrap channel message. The index is the offset, starting with zero, into the array of keys provided as part of the ALSP hello exchange in Layer 0. As such, these keys move out of band of the ASCP articulated database of Keyframes as there would be no other channel to store this in. See ALSP Layer 0 channel references and ASCP Bootstrap process documents for more details.
+- The referenced index must always be the highest known index at the time of the message is being encoded into the Bootstrap channel.
 
 > **Note:** The JOSE protected headers, even in JWE are ***not*** **encrypted**, but *are* **integrity-protected** as part of the AEAD encryption process. This means the `kid` is visible to the recipient prior to decryption, enabling proper key selection, but cannot be tampered with without causing decryption failure. This design ensures that key identifiers are safely discoverable while still cryptographically bound to the encrypted payload.
 
@@ -529,6 +545,27 @@ ASCP separates distribution from visibility through its Channel model. While Art
 ### **Selective Historical Access and Forward Secrecy**
 
 The Keyframe versioning system enables sophisticated access control patterns. Upon Channel creation, an initial Keyframe (v1) defines the symmetric encryption key and creates envelopes for founding members. New participants can be granted selective access: historical access by receiving original Keyframes encrypted to their certificate's public key, or forward-only access through new Keyframes (v2+) that establish fresh encryption keys. Since Keyframes are themselves signed, versioned Artipoints in the Channel log, all access control decisions are auditable and composable, supporting fine-grained privacy policies.
+
+### **CAK Security Considerations**
+
+The **Channel Access Key (CAK)** serves as a lightweight mechanism for **replication gating** at the ASCP LogSync Protocol (ALSP) layer. Possession of the CAK enables a peer to establish replication sessions for a given channel, but **does not grant access to the underlying channel content**. Content authenticity and confidentiality are governed separately through the channel’s signing and encryption keys (distributed in Keyframes and per-recipient envelopes).
+
+**Threats**
+
+The primary security concerns involve unauthorized replay or reuse of CAKs, where adversaries who obtain a CAK may attempt to replay it to initiate replication with peers. Long-lived CAK exposure presents another risk, as CAKs typically remain stable across membership events, making a leaked CAK a standing exposure concern. Additionally, membership revocation edge cases can occur when users are administratively removed from a specific channel but remain authorized elsewhere in the repository, potentially allowing continued replication attempts while still in possession of the CAK.
+
+**Mitigations**
+
+- **Opaque Replication:** Replicating with a CAK alone yields only encrypted ciphertext. Without the channel’s encryption keys, no useful content is exposed.
+- **Repository Authorization Required:** Peers must also present valid repository-level identity credentials. A revoked or non-member identity cannot establish ALSP sessions, regardless of CAK possession.
+- **Separate Cryptographic Domains:** The CAK is independent from channel signing and encryption keys. Content confidentiality and authenticity remain intact even if a CAK is leaked.
+- **Optional Key Rotation:** Implementations MAY rotate CAKs or channel encryption keys if stricter separation of membership is required (e.g., in the rare case of channel-only revocation).
+- **Operational Controls:** Replication services SHOULD apply rate-limiting, anomaly detection, and logging to detect and contain abuse of replayed or leaked CAKs.
+
+**Residual Risks**
+
+- A leaked CAK may allow an adversary who is also a valid repository member to waste bandwidth by requesting encrypted blobs from peers. This does not compromise content confidentiality but may incur resource cost.
+- In the rare case where a user remains system-authorized but is removed from a single channel, enforcement requires proactive CAK and/or channel encryption key rotation. This case is uncommon in practice, given that removal from a channel typically coincides with system-level revocation.
 
 ### **Attack Resistance**
 
@@ -786,7 +823,7 @@ Each channel-key-envelope contains:
 - AES-256 Channel Encryption Key (encrypted for the recipient)
 - Ed25519 Channel Access Key (encrypted for the recipient)
 
-### **5. Create an Artipoint**
+### **5. Create an Articulation Sequence**
 
 BNF Grammar Form:
 
@@ -797,7 +834,7 @@ BNF Grammar Form:
 
 ```
 
-### **6. Sign the Artipoint**
+### **6. Sign the Articulation Sequence**
 
 JWS Protected Header:
 
@@ -821,7 +858,7 @@ Flattened JWS JSON Example:
 
 ```
 
-### **7. Encrypt the Signed Artipoint**
+### **7. Encrypt the Signed Articulation Sequence**
 
 JWE Protected Header:
 
@@ -852,9 +889,9 @@ Flattened JWE JSON Example:
 1. **Append**: Add the JWE object to the Channel's append-only log
 2. **Distribute**: ALSP delivers the encrypted message to all authorized Channel members
 3. **Decrypt Key**: Each member uses their channel-key-envelope to decrypt the AES and CAK keys using their private identity key.
-4. **Decrypt Message**: Use the CAK for sync access to the channel at Layer 0 and use the AES key to decrypt the JWE payload and recover the signed Artipoint at Layer 1.
-5. **Verify Signature**: Validate the Artipoint signature using the signer's EC public identity key and then the Artipoint is passed to Layer 2.
-6. **Parse**: The Artipoint is parsed in Layer 2 and then bubbled up for inclusion into the Layer 3 DAG for view purposes.
+4. **Decrypt Message**: Use the CAK for sync access to the channel at Layer 0 and use the AES key to decrypt the JWE payload and recover the signed Articulation Sequence at Layer 1.
+5. **Verify Signature**: Validate the Articulation Sequence signature using the signer's EC public identity key and then the Articulation Sequence is passed to Layer 2.
+6. **Parse**: The Articulation Sequence is parsed in Layer 2 and then bubbled up for inclusion into the Layer 3 DAG for view purposes.
 
 ### **9. Rotate Keys if Needed**
 
@@ -878,7 +915,7 @@ New key envelopes for this new keyframe are issued for remaining members. This o
 2. **Membership Additions** → annotation(member +)
 3. **Keyframe Creation** → bookmark("keyframe") supports {channel}
 4. **Key Distribution** → annotation(envelope::user := json:{...})
-5. **Artipoint Creation** → Grammar instantiation
+5. **Articulation Sequence Creation** → Grammar instantiation
 6. **Signing** → JWS with ECDSA P-256 using EC identity key
 7. **Encryption** → JWE with AES-256-GCM using direct key mode
 8. **Distribution** → Append to ALSP log

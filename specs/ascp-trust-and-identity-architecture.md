@@ -1,11 +1,11 @@
-## **ASCP Trust and Identity Architecture**
+# **ASCP Trust and Identity Architecture**
 
 **A Log-Anchored approach to Distributed Trust**  
-Version 0.1 - August 2025
+Version 0.3 - September 2025
 
 Jeff Szczepanski, Founder and CEO Reframe Technologies
 
-## **Introduction**
+# **Introduction**
 
 This document defines the cryptographic trust and identity architecture for the Agents Shared Cognition Protocol (ASCP). It establishes how participants—both human users and autonomous agents—prove their identity, bind cryptographic keys to their identities, and establish verifiable trust relationships within and across ASCP instances.
 
@@ -18,7 +18,7 @@ ASCP's trust model addresses several fundamental challenges in distributed syste
 
 The architecture described here provides the foundational layer for all ASCP operations. Every channel log, every Artipoint, and every participant interaction depends on the trust relationships established through these mechanisms. Without this identity layer, ASCP would be unable to provide its core guarantees around immutable provenance, authenticated authorship, and verifiable coordination.
 
-## **Reading Map**
+# **Reading Map**
 
 This document is structured in layers, from foundational concepts to implementation details:
 
@@ -40,7 +40,7 @@ This document is structured in layers, from foundational concepts to implementat
 
 Each ASCP instance operates as a cryptographically independent trust domain while providing optional mechanisms to establish verifiable connections to external PKI systems and other ASCP instances.
 
-## **Glossary**
+# **Glossary**
 
 **ASCP (Agents Shared Cognition Protocol)**: A distributed protocol enabling humans and autonomous agents to collaborate through cryptographically verified, immutable communication channels.
 
@@ -64,11 +64,11 @@ Each ASCP instance operates as a cryptographically independent trust domain whil
 
 **TSA (Time-Stamping Authority)**: RFC 3161-compliant service providing independent temporal attestation of when cryptographic materials were created.
 
-## **Log-Anchored Trust Architecture**
+# **Log-Anchored Trust Architecture**
 
 ASCP employs a **Log-Anchored Trust** model where cryptographic trust decisions are based on immutable, signed entries in a distributed log rather than real-time certificate validation. This fundamental design choice ensures that trust relationships established at any point in time remain verifiable and auditable indefinitely, even as external PKI infrastructure changes or becomes unavailable.
 
-### **The Bootstrap Foundation**
+## **The Bootstrap Foundation**
 
 Each ASCP instance establishes trust through a **bootstrap channel log** that serves as the repository's immutable root of trust:
 
@@ -76,7 +76,7 @@ Each ASCP instance establishes trust through a **bootstrap channel log** that se
 - **Self-Contained Trust**: This establishes the baseline internal trust chain without requiring external dependencies
 - **Immutable Provenance**: Because the bootstrap log cannot be altered without detection, the trust foundation remains auditable across the entire system lifecycle
 
-### **Optional External Anchoring**
+## **Optional External Anchoring**
 
 To enable **portable, verifiable trust** beyond the ASCP instance itself, the RootCA can be optionally anchored to external PKI infrastructure:
 
@@ -85,7 +85,7 @@ To enable **portable, verifiable trust** beyond the ASCP instance itself, the Ro
 - **Chain of Accountability**: Any party trusting the anchoring PKI can independently verify the RootCA endorsement
 - **Temporal Proof**: The signature is bundled with the complete certificate chain as it existed at signing time, preserving the exact trust state
 
-### **Why Log-Anchored Trust Works**
+## **Why Log-Anchored Trust Works**
 
 - **Historical Verification**: Trust decisions can be validated against the state that existed when relationships were established
 - **Autonomous Trust**: Each ASCP replica contains a complete copy of the RootCA and verification chain, enabling independent trust establishment without external dependencies
@@ -95,13 +95,13 @@ To enable **portable, verifiable trust** beyond the ASCP instance itself, the Ro
 
 This architecture provides the foundation for all subsequent identity and trust operations in ASCP, from participant key binding to cross-instance coordination. A full, step-by-step procedure for RootCA anchoring and long-term provenance capture is provided in the section **Provenance of the ASCP RootCA**, after we define the Artipoint structures required to represent this trust data.”
 
-### **Self‑Signing as the Baseline**
+## **Self‑Signing as the Baseline**
 
 - **Proof of possession**: Self‑signing the public key demonstrates that the registrant controls the matching private key.
 - **Authenticated provenance**: Since only authenticated sessions can write to the log, each self‑signed key is linked to the session identity that submitted it.
 - **Immutable record**: The articulation log preserves the public key, the self‑signature, and the author identity permanently.
 
-### **When to Add RootCA Signing**
+## **When to Add RootCA Signing**
 
 RootCA signing of public keys is optional for:
 
@@ -109,7 +109,7 @@ RootCA signing of public keys is optional for:
 - **Policy enforcement**: Enterprises may require all keys be “blessed” by the rootCA.
 - **Escrow linkage**: Tying vault entries directly to a PKI‑anchored identity.
 
-### **Enterprise Escrow Option**
+## **Enterprise Escrow Option**
 
 Some deployments require recoverability of private keys for compliance or legal hold.
 
@@ -122,7 +122,7 @@ Some deployments require recoverability of private keys for compliance or legal 
 
 The detailed operational process for creating, storing, and recovering encrypted key vaults—both personal and enterprise—is covered in the section **ASCP Key Escrow and Recovery Strategy**.
 
-### **Recommended Policy**
+## **Recommended Policy**
 
 - **Always** require self‑signed public keys for proof of possession.
 - **Optionally** require rootCA signing for interoperability or policy reasons.
@@ -134,26 +134,26 @@ The result is a system that provides privacy‑first defaults with enterprise‑
 
 This foundational trust model enables ASCP to provide durable, verifiable trust across both open, privacy‑respecting deployments and tightly‑controlled enterprise environments. The following sections detail the specific Artipoint types and mechanisms that implement this architecture.
 
-## Security and Identity Artipoints
+# Security and Identity Artipoints
 
 ASCP implements its trust architecture through specialized **Artipoint types** that represent cryptographic identities, keys, and trust relationships in the immutable log. These Artipoints handle identity declaration, public key distribution, root certificate authority establishment, and the attachment of trust evidence such as endorsements and recovery bundles.
 
 This design leverages the log-anchored trust model described above, ensuring that evidence remains co-located with its subject and enabling flexible routing of sensitive data across different channels.
 
-### Core design principles
+## Core design principles
 
 1. **Everything is an Artipoint** → all actors, keys, and evidence are first-class, signed records.
 2. **Bookmark pattern** → payloads are referenced; structure and provenance live in the log.
 3. **Attributes over types** (when feasible) → fewer nodes, clearer ownership, easier rotation.
 4. **Log-time trust** → verify with what existed *then*, not with mutable present state.
 
-### Artipoint Types
+## Artipoint Types
 
 These are minimal, composable types. Everything else (endorsements, recovery, current key selection) is attached via attributes and annotations, which are detailed in the following section.
 
-**Identity Artipoint**
+### **Identity Artipoint**
 
-Declares a human, agent, or system identity. Also carries the **current active signing key** via certificate::kid.
+Declares a human, agent, or system identity. Also carries the **current active signing key** via `certificate::kid`.
 
 ```bnf
 [identity-uuid, admin@org.com, 2025-08-08T10:00:00Z,
@@ -170,7 +170,7 @@ Declares a human, agent, or system identity. Also carries the **current active s
 - No need to track previous keys—history is visible by scanning prior annotations.
 - Mirrors Channel keyframe activation (keyframe::key\_id) for symmetry with Layer 1.
 
-**Certificate Artipoint**
+### **Certificate Artipoint**
 
 Publishes a JWK-encoded public key and metadata.
 
@@ -186,7 +186,7 @@ Publishes a JWK-encoded public key and metadata.
 - The certificate Artipoint is the **anchor node** for endorsements and recovery.
 - Keeping evidence on the cert avoids scattering provenance across many nodes.
 
-**RootCA Artipoint**
+### **RootCA Artipoint**
 
 Declares an ASCP instance’s Root CA. This Artipoint is very similar to any other "Certificate" Artipoint, but has a special name given it's unique purpose.
 
@@ -205,101 +205,291 @@ Declares an ASCP instance’s Root CA. This Artipoint is very similar to any oth
 - **Recovery options** are available for rootCA private key material using the same recovery\_envelope mechanism as other certificates.
 - While none of these external references are required, **at least some form of external PKI endorsement is RECOMMENDED** to bootstrap initial trust and enable verification by parties outside the ASCP instance.
 
-## Certificate-Related Attributes
+# Certificate-Related Attributes
 
 Attach these via **annotations** to the target certificate UUID. Values can be inline json:{...} or **UUID references** to other Artipoints that carry the JSON blob (reuse without duplication).
 
-### Endorsement
+## **Endorsement Attribute**
 
-Binds the certificate to a PKI anchor using a detached signature and contemporaneous chain capture.
+### **Purpose and Scope**
 
-**Inline JSON (minimum fields):**
+The endorsement attribute provides a mechanism for binding **external evidence** to ASCP Identity and Certificate Artipoints. These endorsements allow log-anchored primitives (identities and certificates) to be strengthened through independent, external verification mechanisms such as PKI, DIDs, OpenID Connect, or TSA services.
 
-- sig — detached signature over a declared subject (sig\_over)
-- sig\_over — one of: "cert\_jwk" | "cert\_pem" | "fingerprint"
-- cert\_chain\_pem — full chain at signing time (leaf→root)
-- signer — endorser identity (e.g., domain, issuer DN)
-- timestamp — ISO 8601 Z
-- tsa (optional) — RFC 3161 token
+Endorsements are always **annotations**: they never mutate the subject Artipoint, but instead attach structured, verifiable claims about it. This preserves immutability while enabling participants to accumulate portable, durable evidence.
 
-**Inline example:**
+### **Attestation vs. Endorsement**
+
+To avoid ambiguity:
+
+- **Attestation** refers to the *fact* being asserted (e.g., that a hash existed at a time, or that a key fingerprint is valid).
+- **Endorsement** is the *binding* of that attestation to a trusted issuer who has cryptographically vouched for it.
+
+In ASCP, endorsement attributes encapsulate **attestations signed by endorsers**.
+
+### Design Rationale: Separating Attestation from Endorsement
+
+In many existing identity systems (including W3C DID Documents), the notion of a "verification method" tends to collapse two separate ideas into one: (a) the *fact being claimed* about a key or identity, and (b) the *issuer who is vouching*for that fact. This can lead to ambiguity and makes it harder to evaluate provenance clearly.
+
+ASCP deliberately separates these concerns:
+
+- **Attestation** is the factual claim itself. Examples:
+  - This JWK has fingerprint sha256:abcd…
+  - This key existed at or before 2025-08-13T14:01:22Z
+  - This certificate is bound to the identifier mailto:<alice@example.com>
+- **Endorsement** is the binding of that attestation to a trusted issuer, accompanied by cryptographic evidence. Examples:
+  - A PKI CA issues a JWS with an x5c chain vouching for the fingerprint.
+  - A TSA issues an RFC 3161 token vouching for the time of existence.
+  - An OIDC provider issues an IdentityClaimBundle binding the key to an account.
+  - A DID controller issues a JWS referencing the key’s thumbprint.
+
+This separation has several advantages:
+
+1. **Clarity of semantics**: Implementers can reason about *what fact is being claimed* independently from *who is vouching for it*.
+2. **Auditability**: The log captures immutable facts (attestations) alongside issuer-bound endorsements, so future verifiers can replay validation decisions against historical evidence.
+3. **Extensibility**: New attestation types (e.g., hardware key provenance, biometric factors) can be introduced without redefining endorsement mechanisms.
+4. **Unified model**: PKI, DID, OIDC, TSA, and future systems all slot into the same endorsement schema — they differ only by mechanism and evidence format.
+
+By keeping attestations and endorsements distinct, ASCP avoids the overloading common in other models and ensures that provenance remains transparent, composable, and durable.
+
+### **Endorsement Attribute Schema**
+
+Endorsements are recorded under the endorsement key, optionally classed by mechanism (e.g., endorsement::jws-x5c). The payload is a JSON object following the schema below:
+
+```
+{
+  "schema": "ascp.endorsement.v1",
+  "subject": "cert",              // cert, identity
+  "attestation": "fingerprint",   // fingerprint, issuance-time, id-binding
+  "fingerprint": "sha256:...",    // MUST bind to the subject's JWK
+  "issuer": {
+    "mechanism": "jws-x5c",      // jws-x5c, jws-kid, did-jws,
+                                 // oidc-icb, tsa-rfc3161
+    "hint": "ca.example.org"     // free-form display string
+  },
+  "evidence": {                  // mechanism-specific material
+    "jws": "<compact or detached JWS>",
+    "chain": ["<x5c leaf>", "<int>", "<root>"],
+    "icb": "<OIDC IdentityClaimBundle>",
+    "did": "did:key:z6Mk...",
+    "tst": "<base64-der-TST>"
+  },
+  "issued_at": "2025-08-13T14:01:22Z", // ISO-8601 UTC
+  "tsa": {                             // optional independent TSA proof
+    "tst": "<base64-der-TST>",
+    "tsa_name": "tsa.example.org"
+  }
+}
+```
+
+### **Attestation Types**
+
+| **Attestation** | **Meaning**                                                   | **Typical Mechanisms**    |
+| --------------- | ------------------------------------------------------------- | ------------------------- |
+| fingerprint     | This certificate/identity key’s fingerprint is valid/trusted. | jws-x5c, jws-kid, did-jws |
+| issuance-time   | This subject existed at or before a given time.               | tsa-rfc3161               |
+| id-binding      | This certificate is bound to a specific identity handle.      | oidc-icb, did-jws         |
+
+Examples of each of the types are in the following sub-sections.
+
+### **PKI Endorsement of Certificate Fingerprint**
+
+```
+[ endorse-uuid, author-uuid, 2025-08-13T14:00:00Z,
+    cert-uuid .
+    ( endorsement::jws-x5c + json:{
+        "schema":"ascp.endorsement.v1",
+        "attestation":"fingerprint",
+        "fingerprint":"sha256:abcd1234...",
+        "issuer":{"mechanism":"jws-x5c","hint":"ca.example.org"},
+        "evidence":{
+            "jws":"<compact JWS>",
+            "chain":["<leaf>","<int>","<root>"] },
+        "issued_at":"2025-08-13T14:01:22Z" }
+    )
+];
+```
+
+### **OIDC Identity Binding**
+
+```
+[ verify-uuid, author-uuid, 2025-08-08T14:30:25Z,
+    cert-uuid .
+    ( endorsement::oidc-icb + json:{
+        "schema":"ascp.endorsement.v1",
+        "attestation":"id-binding",
+        "fingerprint":"sha256:abcd1234...",
+        "issuer":{"mechanism":"oidc-icb","hint":"accounts.google.com"},
+        "evidence":{ "icb":"<IdentityClaimBundle JWS>" },
+        "issued_at":"2025-08-08T14:30:25Z" }
+    )
+];
+```
+
+### **DID-based Endorsement**
+
+```
+[ did-endorse-uuid, author-uuid, 2025-08-20T10:00:00Z,
+    cert-uuid .
+    ( endorsement::did-jws + json:{
+        "schema":"ascp.endorsement.v1",
+        "attestation":"fingerprint",
+        "fingerprint":"sha256:abcd1234...",
+        "issuer":{"mechanism":"did-jws","hint":"did:key:z6Mk..."},
+        "evidence":{"did":"did:key:z6Mk...","jws":"<compact JWS>"},
+        "issued_at":"2025-08-20T10:00:00Z" }
+    )
+];
+```
+
+### **TSA Time Attestation**
+
+```
+[ tsa-uuid, author-uuid, 2025-08-13T14:02:00Z,
+    cert-uuid .
+    ( endorsement::tsa-rfc3161 + json:{
+        "schema":"ascp.endorsement.v1",
+        "attestation":"issuance-time",
+        "fingerprint":"sha256:abcd1234...",
+        "issuer":{"mechanism":"tsa-rfc3161","hint":"tsa.example.org"},
+        "evidence":{"tst":"<base64-der-TST>"},
+        "issued_at":"2025-08-13T14:02:00Z" }
+    )
+];
+```
+
+### **Verification Rules**
+
+1. **Binding:** The endorsement payload’s fingerprint MUST equal the subject Certificate Artipoint’s fingerprint.
+2. **Evidence Validation:**
+   - jws-x5c: verify JWS and validate the embedded x5c chain.
+   - jws-kid: resolve referenced ASCP key and verify signature.
+   - did-jws: resolve DID document, verify JWS using specified verification method.
+   - oidc-icb: validate IdentityClaimBundle per OIDC provider.
+   - tsa-rfc3161: verify Time-Stamp Token using trusted TSA certs.
+3. **Temporal Ordering:** Prefer TSA tst if present; otherwise use issued\_at. Retain the enclosing Artipoint timestamp for auditability.
+4. **Outcome:** Each endorsement evaluates to valid, invalid, or indeterminate, and results SHOULD be surfaced transparently to clients.
+
+This model ensures that endorsements provide clear, structured, and auditable evidence while keeping Identity and Certificate Artipoints immutable and log-anchored. It unifies PKI, OIDC, DIDs, and TSA into a single endorsement framework, strengthening ASCP’s trust fabric without fragmenting the grammar.
+
+## Purpose Attributes
+
+ASCP defines a dedicated **purpose::**\*\* attribute class\*\* for binding explicit functional intentions to cryptographic keys. Unlike endorsements, which represent external attestations, **purpose attributes are first-party declarations** made by the certificate holder itself. They describe *what this key is for* within the ASCP trust fabric.
+
+Each purpose binding is attached directly to a **Certificate Artipoint**, not to the Identity Artipoint. This ensures the semantics follow the lifecycle of the actual key material. When certificates are rotated or replaced, new purpose attributes are articulated alongside the new JWK payload.
+
+Values MUST be the **RFC 7638 JWK thumbprint** of the embedded key, expressed as a URI fragment identifier (e.g., "jwk#\<thumbprint>"). This ensures that purposes are content-addressable, cryptographically bound, and interoperable across JOSE, OIDC, and related ecosystems.
+
+### Purpose: Authentication (purpose::auth)
+
+The purpose::auth attribute indicates that the referenced key may be used for **authentication operations**. This typically includes signing authentication challenges, producing proofs of identity, or verifying possession during channel establishment.
+
+- **Scope:** Certificate Artipoint only
+- **Value:** One or more JWK thumbprints
+- **Verifier rule:** Clients MUST validate that any authentication operation (e.g., channel handshake) references a key whose thumbprint matches an auth purpose binding.
+
+**Example:**
 
 ```bnf
-[endorse-uuid, ca-ops@example.com, 2025-08-08T10:05:00Z,
-  cert-uuid .
-  ( endorsement + json:{
-      "sig": "<b64 detached signature>",
-      "sig_over": "cert_jwk",
-      "cert_chain_pem": "...",
-      "signer": "example.com",
-      "timestamp": "2025-08-08T10:05:00Z",
-      "tsa": { ... }
-    }
-  )
+( purpose::auth + "jwk#SOME7638THUMBPRINT" )
+```
+
+### Purpose: Assertion (purpose::assert)
+
+The purpose::assert attribute signals that the referenced key may be used for **assertion signing**. Assertions include endorsements, identity claims, statements of fact, or any semantic declaration requiring cryptographic non-repudiation.
+
+- **Scope:** Certificate Artipoint only
+- **Value:** One or more JWK thumbprints
+- **Verifier rule:** Clients MUST validate that any signed assertion (e.g., an endorsement attribute or structured statement) is produced with a key whose thumbprint matches an assert purpose binding.
+
+**Example:**
+
+```bnf
+( purpose::assert + "jwk#SOME7638THUMBPRINT" )
+```
+
+### Purpose: Key Agreement (purpose::keyAgreement)
+
+The purpose::keyAgreement attribute indicates that the referenced key may be used for **cryptographic key agreement**operations, such as establishing shared secrets via ECDH. This enables encrypted channel membership, ephemeral session key establishment, and forward-secret communication.
+
+- **Scope:** Certificate Artipoint only
+- **Value:** One or more JWK thumbprints
+- **Verifier rule:** Clients MUST ensure that only keys bound to keyAgreement are used for deriving shared secrets in channel envelopes or session contexts.
+
+**Example:**
+
+```bnf
+( purpose::keyAgreement + "jwk#SOME7638THUMBPRINT" )
+
+```
+
+### Design Considerations
+
+- **First-party vs third-party:** Purposes are **first-party declarations**. They are not evidence of key validity—that remains the role of **endorsements**.
+- **Lifecycle alignment:** Because purposes live on the Certificate Artipoint, they automatically rotate with new certificates, avoiding stale bindings.
+- **Canonical value:** JWK thumbprints ensure bindings are portable across ASCP, JOSE, and OIDC ecosystems.
+- **No shorthand booleans:** To prevent ambiguity in multi-key scenarios, purpose::auth := true shorthand is not supported. All bindings MUST explicitly reference JWK thumbprints.
+
+### Default Purposes for Artipoint Authorship (Normative)
+
+- **Requirement:** Artipoint authorship **MUST** be performed with a certificate whose **purpose::assert** set includes the RFC‑7638 thumbprint of the embedded JWK.
+- **Verification:** Given a signed Artipoint, verifiers **MUST** resolve the JOSE kid → Certificate Artipoint → compute JWK thumbprint, and confirm membership in **purpose::assert** at the statement timestamp. If not present, the signature **MUST** be treated as **not authorized for authorship** (even if the cryptographic signature verifies).
+- **Identity hint:** The identity’s certificate::kid indicates the *currently active authorship certificate*. That certificate **MUST** declare purpose::assert for authorship to be valid.
+
+**Separation of purposes:**
+
+- **Session authentication / handshakes** use keys listed in **purpose::auth**.
+- **Artipoint signing (authorship, endorsements, governance statements)** uses keys listed in **purpose::assert**.
+- **Envelope/channels key establishment** uses keys listed in **purpose::keyAgreement**.
+
+**Recommended key hygiene:**
+
+- Implementations **SHOULD** use distinct keys for assert and keyAgreement.
+- Using the same key for auth and assert is permitted but **NOT RECOMMENDED** in high‑assurance deployments.
+
+**Example:**
+
+```bnf
+[identity-uuid, author-uuid, 2025-09-04T12:30:00Z,
+  ["identity","Jeff Szczepanski","mailto:jeff@example.com"] .
+  ( certificate::kid := "ascp:cert:cert-uuid-A" )
 ];
 
-```
-
-**By reference:**
-
-```bnf
-cert-uuid .
-( endorsement + endorse-artipoint-uuid );
-
-```
-
-**Client behavior (endorsement):**
-
-1. Collect all endorsement values on the cert (dereference UUIDs if needed).
-2. Validate the certificate chain **as recorded**.
-3. Verify sig against the chosen sig\_over target (JWK/PEM/fingerprint).
-4. If present, verify tsa and record asserted time.
-
-### Recovery\_Envelope
-
-Stores a double‑encrypted private key recovery bundle (outer: ECDH‑ES to recovery\_cert, inner: password‑derived AES).
-
-**Inline JSON (minimum fields):**
-
-- recovery\_cert — ascp:cert:\<uuid> for the recovery public key (Key B)
-- encrypted\_key — JWE-of-JWE payload (outer ECDH‑ES, inner AES‑GCM)
-- protection — \["recovery-key","password"] (or future schemes)
-- rotation\_id — human-friendly version tag (e.g., "v1")
-- created — ISO 8601 Z
-- purpose (optional) — "device-migration" | "local-backup" | ...
-
-**Inline example:**
-
-```bnf
-[recover-uuid, alice@example.com, 2025-08-08T10:06:00Z,
-  cert-uuid .
-  ( recovery_envelope + json:{
-      "recovery_cert": "ascp:cert:<uuid-of-B>",
-      "encrypted_key": { ...JWE-of-JWE... },
-      "protection": ["recovery-key","password"],
-      "rotation_id": "v1",
-      "created": "2025-08-08T10:06:00Z",
-      "purpose": "device-migration"
-    }
-  )
+[cert-uuid-A, author-uuid, 2025-09-04T12:29:59Z,
+  ["certificate","Jeff ES256 Signing",
+    json:{ "kty":"EC","crv":"P-256","x":"…","y":"…","alg":"ES256","key_ops":["verify"] } ] .
+  ( purpose::assert + "jwk#TPT-A" )
 ];
 
+; A signed Artipoint authored by Jeff must reference
+; kid=ascp:cert:cert-uuid-A, and verifiers MUST confirm that
+; TPT-A ∈ purpose::assert on that certificate at the time of signing.
 ```
 
-**By reference:**
+## Recovery\_Envelope
 
-```bnf
-cert-uuid .
-( recovery_envelope + recovery-artipoint-uuid );
+Stores a double‑encrypted private key recovery bundle that enables secure key backup and device migration. The recovery data uses layered encryption: the outer layer encrypts to a recovery certificate using ECDH‑ES, while the inner layer uses password‑derived AES encryption. This dual-protection scheme ensures that both the recovery key and the user's password are required for decryption.
+
+The complete `user-key-envelope` JSON structure and recovery process are detailed in the **ASCP Key Escrow and Recovery Strategy** section.
+
+**Attribute Value Encoding**
+
+Each recovery envelope is attached to the certificate Artipoint as an **annotation** that either is part of the original articulation of the certificate itself or added as follows:
 
 ```
+[recover-uuid, author-uuid, 2025-08-08T10:06:00Z,
+  cert-uuid .
+  ( recovery_envelope + json:{ <user-key-envelope> } )
+];
+```
+
+The recovery envelope becomes the **value** of the recovery\_envelope attribute, encoded as a JSON object containing the complete double-encrypted key material and metadata.
 
 **Authoring & routing patterns**
 
-- Third‑party CA posts the endorsement as an annotation in *its* channel; value can be inline or a pointer to a CA‑hosted Artipoint.
+- Third‑party CA posts the recovery envelope as an annotation in *its* channel; value can be inline or a pointer to a CA‑hosted Artipoint.
 - Recovery material for an org user can be published in a **more restricted channel** than the cert itself; the attribute still cleanly targets the cert UUID.
 
-## Identity: Certificate Binding & Rotation
+# Identity: Certificate Binding & Rotation
 
 In ASCP, every user and agent that contributes immutable entries to the articulation log must have its own cryptographic key pair. The private key is used to sign all Artipoints authored by that identity. The public key is published in the log to establish verifiable provenance.
 
@@ -330,13 +520,11 @@ Use certificate::kid on the identity to set the current active signing key.
 - Simple, explicit, and mirrors channel keyframe activation.
 - Old keys remain verifiable for historical signatures; no extra bookkeeping.
 
-## **Identity Bootstrap and Verification Design**
+# **Identity Bootstrap and Verification Design**
 
 This section outlines how new participants—human users or autonomous agents—establish verifiable identity using self-generated cryptographic keys and portable, third-party-issued JWT attestations. The mechanism supports decentralized operation while ensuring secure, auditable identity binding.
 
-### Core Concepts
-
-**Identity Representation**
+## **Identity Representation**
 
 - **Human Identities**: Represented as resource URIs (e.g., mailto:<jeff@example.com>)
 - **Agent Identities**: Represented as persistent URNs (e.g., urn:agent:reframe:cortex-coordinator)
@@ -347,7 +535,7 @@ Each identity is cryptographically bound to a **self-generated identity key pair
 - pk\_user: Public key, expressed as a JOSE JWK (shared for verification and encryption)
 - Also referred to as a **JWK-based EC Identity Key**, using NIST EC P-256 or stronger JOSE-native keys.
 
-### Bootstrapping Identity: How New Users Introduce Themselves
+## Bootstrapping Identity: How New Users Introduce Themselves
 
 This process occurs **once**, as the user/client joins the ASCP system for the first time. All subsequent authentication is handled using cryptographic signatures associated with the self-generated identity key bound through this process.
 
@@ -372,7 +560,7 @@ Requirements:
 - Authentication request SHOULD include prompt=login to force real-time reauthentication
 - Resulting ID token MUST include the unmodified nonce in a signed field
 
-### Secure IdentityClaimBundle Format
+## Secure IdentityClaimBundle Format
 
 The following steps are required to generate the necessary IdentityClaimBundle to link the client identity to the public key of the self-generated key pair:
 
@@ -452,7 +640,7 @@ Upon receiving the JWS signed IdentityClaimBundle, the ASCP verifier must:
 
 The specific cryptographic and claim requirements for access tokens used in ASCP sessions are defined in the **Appendix: Identity Token Requirements**.
 
-### Why This Design Can Be Trusted
+## Why This Design Can Be Trusted
 
 - **Nonce-bound**: Proves key binding occurred in real-time, in response to challenge
 - **Self-sovereign**: No third-party holds user private keys
@@ -460,32 +648,33 @@ The specific cryptographic and claim requirements for access tokens used in ASCP
 - **Composably secure**: Outer envelope makes audit and validation straightforward
 - **Aligns with standards**: Uses JWK, JWS, and JWT—all JOSE-native
 
-### Logging Identity Verification in ASCP
+## Logging Identity Verification in ASCP
 
-Once verified, the ASCP peer/server writes an Identity Artipoint:
+Once verified, the ASCP peer/server writes an Identity, Certificate, and Endorsement Attribute onto the Certificate.
 
 ```
-[identity-uuid, jeff@example.com, 2025-08-08T14:30:22Z,
+[identity-uuid, author-uuid, 2025-08-08T14:30:22Z,
   ["identity", "Jeff Szczepanski", "mailto:jeff@example.com"] .
   ( type := "human",
     certificate::kid := "ascp:cert:cert-uuid"
   )
 ];
 
-[cert-uuid, jeff@example.com, 2025-08-08T14:30:22Z,
+[cert-uuid, author-uuid, 2025-08-08T14:30:22Z,
   ["certificate", "Jeff ES256 Identity Key", json:{ <JWK public key> }] .
   ( fingerprint := "sha256:abcd...",
     issued := "2025-08-08T14:30:22Z" )
 ];
 
-[verification-uuid, alice@peer.ascp, 2025-08-08T14:30:25Z,
+[verification-uuid, author-uuid, 2025-08-08T14:30:25Z,
   cert-uuid .
-  ( endorsement + json:{
-      "validation_method": "oidc@https://accounts.google.com",
-      "evidence": "<IdentityClaimBundle JWS>",
-      "verified_by": "ascp://peer/alice",
-      "timestamp": "2025-08-08T14:30:25Z"
-    }
+  ( endorsement::oidc-icb + json:{
+      "schema":"ascp.endorsement.v1",
+      "attestation":"id-binding",
+      "fingerprint":"sha256:abcd1234...",
+      "issuer":{"mechanism":"oidc-icb","hint":"accounts.google.com"},
+      "evidence":{"icb":"<IdentityClaimBundle JWS>"},
+      "issued_at":"2025-08-08T14:30:25Z" }
   )
 ];
 ```
@@ -508,18 +697,18 @@ This Artipoint acts as durable, auditable proof of the key–identity binding.
 - **Universal provider support**: Works seamlessly with consumer providers (Google, Apple) and enterprise systems (Okta, Azure AD, Keycloak)
 - **Enterprise flexibility**: Supports corporate authentication flows while maintaining consistent OIDC token interface
 
-## **ASCP Key Escrow and Recovery Strategy**
+# **ASCP Key Escrow and Recovery Strategy**
 
 ASCP provides a secure and auditable approach to private key recovery that builds on the log-anchored trust foundation. The strategy enables users to recover their **identity private key** without ever exposing it in plaintext to any third party, supporting device migration, key backup, and enterprise compliance scenarios.
 
-### **Core Design Principles**
+## **Core Design Principles**
 
 - **Zero-trust storage**: Recovery materials remain confidential even if the log is compromised
 - **Self-contained recovery**: No external key management dependencies
 - **Dual recovery modes**: User-controlled privacy or enterprise escrow options
 - **User-controlled decryption**: Only authorized parties can decrypt recovery bundles
 
-### **High-Level Flow**
+## **High-Level Flow**
 
 **During Key Provisioning (e.g., account setup or key rotation)**
 
@@ -533,43 +722,53 @@ ASCP provides a secure and auditable approach to private key recovery that build
    - **First**, encrypt the identity private key with Key C (password-derived AES key), using JWE with alg: "dir" and enc: "A256GCM"
    - **Then**, encrypt the resulting ciphertext with Key B (the recovery public key), using JWE with alg: "ECDH-ES+A256KW" and enc: "A256GCM"
    - This layering ensures that **both the password and the recovery key are required** to recover the identity key
-5. Create a user-key-envelope Artipoint:
-   - Stores the doubly encrypted private key
-   - Signed by the current identity (Key A) or another trusted issuer (e.g., org CA)
-   - Written to the @Bootstrap channel for universal discoverability and replication
+5. Attach recovery envelope to certificate:
+   - Create a `user-key-envelope` JSON structure containing the doubly encrypted private key
+   - Attach as a `recovery_envelope` attribute to the Certificate Artipoint via annotation
+   - Published to appropriate channel for discoverability and replication
 
 **On a New Device or During Recovery**
 
-1. Sync the @Bootstrap channel (public and unencrypted)
-2. Locate the user’s user-key-envelope
+1. Locate the user's Certificate Artipoint and associated `recovery_envelope` attribute
+2. Extract the `user-key-envelope` JSON structure
 3. Use the recovery private key (**Key B**) to decrypt the outer layer
 4. Prompt the user for their password to derive Key C
 5. Use Key C to decrypt the inner layer, recovering the identity private key (**Key A**)
 6. Import Key A into secure storage (e.g., Secure Enclave, TPM, or keychain)
-7. Proceed to access the user’s private channel using the now-available Key A:
+7. Proceed to access the user's private channel using the now-available Key A:
    - Decrypt key envelopes for Channel AES and CAK
    - Authenticate ALSP replication and Artipoint authorship
 
-### **user-key-envelope Structure**
+## **user-key-envelope JSON Structure**
 
-This Artipoint is published to the @Bootstrap channel as a signed, unencrypted payload.
+This JSON structure is attached to a Certificate Artipoint as the value of a `recovery_envelope` attribute.
 
 ```json
-[   
-    "uuid": "...",
-    "source": "user@domain",
-    "timestamp": "2025-08-06T12:00:00Z",
+{  
     "type": "user-key-envelope",
+    "version": "1.0",
     "recovery_cert": "ascp:cert:<uuid-of-recovery-key>",
     "encrypted_key": { ...JWE-wrapped encrypted JWE... },
     "alg": "ECDH-ES+A256KW",
     "enc": "A256GCM",
     "protection": ["recovery-key", "password"],
+    "rotation_id": "v1",
     "recovery_purpose": "device-migration | local-backup",
     "rotation_id": "v1 | v2 | ...",
     "created": "2025-08-06T12:00:00Z"
-]
+}
 ```
+
+- `type` — Identifies this as a user key recovery envelope
+- `version` — Schema version for forward compatibility
+- `recovery_cert` — Reference to the recovery public key (Key B) used for outer encryption
+- `encrypted_key` — Double-encrypted identity private key (outer: ECDH-ES, inner: password-derived AES)
+- `alg` — Encryption algorithm used for the outer JWE layer
+- `enc` — Content encryption algorithm for authenticated encryption
+- `protection` — Array indicating the protection factors required for decryption
+- `rotation_id` — Human-readable identifier for tracking key rotations
+- `recovery_purpose` (optional) — Intended use case for this recovery envelope
+- `created` — Timestamp when the recovery envelope was generated
 
 The `encrypted_key` field contains a **JWE-wrapped JWE object**:
 
@@ -583,25 +782,25 @@ This double-encryption strategy ensures:
 - Even if one factor is compromised, the identity key remains secure
 - All encryption uses authenticated encryption (AES-GCM) via standard JOSE mechanisms
 
-### **Security Considerations**
+## **Security Considerations**
 
-- **Passive log exposure**: Since the envelope is doubly encrypted and stored in the clear, even full replication of the @Bootstrap channel does not compromise user secrets
+- **Passive log exposure**: Since the envelope is doubly encrypted and stored in the clear, even full replication of the log does not compromise user secrets
 - **Key B storage**: Recovery key material must be protected via a second device, hardware token, or exportable file/QR code with strong local security
 - **Key C (password) complexity**: The passphrase should meet entropy guidelines and use a strong KDF like Argon2id
-- **No org access**: The organization cannot decrypt or recover a user’s key unless explicitly granted access to Key B or Key C by the user
+- **No org access**: The organization cannot decrypt or recover a user's key unless explicitly granted access to Key B or Key C by the user
 
-### **Future Enhancements**
+## **Future Enhancements**
 
 - **Multi-party Shamir recovery**: Split Key B into multiple shares for multi-admin or user+device recovery models
 - **QR-code recovery bootstrapping**: Encode the recovery JWE for scanning from air-gapped backups
 - **Hardware key support**: Use FIDO2/WebAuthn for Key B storage and authentication during decryption
 - **Rotation tracking**: Allow rotation of Key A while preserving old envelopes in the log for historical decryptability
 
-### **Summary**
+## **Summary**
 
-ASCP supports secure, privacy-preserving key recovery by leveraging layered encryption, log-anchored publication, and optional recovery keypairs. This ensures that users can regain access to their identity keys without trusting any intermediary, while maintaining the protocol’s cryptographic integrity and auditability.
+ASCP supports secure, privacy-preserving key recovery by leveraging layered encryption, log-anchored publication, and optional recovery keypairs. This ensures that users can regain access to their identity keys without trusting any intermediary, while maintaining the protocol's cryptographic integrity and auditability.
 
-## **Provenance of the ASCP RootCA**
+# **Provenance of the ASCP RootCA**
 
 This section defines the full provenance chain for the **ASCP Root Certificate Authority (rootCA)**, including:
 
@@ -616,7 +815,7 @@ The goal is to ensure that **any verifier, at any time in the future**, can:
 3. See its relationship to a trusted PKI at the time of anchoring.
 4. Validate the integrity of this provenance against immutable and independent records.
 
-### **RootCA Generation and Self-Signing**
+## **RootCA Generation and Self-Signing**
 
 1. **Generate rootCA Key Pair**
    - Algorithm: ECDSA P-384 (default) or equivalent.
@@ -629,7 +828,7 @@ The goal is to ensure that **any verifier, at any time in the future**, can:
    - The rootCA public key and self-signed certificate are embedded in the **first immutable Artipoint** of the repository’s @Bootstrap channel.
    - This Artipoint is cryptographically signed by the rootCA private key.
 
-### **Optional Anchoring to a Public or Enterprise PKI**
+## **Optional Anchoring to a Public or Enterprise PKI**
 
 To provide **portable, externally verifiable trust**, the rootCA can be endorsed by a PKI certificate from:
 
@@ -650,7 +849,7 @@ To provide **portable, externally verifiable trust**, the rootCA can be endorsed
   2. Verify the detached signature over the rootCA key.
   3. Confirm that the rootCA was endorsed by the PKI identity at the recorded point in time.
 
-### **Optional Time-Stamping Authority (TSA) Signature**
+## **Optional Time-Stamping Authority (TSA) Signature**
 
 To provide **independent temporal attestation**, the bootstrap Artipoint can include an RFC 3161-compliant TSA token:
 
@@ -668,7 +867,7 @@ To provide **independent temporal attestation**, the bootstrap Artipoint can inc
 - Verifiers gain third-party assurance of when the provenance payload was created.
 - Even if the ASCP repository’s own time records are disputed, the TSA attestation stands as independent proof.
 
-### **Provenance Chain Validation Steps for a Verifier**
+## **Provenance Chain Validation Steps for a Verifier**
 
 When a verifier examines a repository’s bootstrap channel, they:
 
@@ -684,14 +883,14 @@ When a verifier examines a repository’s bootstrap channel, they:
    - Ensure bootstrap Artipoint is intact in all replicas.
    - Validate signatures back to rootCA.
 
-### **Key Points**
+## **Key Points**
 
 - The provenance is **permanently preserved** in the immutable bootstrap channel.
 - Even if the PKI certificate later expires or is revoked, verifiers can confirm it was valid when the repository was anchored.
 - Re-anchoring is possible at any later date to provide renewed PKI endorsements without replacing the rootCA.
 - Optional TSA signatures and/or publication in a transparency log provide **independent temporal proof** for maximum audit assurance.
 
-## Overall Summary
+# Overall Summary
 
 ASCP's log-anchored trust architecture solves the fundamental challenges of distributed identity by anchoring all trust decisions in immutable log entries rather than real-time validation. This provides durable identity, complete cryptographic provenance, and autonomous operation without external dependencies.
 
@@ -699,7 +898,7 @@ The system enables both privacy-first and enterprise deployments through self-so
 
 ASCP delivers a trust infrastructure that integrates with existing PKI systems today while providing the foundation for scalable human-AI coordination.
 
-## **Appendix: Identity Token Requirements**
+# **Appendix: Identity Token Requirements**
 
 ASCP is agnostic to how clients obtain access tokens. Token acquisition—whether through OAuth 2.0 flows, enterprise SSO, or other authentication mechanisms—falls outside the ASCP protocol scope. Earlier sections detail where these tokens are presented and validated during identity bootstrap and session establishment.
 
@@ -710,7 +909,7 @@ From ASCP’s perspective:
 - **A token is a token.**
 - The only requirement is that it meets the validation and policy rules established by the ASCP deployment.
 
-### **Token Presentation**
+## **Token Presentation**
 
 - Clients MUST present a valid OAuth 2.0 access token when initiating an ASCP session.
 - Preferred token format: **JWT** per RFC 7519.
@@ -718,7 +917,7 @@ From ASCP’s perspective:
   - In the Authorization: Bearer header during the WebSocket upgrade request.
   - Or as the first ASCP protocol message after the connection is established.
 
-### **Token Validation Requirements**
+## **Token Validation Requirements**
 
 On receiving a token, the ASCP server MUST:
 
@@ -731,7 +930,7 @@ On receiving a token, the ASCP server MUST:
 3. **Enforce scope/role policy** as defined by the deployment.
 4. Optionally verify **delegation claims** (e.g., act claim showing an agent acting on behalf of a user).
 
-### **Deployment Policy**
+## **Deployment Policy**
 
 - The ASCP protocol does not mandate a specific token acquisition flow.
 - Each deployment determines:
@@ -740,6 +939,6 @@ On receiving a token, the ASCP server MUST:
   - How client and agent tokens are obtained.
 - This separation ensures ASCP remains compatible with both public/consumer logins and enterprise/private identity systems.
 
-**In summary:**
+### **In summary**
 
 ASCP does not dictate *how* tokens are obtained, only that they are valid, verifiable, and authorized for the intended session. This allows maximum flexibility in identity integration while keeping ASCP’s core protocol simple, consistent, and interoperable.
