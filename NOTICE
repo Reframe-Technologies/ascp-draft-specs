@@ -1,0 +1,27 @@
+Agent Shared Cognition Protocol (ASCP)
+Copyright © 2025 Reframe Technologies, Inc.
+All rights reserved.
+
+This repository contains early draft specifications for the 
+Agent Shared Cognition Protocol (ASCP), intended for future 
+submission to the Internet Engineering Task Force (IETF) as 
+Internet-Drafts and, ultimately, for consideration as 
+IETF Standard-Track RFCs.
+
+The Specification Text in this repository is provided under 
+terms consistent with the IETF Trust Legal Provisions (TLP). 
+You may copy, distribute, and create derivative works of the 
+Specification Text, provided such works do not misrepresent 
+themselves as the original specification.
+
+All Code Components within the Specification Text (including 
+ABNF grammars, schemas, examples, and pseudocode) are licensed 
+under the BSD 2-Clause License. Reference implementations, if 
+present, are licensed under the Apache License 2.0.
+
+Third-party content and external standards referenced in these 
+documents remain the property of their respective owners and 
+are subject to their own licensing terms.
+
+This NOTICE file is provided for clarity and does not modify 
+the terms of the LICENSE file.
