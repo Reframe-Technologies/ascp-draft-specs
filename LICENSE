@@ -1,0 +1,97 @@
+Copyright © 2025 Reframe Technologies, Inc.
+All rights reserved.
+
+===============================
+  ASCP Specification License
+===============================
+
+The documents, specifications, and text contained in this repository
+("Specification Text") are provided under terms consistent with the
+IETF Trust Legal Provisions (TLP), as described below.
+
+You are granted permission to:
+
+  • copy, publish, and distribute this Specification Text,
+  • create and distribute derivative works,
+  • translate or modify the text,
+  • implement the described protocol(s) in whole or in part,
+
+provided that:
+
+  • derivative works MUST NOT be represented as the original
+    specification,
+  • proper attribution to the original authors is maintained.
+
+The authors intend to contribute these documents to the Internet
+Engineering Task Force (IETF) for standardization. Upon submission as
+Internet-Drafts (I-Ds), the Specification Text will be governed by the
+IETF Trust Legal Provisions in effect at that time.
+
+NO WARRANTY
+
+This Specification Text is provided “AS IS”, without any warranties,
+express or implied, including but not limited to warranties of
+merchantability, fitness for a particular purpose, or non-infringement.
+
+
+====================================
+  License for Code Components
+====================================
+
+Portions of this repository may contain code components, including but
+not limited to ABNF grammar definitions, schemas, examples, and other
+normative or illustrative code ("Code Components").
+
+All Code Components are licensed under the BSD 2-Clause License:
+
+  BSD 2-Clause License
+  --------------------
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above
+       copyright notice, this list of conditions and the following
+       disclaimer in the documentation and/or other materials provided
+       with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+  OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+  AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+
+
+====================================
+  Reference Implementations
+====================================
+
+Any reference implementations of ASCP (if included in this repository
+or linked from it) and any associated tooling, libraries, or SDKs are
+licensed separately under the **Apache License 2.0**, unless explicitly
+stated otherwise.
+
+The Apache 2.0 license text can be found at:
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+
+====================================
+        Final Notes
+====================================
+
+This dual-licensing structure mirrors the licensing model used for
+IETF RFCs: specification text under IETF TLP-like terms, and code
+components under the BSD 2-Clause License.
+
+Use of this repository constitutes acceptance of these terms.
