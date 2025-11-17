@@ -1,6 +1,7 @@
 # Contributing to ASCP (Agent Shared Cognition Protocol)
 
-Thank you for your interest in contributing to the **Agent Shared Cognition Protocol (ASCP)**.  
+Thank you for your interest in contributing to the **Agent Shared Cognition Protocol (ASCP)**.
+
 ASCP is intended to become an **open, vendor-neutral Internet Standard** supporting the emerging **Cortex Layer**—a durable substrate for human–AI shared cognition.
 
 This repository hosts **early, pre-IETF drafts** of the ASCP specifications and supporting documents. Contributions are welcome and strongly encouraged.
