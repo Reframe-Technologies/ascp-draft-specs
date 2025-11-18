@@ -11,11 +11,11 @@ See the top-level [`README.md`](../README.md) file of this repo for more details
 | **Document** | **Purpose** |
 | ------------ | ----------- |
 | [`the-agents-shared-cognition-protocol.md`](./the-agents-shared-cognition-protocol.md) | Master specification outlining the ASCP architecture, layered model, and coordination primitives |
-| [`ascp-artipoint-grammar.md`](./ascp-artipoint-grammar.md) | Defines the grammar for immutable, addressable Artipoints — the atomic units of shared cognition |
-| [`ascp-channels.md`](./ascp-channels.md) | Secure distribution of Artipoints using encrypted channels |
-| [`ascp-logsync.md`](./ascp-logsync.md) | Transport and synchronization layer for distributed logs |
-| [`ascp-identity-and-trust.md`](./ascp-identity-and-trust.md) | Cryptographic identity, key management, and trust anchoring |
-| [`ascp-bootstrap-and-discovery.md`](./ascp-bootstrap-and-discovery.md) | Replica initialization and channel discovery |
+| [`ascp-artipoint-grammar.md`](./ascp-artipoint-grammar-a-structure.md) | Defines the grammar for immutable, addressable Artipoints — the atomic units of shared cognition |
+| [`ascp-channels.md`](./ascp-channels-secure-distribution-layer.md) | Secure distribution of Artipoints using encrypted channels |
+| [`ascp-logsync.md`](./ascp-logsync-protocol-alsp.md) | Transport and synchronization layer for distributed logs |
+| [`ascp-trust-and-identity.md`](./ascp-trust-and-identity-architecture.md) | Cryptographic identity, key management, and trust anchoring |
+| [`ascp-bootstrap-and-discovery.md`](./ascp-bootstrap-process-and-channel.md) | Replica initialization and channel discovery |
 
 ## 🛠 Usage
 
@@ -25,7 +25,7 @@ Implementers should follow the layered reading order:
 2. **Grammar** – Understand `ascp-artipoint-grammar.md` to parse/create coordination statements
 3. **Distribution** – Integrate secure channels and synchronization via `ascp-channels.md` and `ascp-logsync.md`
 4. **Identity & Trust** – Defines how identity and trust comes together into your ASCP instance
-5. **Bootstrapping** - How everything comes together into a coherent operating protocol stack including rooting trust, confirming identities, etc.
+5. **Bootstrapping** - How everything comes together into a coherent replicas including rooting trust, confirming identities, etc.
 
 ## 📐 Conformance
 
