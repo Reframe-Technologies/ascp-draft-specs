@@ -94,4 +94,8 @@ This dual-licensing structure mirrors the licensing model used for
 IETF RFCs: specification text under IETF TLP-like terms, and code
 components under the BSD 2-Clause License.
 
+Note: “ASCP” as a protocol name is not trademarked, and may be freely used to
+refer to independent implementations; Reframe trademarks (such as “Cortex Layer™”)
+apply only to Reframe-branded products and not to the protocol itself.
+
 Use of this repository constitutes acceptance of these terms.
