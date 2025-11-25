@@ -23,6 +23,7 @@ We’re building toward having drafts of:
 - ✅ Complete grammar and top-level spec
 - ✅  Secure distribution layer (Channels)
 - ✅  Log synchronization protocol (ALSP)
+- ✅ Governance & Access Control
 - ✅ Identity & Trust Model
 - 🔜 Bootstrap model - building a new org repository
 - 🔜 Reference implementations in Python and Rust
