@@ -2,14 +2,14 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.5 — Informational (Pre-RFC Working Draft)  
+Version: 0.6 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
 # **Status of This Document**
 
-This document is part of the ASCP specification suite and defines the grammar used to express immutable, addressable Artipoints within the ASCP Cortex Layer. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the Artipoint syntax and related semantics.
+This document is part of the ASCP specification suite and defines the grammar used to express immutable, addressable Artipoints within ASCP. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the Artipoint syntax and related semantics.
 
 This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Normative language (e.g., MUST, SHOULD, MAY) appears in this document as guidance for future standardization and may change in subsequent revisions.
 
@@ -128,7 +128,7 @@ The author field **MUST** contain a UUID reference to a valid Identity Artipoint
 
 # **Articulation Patterns**
 
-The true power of Artipoints emerges through **composition**—how individual cognitive atoms combine to form complex, interconnected structures within the DAG. Each of the four articulation patterns defined above serves a distinct role in building and evolving this shared cognitive graph:
+The true power of Artipoints emerges through **composition**—how individual cognitive atoms combine to form complex, interconnected structures within the DAG. Each of the four articulation patterns defined below serves a distinct role in building and evolving this shared cognitive graph:
 
 - **Instantiation** creates new nodes—the foundational cognitive atoms that represent tasks, documents, insights, or any meaningful unit of thought
 - **Connection** establishes directed edges between existing nodes, encoding relationships like dependencies, associations, or semantic links
@@ -144,16 +144,16 @@ The following normative sub-sections detail each one of distinct kind of articul
 ## **Instantiation**
 
 ```bnf
-instantiation = "[" type "," label "," payload "]" [ "." attribute-list ]
+instantiation = "[" artipoint-type "," label "," payload "]" [ "." attribute-list ]
 
 ```
 
 Declares a typed and labeled unit of meaning with an embedded or referenced payload.
 
 - **type**: A semantic label like "task", "doc", "stream", etc. Types are not reserved keywords; they are open-ended domain vocabulary. New types MAY be freely introduced by any implementation to suit application-specific needs. Common types are defined in the Default Symbol Dictionary for efficient encoding, but implementations are not constrained to this set.
-- **label**: A human-readable title or caption
-- **payload**: The main content—can be a typed embedded inline structure (ie: typedBlock), literal numeric value using various encodings, or an ordinary UTF-8 string which would typically be a URL.
-- **attribute-list**: Optional semantic metadata (see below)
+- **label**: A human-readable title or descriptive caption. Implimentations **MAY** display this in a manner similar to how the title of browser bookmark is typically rendered.
+- **payload**: The main content—can be a typed embedded inline structure (ie: typedBlock), literal numeric value using various encodings, or an ordinary quoted UTF-8 string which would typically be a URL.
+- **attribute-list**: Optional semantic metadata. See the section on Artipoint Attributes.
 
 ## **Annotation**
 
@@ -171,7 +171,7 @@ connection = uuidReference verb-operator uuidSet
 
 ```
 
-Establishes a semantic relationship between a source Artipoint and a set of targets via an operator. A connection expression applies a verb-operator between an existing Artipoint (LHS) and one or more existing Artipoints (RHS). A connection MUST:
+Establishes a semantic relationship between an existing source Artipoint (LHS) and one or more existing target Artipoints (RHS) using a verb-operator. A connection **MUST**:
 
 - **Apply the Relationship Atomically:** Evaluate the operator semantics in a single articulation event with no intermediate states.
 - **Introduce No Implicit Creation or Movement:** A connection MUST NOT create new Artipoints or implicitly relocate existing ones.
@@ -186,17 +186,17 @@ construction = instantiation verb-operator uuidSet
 
 ```
 
-A construction expression creates a new Artipoint and applies a verb-operator between an existing Artipoint (LHS) and one or more existing Artipoints (RHS) in a **single, atomic articulation**. A construction MUST:
+A construction expression creates a new Artipoint and applies a verb-operator between an existing Artipoint (LHS) and one or more existing Artipoints (RHS) in a **single, atomic articulation**. A construction **MUST**:
 
 - **Create and Relate Atomically:** Instantiate the new Artipoint and apply the operator-defined relationship in one inseparable step.
 - **Apply Operator Semantics at Birth:** The operator determines the new Artipoint’s initial structural position (“birth topology”) relative to the RHS. Any Scoped Displacement Behavior (SDB) MUST be evaluated using this birth context.
 - **Not Be Treated as Two Statements:** A construction MUST NOT be interpreted as an instantiation followed by a connection; semantics MUST reflect atomic evaluation.
 
-See **Operator Semantics** for the definitions of topological, hierarchical, and Scoped Displacement Behavior effects.
+See **Operator Semantics** for the definitions of topological, hierarchical, and SDB effects.
 
 # **Payloads and Typed Blocks**
 
-The normative pattern for the payload of an Artipoint is as follows:
+The normative pattern for the payload of an Artipoint MUST be according to the following:
 
 ```bnf
 payload = quoted-string / typedBlock / scalar-value
@@ -211,12 +211,12 @@ future-type = ALPHA *(ALPHA / DIGIT)
 The payload field, used both in instantiations and attribute values, accepts the following:
 
 - A quoted-string
-- A typed block (e.g., embedded JSON or structured string)
+- A typed block (e.g., embedded JSON, UUID or structured string)
 - Numeric scalar-values as integers, hex or binary constants in a C-language like way
 
 The quoted-string form is just shorthand for the string typed block pattern and often will be a URL referencing the dynamic content or state of the artipoint.
 
-The `jsonObject` pattern is intentionally opaque to the ASCP grammar. The Layer-2 parser identifies only the outer `{ ... }` boundaries and consumes everything between as a JSON payload. ASCP requires that these braces form a syntactically balanced region so the payload can be correctly delimited, but it does not enforce JSON's internal structure or semantics. JSON payloads are marked with a `json:` prefix and, when interpreted, must form well-formed JSON objects per [RFC 8259](https://datatracker.ietf.org/doc/html/rfc8259). All whitespace, formatting, and JSON-specific validation is handled externally. This separation keeps the ABNF grammar focused on articulation structure while allowing full JSON flexibility.
+The `jsonObject` pattern is intentionally opaque to the ASCP grammar. The Layer-2 parser identifies only the outer `{ ... }` boundaries and consumes everything between as a JSON payload. ASCP requires that these braces form a syntactically balanced region so the payload can be correctly delimited, but it does not enforce JSON's internal structure or semantics. JSON payloads are marked with a `json:` prefix and, when interpreted, must be well-formed JSON objects per [RFC 8259](https://datatracker.ietf.org/doc/html/rfc8259). All whitespace, formatting, and JSON-specific validation is handled externally. This separation keeps the ABNF grammar focused on articulation structure while allowing full JSON flexibility.
 
 **Normative Constraint:** Expressions **MUST NOT** appear inside payloads. Payloads are opaque content-bearing structures and cannot contain instantiation, annotation, connection, or construction expressions. Composition occurs **only** via referencing previously articulated Artipoints through UUIDs. Implementations **MUST** reject or treat as invalid any payload that attempts to embed grammar-level expressions.
 
@@ -344,7 +344,7 @@ Example:
 [uuidA, uuidAuthorIdentity, 2025-07-28T10:20Z,
   [snippet,
      "Key passage from study",
-     uri:"https://papers.ai/conference2025/paper42"]
+     uri:"https://papers.ai/conference2025/paper42#passage26"]
   extracts {uuidDoc}
 ];
 ```
@@ -571,7 +571,7 @@ fraction  = "." 1*DIGIT
 
 Timestamps in ASCP Artipoints represent the **articulation time**—the moment when the author (human or AI agent) made the cognitive decision to create, modify, or relate cognitive structure within the shared DAG. This is fundamentally different from content creation time, system processing time, or wall-clock synchronization, although the changes to the DAG *should* propagate into the ASCP channel log with minimal latency and typically within one second or less.
 
-- **RFC 3339 compliant** UTC-only timestamps (Z suffix mandatory)
+- MUST be **RFC 3339 compliant** UTC-only timestamps (Z suffix mandatory)
 - Fractional seconds SHOULD be limited to millisecond precision (3 digits maximum)
 - Timestamps SHOULD be precise to at least the nearest second
 - Timestamps SHOULD be accurate to within 100 milliseconds of actual wall-clock time when the system is operating online
@@ -653,7 +653,7 @@ This grammar defines a minimal but powerful **cognitive substrate**—a way to p
 - Designed for cryptographically scoped, decentralized distribution via ASCP
 - Organized as **semantic statements**, each explicitly terminated with a ; for clarity and structure
 
-It is the **syntax layer of the Cortex**—the foundation of durable, auditable collaboration between humans and intelligent systems.
+It provides the foundational syntax for durable, auditable collaboration between humans and intelligent systems.
 
 ## Future Considerations:
 
@@ -923,14 +923,14 @@ Where:
 
 Encodes a collection of UUIDs from the textual { uuid1, uuid2, ..., uuidN } syntax into a compact binary representation.
 
-**Textual Form**
+#### **Textual Form**
 
 ```plaintext
 { uuid1, uuid2, ..., uuidN }
 
 ```
 
-**Binary Format**
+#### **Binary Format**
 
 ```plaintext
 0x1F | 0x02 | <ULEB128-length> | <UUID-bytes>
@@ -944,40 +944,40 @@ Where:
 - \<ULEB128-length> = Number of bytes in the UUID data (always multiple of 16)
 - \<UUID-bytes> = Concatenated 16-byte UUIDs in sequence
 
-**Encoding Process**
+#### **Encoding Process**
 
 1. Count the UUIDs in the set: N
 2. Calculate byte length: N × 16
 3. Encode length as ULEB128
 4. Concatenate all UUID bytes in order
 
-**Examples**
+#### **Examples**
 
 - **3 UUIDs:** `0x1F 0x02 0x30` followed by 48 UUID bytes
 - **1 UUID:** `0x1F 0x02 0x10` followed by 16 UUID bytes
 - **Empty set:** encoded as `0x1F 0x02 0x00`
 
-**Semantic Properties**
+#### **Semantic Properties**
 
 - **Order preserved:** UUIDs maintain their textual sequence
 - **Duplicates allowed:** Consumer implementations MAY deduplicate
 - **Validation:** Byte count MUST be divisible by 16
 
-**Single UUID vs UUID Set Distinction**
+#### **Single UUID vs UUID Set Distinction**
 
 - A `0x20` single UUID is always a bare scalar value with no braces.
 - A `0x02` UUID Set is always brace-delimited in textual form and encoded as a compact block in binary form.
 - A `0x20` UUID is **not** equivalent to a singleton `0x02` UUID Set—braces are implied only in the set case.
 - Implementations MUST preserve this distinction.
 
-**Alternate Representation of Sets (with braces)**
+#### **Alternate Representation of Sets (with braces)**
 
 - Sets may alternatively remain in the **textual grammar form** with braces { … } and commas separating elements.
 - Inside this alternate form, each element MAY be encoded individually as a `0x20` UUID BVI or left as a textual UUID.
 - This form is valid but **less efficient**, since braces and commas remain part of the serialized form rather than collapsing into the compact 0x02 binary block.
 - Importantly, such brace-preserving encodings are **not the same as a** **0x02** **UUID Set**—they are textual-set representations with per-element encodings.
 
-**Encoding Examples:**
+#### **Encoding Examples:**
 
 **Original textual form:**
 
@@ -1001,7 +1001,7 @@ Where:
 
 The mixed form preserves brace syntax while allowing per-element encoding. The compact form eliminates all textual overhead by encoding the entire set as a single binary block.
 
-**Parser Requirements**
+#### **Parser Requirements**
 
 - MUST accept both canonical 0x02 binary form and brace-preserving textual form.
 - MUST NOT collapse a 0x20 single UUID without braces into a singleton 0x02 UUID Set or vice versa.
@@ -1014,14 +1014,14 @@ This distinction ensures consistent interpretation of singleton UUIDs, compact b
 
 Encodes arbitrary binary data from hex or binary string representations into direct binary form.
 
-**Textual Forms**
+#### **Textual Forms**
 
 ```
 0x48656c6c6f        ; hex representation
 0b0100100001100101  ; binary representation
 ```
 
-**Binary Format**
+#### **Binary Format**
 
 ```
 0x1F | 0x00 | <ULEB128-length> | <raw-bytes>
@@ -1034,20 +1034,20 @@ Where:
 - `<ULEB128-length>` = Number of bytes in the payload
 - `<raw-bytes>` = Direct binary data
 
-**Encoding Process**
+#### **Encoding Process**
 
 1. Parse hex (`0x...`) or binary (`0b...`) string representation
 2. Convert to raw bytes (hex: 2 chars → 1 byte, binary: 8 bits → 1 byte)
 3. Calculate byte length and encode as ULEB128
 4. Append raw binary data
 
-**Examples**
+#### **Examples**
 
 - **Hex input:** `0x48656c6c6f` → `0x1F 0x00 0x05 48656c6c6f`
 - **Binary input:** `0b0100100001100101` → `0x1F 0x00 0x02 4865`
 - **Empty data:** `0x` → `0x1F 0x00 0x00`
 
-**Validation Requirements**
+#### **Validation Requirements**
 
 - **Hex format:** Must contain even number of hex digits (full bytes)
 - **Binary format:** Must contain multiple of 8 bits (full bytes)
@@ -1058,13 +1058,13 @@ Where:
 
 Encodes UTF-8 text strings without requiring JSON-style escaping for common characters.
 
-**Textual Form**
+#### **Textual Form**
 
 ```plaintext
 "Hello, 世界! 🌍"
 ```
 
-**Binary Format**
+#### **Binary Format**
 
 ```plaintext
 0x1F | 0x03 | <ULEB128-length> | <utf8-bytes>
@@ -1077,7 +1077,7 @@ Where:
 - `<ULEB128-length>` = Number of bytes in UTF-8 encoding
 - `<utf8-bytes>` = Raw UTF-8 encoded string data
 
-**Encoding Process**
+#### **Encoding Process**
 
 *Encoders MUST first unescape JSON-style sequences into fully UTF-8 literal stream before encoding as a BVI UTF-8 escaped sequence*
 
@@ -1086,13 +1086,13 @@ Where:
 3. Calculate byte length and encode into ULEB128
 4. Append UTF-8 byte sequence
 
-**Examples**
+#### **Examples**
 
 - **ASCII:** `"Hello"` → `0x1F 0x03 0x05` + `48656c6c6f`
 - **Unicode:** `"世界"` → `0x1F 0x03 0x06` + `e4b896e7958c`
 - **Empty string:** `""` → `0x1F 0x03 0x00`
 
-**Character Handling**
+#### **Character Handling**
 
 - **No escaping required:** Direct UTF-8 encoding of all valid Unicode characters
 - **Newlines and tabs:** Encoded directly as UTF-8 bytes
@@ -1103,7 +1103,7 @@ Where:
 
 Encodes RFC 3339 compliant UTC timestamps using variable-width binary formats optimized for typical precision requirements.
 
-**Textual Form**
+#### **Textual Form**
 
 ```asciidoc
 2025-08-18T12:34:56Z           ; no fractional seconds
@@ -1111,7 +1111,7 @@ Encodes RFC 3339 compliant UTC timestamps using variable-width binary formats op
 2025-08-18T12:34:56.123456Z    ; microsecond precision
 ```
 
-**Binary Format**
+#### **Binary Format**
 
 ```asciidoc
 0x1F | 0x21 | <time32-bytes>
@@ -1124,19 +1124,19 @@ Where:
 - `0x21` or `0x22` = Timestamp type identifier (time32) or (time64) follows
 - `<time-bytes>` = Encoded timestamp data in big-endian format
 
-**Format Selection**
+#### **Format Selection**
 
 - **time32 (4 bytes):** No fractional seconds AND fits in 32-bit Unix timestamp range (1970-2106) for type code 0x21
 - **time64 (8 bytes):** Has fractional seconds OR exceeds 32-bit range (extends to year 2554) for type code 0x22
 
-**Encoding Process**
+#### **Encoding Process**
 
 1. Parse RFC 3339 timestamp and extract Unix epoch seconds + fractional component
 2. Validate fractional seconds precision (RFC 3339 supports arbitrary precision via `time-secfrac = "." 1*DIGIT`)
 3. Select format based on presence of fractional seconds and timestamp range
 4. Encode using appropriate binary representation
 
-**Examples**
+#### **Examples**
 
 - **Basic timestamp:** `2025-08-18T12:34:56Z` → `0x1F 0x21 0x66C7B310`  
   *(1,723,988,096 seconds since Unix epoch, encoded as 4-byte time32)*
@@ -1145,12 +1145,12 @@ Where:
 - **With microseconds:** `2025-08-18T12:34:56.123456Z` → `0x1F 0x22 0x1E74DF8066C7B310`  
   *(123,456,000 nanoseconds in upper 30 bits, same epoch seconds in lower 34 bits)*
 
-**Format Specifications**
+#### **Format Specifications**
 
 - **time32:** Direct `uint32` seconds since Unix epoch (1970-01-01T00:00:00Z)
 - **time64:** `uint64` = (fractional\_ns << 34) | seconds, where both formats share the same Unix epoch base and upper 30 bits encode nanoseconds (0-999,999,999)
 
-**RFC 3339 Compliance**
+#### **RFC 3339 Compliance**
 
 - UTC timezone only (Z suffix mandatory, no timezone offsets)
 - Hours restricted to 00-23 (RFC 3339 clarification over ISO 8601)
@@ -1188,7 +1188,7 @@ uuidC 0x1E 0x40 {data}     ; "json:" prefix compressed
 
 The DSD v1 organizes tokens into functional ranges to enable efficient lookup and future extension:
 
-**Verbs (0x00–0x1F)**
+#### **Verbs (0x00–0x1F)**
 
 | Code      | Token          |
 | --------- | -------------- |
@@ -1204,7 +1204,7 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 | 0x09      | removes        |
 | 0x0A–0x1F | Reserved verbs |
 
-**Artipoint Types (0x20–0x3F)**
+#### **Artipoint Types (0x20–0x3F)**
 
 | Code       | Type            |
 | ---------- | --------------- |
@@ -1220,7 +1220,7 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 | 0x29       | **decision**    |
 | 0x2A-0x03F | Reserved Future |
 
-**Typed-Block Prefixes (0x40–0x5F)**
+#### **Typed-Block Prefixes (0x40–0x5F)**
 
 | Code      | Token                         |
 | --------- | ----------------------------- |
@@ -1231,7 +1231,7 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 | 0x44      | uuid:                         |
 | 0x45–0x4F | Reserved typed-block prefixes |
 
-**Common Attributes (0x50–0x7F)**
+#### **Common Attributes (0x50–0x7F)**
 
 | Code      | Token                 |
 | --------- | --------------------- |
@@ -1259,7 +1259,7 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 | 0x65      | purpose::keyAgreement |
 | 0x66–0x7F | Reserved attributes   |
 
-**Vendor/Extension Range (Future)**
+#### **Vendor/Extension Range (Future)**
 
 | Range     | Purpose                       |
 | --------- | ----------------------------- |
@@ -1267,13 +1267,41 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 
 ## Compliance
 
-1. **Signing:** At Layer-1 Channel encoding, producers sign the payload as emitted. No re-serialization or normalization.
-2. **Reserved bytes:** 0x1E and 0x1F are reserved as escape introducers and MUST NOT appear in textual grammar regions. Producers MUST NOT emit these bytes outside of BVIs/DSD; decoders MUST error if encountered in textual regions thereby dropping the current articulation statement.
-3. **NUL Characters**: U+0000 is prohibited; encoders MUST error if present; decoders MUST reject.”
-4. **Extensibility:** Unknown codes in the reserved/vendor ranges MUST cause parse error unless explicitly declared in a profile.
-5. **Round-tripping:** Tools MAY expand escapes back to full text for readability, but any rewrite produces a distinct artifact with a new signature.
+### Core Requirements
 
-## Appendix 3: Validation and Error Handling (Normative) 
+1. **Signing:** At Layer-1 Channel encoding, producers sign the payload as emitted. No re-serialization or normalization.
+2. **Reserved Bytes:** 0x1E and 0x1F are reserved as escape introducers for DSD and BVI respectively.
+3. **Reserved Byte Restrictions:** These reserved bytes (0x1E and 0x1F) MUST NOT appear in textual grammar regions or in JSON objects.
+   - Producers MUST NOT emit these bytes outside of BVIs/DSD contexts.
+   - Decoders MUST error if encountered in textual regions, dropping the current articulation statement.
+4. **NUL Characters:** U+0000 is prohibited; encoders MUST error if present; decoders MUST reject.
+5. **Extensibility:** Unknown codes in the reserved/vendor ranges MUST cause parse error unless explicitly declared in a profile.
+6. **Round-tripping:** Tools MAY expand escapes back to full text for readability, but any rewrite produces a distinct artifact with a new Layer-1 signature.
+
+### Textual Format Recommendations
+
+Articulation Statements SHOULD follow these formatting conventions:
+
+- **Character Encoding:** MUST be UTF-8 encoding with no BOM (Byte Order Mark)
+- **Line Endings:** SHOULD use Unix-style line endings (LF without CR)
+- **Whitespace:** SHOULD NOT have trailing whitespace
+- **Spacing:** SHOULD have a single space after commas and semicolons, except when at end of line
+- **Attribute Ordering:** Attribute lists SHOULD be ordered alphabetically by key
+
+### JSON Payload Formatting
+
+JSON payload formatting within the grammar (e.g., `json:` blocks or attribute values) SHOULD follow these conventions:
+
+- **Canonicalization:** SHOULD follow best practices from [RFC 8785 – JSON Canonicalization Scheme (JCS)](https://datatracker.ietf.org/doc/html/rfc8785), unless the structure being encoded requires a different format
+- **Character Encoding:** MUST be strictly UTF-8 encoded just like the rest of the Articulation statement
+- **Key Ordering:** Keys SHOULD be sorted lexicographically (by UTF-16 codepoint)
+- **Whitespace:** SHOULD have no insignificant whitespace
+- **String Format:** Strings MUST use double quotes (") with proper JSON escaping
+- **Number Format:** Numbers SHOULD be in exact format (no trailing .0, scientific notation, or inconsistent formatting)
+
+**NOTE:** The formatting conventions in "Textual Format Recommendations" and "JSON Payload Formatting" are **not required for signature correctness**, but are highly encouraged to promote consistent encoding, diffability, and tooling interoperability across ASCP implementations.
+
+# Appendix 3: Validation and Error Handling (Normative) 
 
 This section defines **accept‑and‑record** behavior for an immutable log. Once an articulation enters a channel log, it is **never altered or removed** by protocol action. All implementations MUST converge on identical handling by following the rules below.
 
@@ -1327,6 +1355,6 @@ Implementations SHOULD expose a diagnostics feed with fields like { uuid, envelo
 - Unknown verbs/types/codes MUST NOT block ingestion. They are preserved for future interpreters and evaluated as **no‑op** today per E1/E2/E10.
 - Profiles MAY further constrain acceptance (e.g., disallow certain typed blocks) but MUST still follow these deterministic outcomes.
 
-### Conformance
+## Conformance
 
 Implementations MUST demonstrate, via test vectors, that given identical articulation sequences they yield identical DAG effects and identical diagnostics for all cases E1–E10.

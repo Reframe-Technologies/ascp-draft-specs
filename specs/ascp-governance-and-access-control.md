@@ -1,8 +1,11 @@
 # ASCP Governance and Access Control Specification
 
-Version 0.1 - Novermber 2025
+**Public Comment Draft -** *Request for community review and collaboration*
 
-Jeff Szczepanski, Founder and CEO Reframe Technologies
+Version: 0.2 — Informational (Pre-RFC Working Draft)  
+November 2025
+
+**Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
 # Abstract
 
@@ -35,19 +38,30 @@ This document does NOT define:
 
 Governance in ASCP is declarative, append-only, and semantically interpretable by both humans and AI agents.
 
-## Terminology
+# **Governance Scope Across All ASCP Structures**
 
-Key terms defined in this document:
+Governance in ASCP applies uniformly across all **Structures**, including Spaces, Streams, Piles, Groups, and Channels. Governance attributes such as member, writer, owner, role::\*, deny::\*, and expiration::\* are **Structure-agnostic** and MAY be attached to any Artipoint of a structural nature unless otherwise restricted.
 
-- **Structure** — An Artpoint of type Space, Stream, Pile, or Group.
+These governance attributes define **semantic participation**, **authorship rights**, **stewardship**, **role assignments**, and **inheritance behavior** within the coordination graph. Their interpretation is handled entirely within Layer-2 and Layer-3 through DAG evaluation. Governance semantics do **not** enforce cryptographic access; they define **semantic authority** and **coordination meaning**.
+
+Cryptographic enforcement, including access to encrypted payloads and distribution scopes, is the responsibility of Layer-1 Channels, which receive their effective participant sets and key provisioning instructions from the governance state evaluated in Layer-3.
+
+Governance therefore provides the **semantic model**, while Channels provide the **cryptographic transport**.
+
+# Terminology
+
+Key terms defined or referenced in this document:
+
+- **Structure** — An Artpoint of type Space, Stream, Pile, Channel or Group.
 - **Governance Attribute** — A typed attribute of an Artipoint expressing membership, authorship, stewardship, or roles.
+- **Channel** - The Layer-1 secure distribution mechanism of ASCP: a cryptographically scoped pathway through which Articulation Statements are signed, optionally encrypted, transmitted, and stored in an append-only log. A Channel establishes the visibility and privacy boundaries of shared context.
 - **Inherited Attribute** — An Artipoint attribute whose effective value is derived from a parent structure.
 - **Virtual Group** — A dynamic reference to a participant set (e.g., @members).
 - **Effective Governance Set** — The evaluated set of participants or roles after inheritance, overrides, denies, expirations, and virtual group resolution.
 
-Definitions of Artipoints, Articulation Statements, Channels, and the structural DAG appear in the ASCP Master Specification.
+Definitions of Artipoints, Articulation Statements and the structural DAG appear in the ASCP Master Specification.
 
-## Governance Model Overview
+# Governance Model
 
 Governance in ASCP is defined by three principles:
 
@@ -57,20 +71,31 @@ Governance in ASCP is defined by three principles:
 
 Applications MAY use governance attributes for authorization, routing, notifications, workload assignment, role resolution, or context rendering.
 
-## 4. Governance Attributes
+## Governance Attributes
 
-Attributes may appear for any Structure such as Space, Stream, Pile, or Group unless otherwise restricted.
+All Governance attributes defined in this specification are **Structure-agnostic**. They **MAY** apply to Spaces, Streams, Piles, Channels, Groups and other future Artipoint types.
 
-### 4.1 Membership
+This enables a consistent governance model across ASCP while preserving the independence between:
+
+- **semantic coordination structures** (Spaces, Streams, Piles)
+- **cryptographic distribution structures** (Channels)
+
+### Membership
 
 ```
 member + <participant>  
 member - <participant>
 ```
 
-Indicates semantic inclusion in a Structure.
+The \`member\` attribute expresses semantic inclusion of a participant within a Structure. It defines participation and coordination visibility at the semantic layer and is evaluated according to the inheritance and override rules described in this specification.
 
-### 4.2 Writers
+Membership does not itself grant cryptographic access to Channel content or any other transport-layer authorization. Cryptographic access is determined exclusively by the Layer-1 Channel key provisioning mechanism, which is configured based on governance evaluation performed by Layer-3 clients.
+
+Governance defines \*who is considered part of a Structure\*. Channels define \*who receives decryptable payloads\*. These domains are intentionally orthogonal but connected through Keyframes and Layer-3 interpretation.
+
+**Note**: Keyframes are NOT governance Artipoints but may be created as a result of governance evaluations provided to Layer-1.
+
+### Writers
 
 ```
 writer + <participant>  
@@ -79,7 +104,7 @@ writer - <participant>
 
 Indicates who may articulate into the Structure.
 
-### 4.3 Ownership
+### Ownership
 
 ```
 owner := <participant>
@@ -87,7 +112,7 @@ owner := <participant>
 
 Defines the administrative steward of a Structure.
 
-### 4.4 Inheritance Override
+### Inheritance Override
 
 ```
 inherits := <structure-ref | "default">
@@ -95,7 +120,7 @@ inherits := <structure-ref | "default">
 
 Defines explicit inheritance source.
 
-### 4.5 Deny Semantics
+### Deny Semantics
 
 ```
 deny::<attribute> := <participant>
@@ -103,7 +128,7 @@ deny::<attribute> := <participant>
 
 Denials override inherited and local positives.
 
-### 4.6 Expiration Semantics
+### Expiration Semantics
 
 ```
 expiration::<attribute> := (<participant>, <timestamp>)
@@ -111,11 +136,9 @@ expiration::<attribute> := (<participant>, <timestamp>)
 
 Expired grants MUST NOT be effective after the timestamp.
 
-# Groups
+## Groups
 
-Groups are modular participant sets expressed as Structures of type *group*.
-
-## Characteristics
+Groups are modular participant sets expressed as a Structures where the Artipoint type is `Group`. Groups:
 
 - MAY contain membership and role attributes
 - MAY reference other Groups
@@ -123,11 +146,11 @@ Groups are modular participant sets expressed as Structures of type *group*.
 - Act as reusable governance components
 - Provide identity stability
 
-## Composition
+### Composition
 
 Groups MAY be constructed from individuals, other Groups, or Virtual Groups.
 
-# Virtual Groups
+### Virtual Groups
 
 Virtual Groups dynamically resolve based on evaluated state.
 
@@ -139,6 +162,31 @@ Normative virtual groups:
 - `@role::<role>`
 
 Resolution MUST occur after inheritance, denies, and expiration pruning.
+
+## **Governance and Keyframe Semantics**
+
+Keyframes are Layer-2 Artipoints that encode the **intended cryptographic state** of a Channel or other secure distribution context. Their payloads typically include:
+
+- encryption algorithm declarations
+- signing algorithm declarations
+- kid version identifiers
+- references to participants for whom key envelopes must be generated
+
+Governance defines the **semantic reasons** for creating or modifying a Keyframe, including:
+
+- membership additions or removals
+- changes in responsibility or stewardship
+- explicit rotation events driven by policy
+
+However, Governance itself does **not** define the cryptographic mechanics of Keyframes. Layer-1 Channels carry out the actual:
+
+- generation of symmetric keys
+- creation of per-recipient JWE envelopes
+- enforcement of cryptographic access control
+
+Layer-3 implementations interpret Governance attributes, determine the effective participant set for a Channel, and supply this resolved set to Layer-1 for Keyframe execution.
+
+This ensures strict separation between **semantic authority** (Governance) and **cryptographic enforcement** (Channels).
 
 # RACI-Style Roles
 
@@ -197,7 +245,7 @@ Structures follow this containment model:
 
 # Evaluation Algorithm (Normative)
 
-Clients MUST evaluate governance in this order:
+Clients **MUST** evaluate governance in this order:
 
 1. Gather Local Attributes
 2. Apply Inheritance
@@ -209,12 +257,32 @@ Clients MUST evaluate governance in this order:
 8. Resolve RACI Roles
 9. Produce Effective Governance Set
 
+# **Channels as Governance-Controlled Distribution Structures**
+
+Channels are Structures that specialize in **cryptographic distribution**. Like all Structures, they MAY carry all the normal governance attributes defined by this specification. These attributes define the **semantic** participants and stewards of a Channel.
+
+However, Channels differ from other Structures in two ways:
+
+## **Cryptographic Enforcement**
+
+1. Channels enforce **payload confidentiality** and **distribution scope** using symmetric encryption and per-recipient key envelopes.
+2. This enforcement is not derived from governance directly; instead, Layer-3 interprets governance attributes and provides the effective participant list to Layer-1 for key provisioning.
+
+## **Keyframe Binding**
+
+1. Channels use Keyframes to express desired cryptographic configuration as Layer-2 Artipoints.
+2. Governance attributes influence Keyframe creation but do not dictate cryptographic behavior directly.
+
+This design allows Channels to be governed like any other Structure while preserving their role as transport-layer security boundaries.
+
 # Security Considerations
 
 Governance requires verified identities. All governance Artipoints MUST be signature-verified prior to evaluation. Identity verification, trust chain validation, and key material handling are defined in:
 
 - **ASCP Identity & Trust**
 - **ASCP Channels: Secure Distribution Layer Specification**
+
+**Important**: Governance evaluation **MUST** occur before any cryptographic state changes in Channels. Incorrect or malicious governance interpretation can result in unauthorized inclusion or exclusion at the semantic layer, but Layer-1’s cryptographic rules remain strict and independent.
 
 # Interaction with Bootstrap
 

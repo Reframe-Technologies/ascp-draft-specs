@@ -1,20 +1,21 @@
 # The Agents Shared Cognition Protocol (ASCP)
 
-**Architectural Framework and System Model for the Cortex Layer**
+**Architectural Framework and System Model**
 
-Informational Specification — Version 0.5  
+**Public Comment Draft -** *Request for community review and collaboration*
+
+Version: 0.5 — Informational (Pre-RFC Working Draft)  
 November 2025
 
-Jeffrey Szczepanski  
-Founder & CEO, Reframe Technologies, Inc.
+**Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
 # **Abstract**
 
 Modern digital work has no protocol for context. Human collaborators coordinate through ad-hoc chat, documents, and links; AI agents interact through stateless prompts and forget everything between sessions. As a result, shared understanding scatters, coordination is fragile, and meaning dissolves as fast as it is created.
 
-The **Agents Shared Cognition Protocol (ASCP)** introduces a missing layer of infrastructure: a **Cortex Layer** that provides durable, structured, and addressable context for humans and agents. ASCP defines a universal grammar for coordination statements—encoded as immutable, signed statements called **Artipoints**—and distributes these statements through secure Channels backed by an append-only synchronization layer.
+The **Agents Shared Cognition Protocol (ASCP)** introduces a missing layer of infrastructure: a **coordination substrate** that provides durable, structured, and addressable context for humans and agents. ASCP defines a universal grammar for expressing coordination through immutable units called **Artipoints**, which compose into cryptographically signed Articulation Sequences distributed through secure Channels backed by an append-only synchronization layer.
 
-Where HTTP standardized content delivery, ASCP standardizes **context articulation**. It enables persistent shared memory, auditable reasoning, and seamless collaboration across tools, devices, and intelligent agents. The result is an interoperable substrate for shared cognition: a distributed, private, and composable graph of articulated context that evolves as collaborators think and work together.
+Where HTTP standardized content delivery, Where HTTP standardized content delivery, ASCP standardizes **the articulation of context**. It enables persistent shared memory, auditable reasoning, and seamless collaboration across tools, devices, and intelligent agents. The result is an interoperable substrate for shared cognition: a distributed, private, and composable graph of articulated context that evolves as collaborators think and work together.
 
 # **Introduction**
 
@@ -24,7 +25,7 @@ This document provides the architectural framework for ASCP, describing the conc
 
 *To ground the architectural model, we begin with ASCP’s atomic primitive: the Artipoint.*
 
- Artipoints are immutable, addressable units of articulated context: structured statements about relevance, relationships, intent, and decision-making. Artipoints compose into **Articulation Statements**, which capture discrete acts of coordination, and these accumulate into an append-only, cryptographically verifiable log that forms a distributed DAG of shared understanding.
+Artipoints are immutable, addressable units of articulated context—structured references expressing relevance, relationships, intent, and decisions. Artipoints compose into **Articulation Statements**, which capture discrete acts of coordination, and these accumulate into an append-only, cryptographically verifiable log that forms a distributed DAG of shared understanding.
 
 End users do not interact with this DAG directly. Instead, applications materialize it through familiar constructs—timelines, threads, agendas, task lists—while ASCP ensures that the underlying context remains coherent, durable, and scoped appropriately for each participant. This allows private context to remain consistent with shared structure, resolving the long-standing tension between individual focus and collective awareness.
 
@@ -39,40 +40,26 @@ It is the **conceptual and architectural overview** for the ASCP specification s
 
 # Motivations for ASCP
 
-Despite the explosion of tools and connectivity, shared working context remains fragmented and ephemeral. Bookmarks are personal and lack structure, while teams coordinate through brittle messaging systems with no persistent memory. Work gets siloed across incompatible applications, each operating as a black box to the others. Meanwhile, AI agents require repeated prompt injections and lack any form of shared memory, forcing users to re-explain context even when the same agent helped create that context originally.
+Despite the explosion of tools and connectivity, shared working context remains fragmented and ephemeral. Bookmarks are personal and lack structure, while teams coordinate through brittle messaging systems with no persistent memory. [Work gets siloed](https://blog.reframetech.com/flipping-the-workflow-getting-computers-to-work-like-us) across incompatible applications, each operating as a black box to the others. Meanwhile, AI agents require repeated prompt injections and lack any form of shared memory, forcing users to re-explain context even when the same agent helped create that context originally.
 
 There is no foundational layer to manage shared intent, knowledge, and responsibility—no protocol for context itself.
 
-## The Digital Paper Problem
-
-This fragmentation stems from a deeper issue with our current digital infrastructure: while we've successfully encoded all content into digital form with links to reference it, we're still operating under what we call the "digital paper metaphor."
-
-Just as physical papers scattered across a desk require humans to manually organize and maintain the context connecting them, our digital artifacts exist as independent pieces that humans must manually coordinate:
-
-- Figma designs
-- Slack threads
-- Local files
-- Database records
-- Meeting notes
-
-When we copy and paste links between applications for collaboration, we not only lose the context of how and why these connections were made, but we also burden humans with continuously maintaining this coordination overhead.
-
 ## ASCP as the Missing Cortex Layer
 
-The coordination context that melds independent digital artifacts into coherent work remains locked in human memory and informal communication. We have the content, but we lack any structure for the **articulation work**—the work that coordinates the work, so that distributed activities can mesh together effectively—**forming** a first-class digital entity called the Cortex Layer.
+Despite encoding all content into digital form, our current infrastructure operates under a "digital paper" paradigm: independent artifacts—documents, messages, files—exist as discrete pieces that humans must manually coordinate and contextualize. The coordination context that melds these artifacts into coherent work remains locked in human memory and informal communication. We have the content, but we lack any structure for the **articulation work**—the work that coordinates the work, so that distributed activities can mesh together effectively—forming a first-class digital entity called the [**Cortex Layer**](https://blog.reframetech.com/building-the-missing-cortex-layer).
 
 ASCP implements this missing Cortex Layer by making articulation work itself structured, persistent, and addressable. Through a grammar that both humans and agents can read and write, a shared log of coordination statements, and addressable context scoped by task, person, or goal, ASCP transforms ad-hoc coordination into durable infrastructure. This enables agents to contribute meaningfully to workflows, evaluate and adjust plans dynamically, and collaborate transparently—finally bridging the gap between stateless tools and true collaborative partners.
 
 ## Three Key Innovations
 
 **1. Context as First-Class Content**  
-Rather than treating coordination as an informal, human-only activity, ASCP makes context itself a structured, addressable digital entity. Just as HTTP made content universally accessible, ASCP makes coordination context universally readable and writable by both humans and agents.
+ASCP makes coordination context itself a structured, addressable digital entity. Just as HTTP standardized content delivery, ASCP standardizes the articulation of context—making it universally readable and writable by both humans and agents.
 
 **2. Immutable Coordination History**  
-Instead of forcing consensus on a single "current state," ASCP captures what people actually articulated—when, by whom, and in what context. This creates an auditable trail of collaborative thinking that supports coordination without eliminating the nuanced human reasoning that emerges from seeing how decisions evolved.
+Every articulation is cryptographically signed and stored in an append-only log. Instead of forcing consensus on a single "current state," ASCP preserves what each participant articulated—when, by whom, and in what context—creating an auditable trail of collaborative reasoning.
 
 **3. Distributed Shared Memory**  
-The protocol provides persistent memory that spans across tools, sessions, and participants. When you work with an AI agent on Monday and return on Wednesday, both you and the agent have access to the same coordination context—no re-explanation required.
+The protocol provides persistent memory that spans tools, sessions, and participants. Context established on Monday remains accessible on Wednesday—to both humans and agents—without re-explanation or manual synchronization.
 
 # **What This Document is and is Not**
 
@@ -118,7 +105,7 @@ Begin with the **Motivations for ASCP** and **Underpinnings of ASCP** sections. 
 
 ### **For Readers Seeking a Conceptual Model**
 
-Read **Understanding Artipoints** and **Contextual Structures**. These sections define the cognitive building blocks of the Cortex Layer and how they compose into Piles, Streams, and Spaces.
+Read **Understanding Artipoints** and **Contextual Structures**. These sections define the cognitive building blocks of ASCP and how they compose into Piles, Streams, and Spaces.
 
 ### **For Architects and System Designers**
 
@@ -183,7 +170,7 @@ When you bookmark those same meeting notes as an Artipoint with a specific worki
 
 # **Understanding Artipoints**
 
-Artipoints are the foundational primitive of ASCP. Each Artipoint is an immutable, addressable, and author-attributed unit of articulated context—a durable statement that can be referenced, related, and built upon over time. They form the cognitive substrate of the Cortex Layer, enabling shared understanding across humans and AI agents.
+Artipoints are the foundational primitive of ASCP. Each Artipoint is an immutable, addressable, and author-attributed unit of articulated context—a durable statement that can be referenced, related, and built upon over time. They form the cognitive substrate that enables shared understanding across humans and AI agents.
 
 ## **Artipoints Are Structured Bookmarks**
 

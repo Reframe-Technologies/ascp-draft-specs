@@ -1,6 +1,10 @@
 # ASCP: **Bootstrap Process and Channel Discovery**
 
-Building a Local Replica and forming the Root of Trust.
+**Building a Local Replica and forming the Root of Trust.**
+
+Version 0.2 - Novermber 2025
+
+Jeff Szczepanski, Founder and CEO Reframe Technologies
 
 ## **Introduction**
 
