@@ -2,10 +2,20 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.2 — Informational (Pre-RFC Working Draft)  
+Version: 0.21 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
+
+# **Status of This Document**
+
+This document is part of the ASCP specification suite and defines the **governance and access control mechanisms** for ASCP collaborative structures, including membership attributes, inheritance semantics, RACI-style roles, and Channel governance. It is published at this time to gather community feedback on the governance model and evaluation semantics.
+
+This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Implementations based on this document should be considered **experimental**.
+
+The key words “MUST”, “MUST NOT”, “SHOULD”, “SHOULD NOT”, and “MAY”, when used in this document, are to be interpreted as described in RFC 2119 and RFC 8174. Their use here is intended to convey the authors’ expectations for future interoperability profiles; the normative requirements are provisional and subject to change.
+
+Feedback from implementers, protocol designers, distributed systems researchers, and security reviewers is explicitly requested to guide further development toward a future Internet-Draft.
 
 # Abstract
 

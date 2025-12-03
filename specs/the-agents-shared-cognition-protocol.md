@@ -4,10 +4,20 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.5 — Informational (Pre-RFC Working Draft)  
+Version: 0.51 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
+
+# **Status of This Document**
+
+This document establishes the architectural framework and conceptual foundation for the ASCP specification suite. It outlines the system model, design motivations, architectural principles, and how protocol components relate to one another—providing the theoretical and structural basis for the companion protocol specifications. We're publishing it now to gather community feedback on the overall architectural approach, coordination semantics, and layered design, which will help us advance the individual protocol sub-specifications.
+
+This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Implementations based on this document should be considered **experimental**.
+
+The key words “MUST”, “MUST NOT”, “SHOULD”, “SHOULD NOT”, and “MAY”, when used in this document, are to be interpreted as described in RFC 2119 and RFC 8174. Their use here is intended to convey the authors’ expectations for future interoperability profiles; the normative requirements are provisional and subject to change.
+
+Feedback from implementers, protocol designers, distributed systems researchers, and security reviewers is explicitly requested to guide further development toward a future Internet-Draft.
 
 # **Abstract**
 
