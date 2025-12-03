@@ -1434,11 +1434,21 @@ Receivers **MUST** validate, in order:
 6. Nonce correctness
 7. Signature correctness over the CBOR envelope bytes
 
-Messages failing any requirement **MUST** be rejected with an ALSP error message (Section 16).
+Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
 
-### **10.4.6 Error Cases**
+## **10.5 Timestamp Validation**
 
-Use the standard ALSP error message. For more guidance please reference to Section 15 on Error handling.
+Receiving peers MUST validate the `timestamp` field in the `alsp_msg_header` against their local clock.
+
+Implementations MUST NOT accept messages with timestamps that differ from the receiver's local time by more than 300 seconds (5 minutes), as accepting messages beyond this threshold significantly increases replay attack vulnerability.
+
+Implementations SHOULD reject messages whose `timestamp` value differs from the receiver's local time by more than 60 seconds. This recommended default provides strong replay protection while accommodating reasonable clock skew between peers and network latency.
+
+When a message is rejected due to timestamp violation, the receiver MUST send an ALSP error message (Section 16) with the `stale_timestamp` error code indicating the timestamp validation failure.
+
+## **10.6 Error Cases**
+
+Use the standard ALSP error message. For more guidance please reference to Section 16 on Error handling.
 
 - `invalid_auth`: Bad signature, unknown kid, or cert mismatch.
 - `unauthorized`: Token or CAK proof rejected.
@@ -1788,81 +1798,107 @@ While Layer 1 manages all key lifecycle operations (rotation, expiration, revoca
 
 # **14. Transport Bindings**
 
-## **14.1 Transport Independence Statement**
+ALSP is transport-agnostic and can operate over any bidirectional, ordered, reliable delivery mechanism. This section defines the baseline requirements for interoperable deployments and provides guidance for WebSocket/TLS bindings, which serve as the default transport profile.
 
-While ALSP is designed to be transport-agnostic, this specification defines a WebSocket-based binding as the primary implementation. WebSockets provide the optimal characteristics for log synchronization: persistent bidirectional connections that support both push and pull sync models, low-latency message delivery, and efficient batching of articulation entries. Other transport bindings such as HTTPS and gRPC may be considered as future options.
+**Unless explicitly stated otherwise, descriptive text in this section is informational; only statements using RFC 2119 terminology are normative.**
 
-All transport endpoints MUST enforce TLS 1.3 or higher for secure connection establishment and ALSP-level peer session authentication. ALSP implements a dual authentication approach:
+## **14.1 Baseline Transport Profile**
 
-1. **Transport Level (TLS)**: Implementations MUST establish a strong cipher based TLS connection to provide end-to-end encryption with a unique session key. For client-server configurations operating on public internet or corporate infrastructure, implementations SHOULD validate server certificates against PKI infrastructure to authenticate the server domain. For peer-to-peer configurations, implementations MAY use alternative authentication techniques, though such mechanisms are outside the scope of ASCP. 
-2. **Protocol Level (ALSP)**: Once the secure transport connection is established, ALSP auth\_request, auth\_challenge (as needed), and hello message exchange provide the mandatory peer authentication and authorization that applies at the channel replica level. This sequence establishes the session and forms the basis for ongoing message authentication.
+Implementations **MUST** support WebSockets over TLS 1.3 as the baseline ALSP transport. Other transports (e.g., raw TCP, HTTP/2 CONNECT, HTTP/3, gRPC) **MAY** be supported but are not required for baseline interoperability.
 
-## **14.2 WebSocket-over-TLS Binding (Normative)**
+All ALSP messages sent over WebSockets **MUST** use binary frames; text frames **MUST NOT** be used.
 
-The WebSocket binding leverages the full-duplex, persistent nature of WebSocket connections combined with Dot Preserving Binary (DPB) encoding to support high-throughput, resilient synchronization even in the face of large backlogs or offline replay scenarios.
+Transport-level compression (e.g., permessage-deflate) **SHOULD** be disabled to avoid known compression side-channel attacks.
 
-### **Transport Characteristics**
+Each new transport connection **MUST** establish a new ALSP session; ALSP sessions **MUST NOT** span multiple transport connections.
 
-WebSockets provide optimal support for ALSP's bidirectional synchronization requirements:
+Transport-level failures (TLS alerts, WebSocket close frames, underlying socket failures) are **not** represented using ALSP error messages. Upon any transport failure, peers **MUST** initiate a new ALSP session and resume synchronization via sync\_request.
 
-- Full-duplex communication allows both client and server to initiate sync operations without polling
-- Persistent connections reduce overhead compared to repeated HTTPS requests
-- Native support for live updates and push-based delivery
+## **14.2 TLS Requirements**
 
-### **TLS Connection Setup**
+All ALSP deployments using TLS **MUST** use TLS 1.3 or higher.
 
-This section normatively specifies the default ALSP transport over TLS. All ALSP connections establish secure communication through a standardized process that combines transport-level security via TLS 1.3 WebSocket connections with protocol-level authentication through the ALSP auth\_request, auth\_challenge, and hello message exchange. The following requirements define the specific connection establishment procedures:
+Clients **MUST** validate the server certificate when establishing a TLS-protected transport, unless operating in an explicitly configured development or testing mode. Certificate validation **SHOULD** follow standard PKIX verification procedures.
 
-1. **Endpoint and scheme.** For a given domain, the canonical ALSP endpoint **SHOULD** be a WebSocket Secure (WSS) origin at port **443**, e.g., wss\://ascp.\<domain>. Clients **MUST** use the wss scheme and TCP port 443 unless explicitly configured otherwise.
-2. **TLS and ALPN.** The client **MUST** initiate a TLS handshake to the origin on TCP/443. During the handshake, the client **MUST** offer **ALPN** protocols h2 and http/1.1; the server **MUST** select one. Implementations **MUST**support TLS 1.3; support for TLS 1.2 is **OPTIONAL**.
+Server-side certificate rotation **MAY** occur without affecting ALSP session semantics; new connections will naturally establish new ALSP sessions.
+
+## **14.3 WebSocket Binding**
+
+When using WebSockets:
+
+- The client **MUST** initiate the WebSocket handshake.
+- The server **MUST** advertise acceptance of the ALSP subprotocol (if defined).
+- The connection **MUST** be established over TLS 1.3.
+- WebSocket extensions providing compression **SHOULD NOT** be negotiated.
+- Implementations **MAY** use WebSocket close code 1000 (normal closure) or 1002 (protocol error) to terminate connections.
+
+WebSocket pings/pongs are transport operations and do not affect ALSP message sequencing.
+
+## **14.4 HTTP Upgrade and Extended CONNECT**
+
+ALSP **MAY** be deployed using HTTP/1.1 Upgrade, HTTP/2 extended CONNECT, or HTTP/3 CONNECT. These profiles **SHOULD** maintain the same security properties and MUST preserve ordered, bidirectional message delivery.
+
+Implementations supporting multiple HTTP transports **MUST** ensure consistent ALSP session semantics across all bindings.
+
+## **14.5 Alternative Transports**
+
+Deployments **MAY** define additional bindings (e.g., raw TCP with TLS, QUIC streams, or gRPC streaming APIs). Any alternative binding:
+
+- **MUST** support ordered, reliable delivery.
+- **MUST** preserve ALSP message boundaries exactly as encoded.
+- **MUST** provide equivalent security properties to WebSocket/TLS.
+- **MUST** begin a new ALSP session on transport establishment.
+
+Future companion documents may specify additional transport profiles.
+
+## **14.6 WebSocket Connections (Non-Normative)**
+
+This section provides implementation guidance for establishing WebSocket connections that satisfy the normative requirements defined in sections 14.1-14.5. The following procedure describes a typical connection establishment sequence:
+
+1. **Endpoint and scheme.** For a given domain, implementations typically use a WebSocket Secure (WSS) origin at port 443, such as wss\://ascp.\<domain>. Clients generally use the wss scheme and TCP port 443 unless explicitly configured otherwise.
+2. **TLS and ALPN.** The client initiates a TLS handshake to the origin on TCP/443. During the handshake, the client offers ALPN protocols h2 and http/1.1, and the server selects one. Implementations MUST support TLS 1.3; TLS 1.2 support is optional.
 3. **WebSocket establishment.**
-   - If ALPN selects **HTTP/2**, the client and server **MUST** establish the WebSocket using the **Extended CONNECT** mechanism per RFC 8441 with :protocol = "websocket".
-   - If ALPN selects **HTTP/1.1**, the client and server **MUST** establish the WebSocket using the standard HTTP/1.1 **Upgrade** handshake.
-4. **Connection model.** After the WebSocket is established, ALSP **MUST** operate over a **persistent, full-duplex** TCP connection. Application data **MUST** be carried as **WebSocket binary messages**.
-5. **Compression.** Implementations **SHOULD NOT** negotiate per-message compression extensions (e.g., per-message-deflate) for ALSP frames by default, as Layer 1 payloads already employ JWE compression where appropriate, and compression can introduce security vulnerabilities like CRIME and BREACH attacks.
-6. **Keepalive and liveness.** Endpoints **SHOULD** use WebSocket **Ping/Pong** frames to detect half-open connections and to maintain NAT/firewall mappings at reasonable intervals.
-7. **Subprotocol identification.** Servers **SHOULD** advertise, and clients **SHOULD** request, the WebSocket subprotocol token `ascp.alsp.v1` (where v1 corresponds to ALSP version 0.x for backward compatibility) via Sec-WebSocket-Protocol to enable policy and routing at intermediaries. If the subprotocol is not accepted, the connection **MAY** proceed without it.
-8. **Proxy traversal.** When traversing explicit HTTP proxies, clients **MAY** use HTTP CONNECT tunneling prior to TLS, per HTTP semantics. Once tunneled, the requirements in (2) and (3) apply.
-9. **Error handling and reconnect.** On transport failure (TLS or WebSocket), clients **SHOULD** immediately re-establish a new WSS connection and resume ALSP synchronization per the ALSP state machine (hello/auth and channel resubscription rules defined elsewhere in this specification).
-10. **WebSocket close handling.** When ALSP protocol errors occur, implementations **SHOULD** close the WebSocket with code 1002 (Protocol Error) and include the ALSP error\_code in the close reason where possible.
+   - If ALPN selects HTTP/2, the client and server establish the WebSocket using the Extended CONNECT mechanism per RFC 8441 with :protocol = "websocket".
+   - If ALPN selects HTTP/1.1, the client and server establish the WebSocket using the standard HTTP/1.1 Upgrade handshake.
+4. **Connection model.** After the WebSocket is established, ALSP operates over a persistent, full-duplex TCP connection. Application data is carried as WebSocket binary messages.
+5. **Compression.** Implementations typically avoid negotiating per-message compression extensions (e.g., per-message-deflate) for ALSP frames, as Layer 1 payloads already employ JWE compression where appropriate, and compression can introduce security vulnerabilities like CRIME and BREACH attacks.
+6. **Keepalive and liveness.** Endpoints typically use WebSocket Ping/Pong frames to detect half-open connections and to maintain NAT/firewall mappings at reasonable intervals.
+7. **Subprotocol identification.** Servers typically advertise, and clients typically request, the WebSocket subprotocol token `ascp.alsp.v1` (where v1 corresponds to ALSP version 0.x for backward compatibility) via Sec-WebSocket-Protocol to enable policy and routing at intermediaries. If the subprotocol is not accepted, the connection may proceed without it.
+8. **Proxy traversal.** When traversing explicit HTTP proxies, clients may use HTTP CONNECT tunneling prior to TLS, per HTTP semantics. Once tunneled, the requirements in (2) and (3) apply. Proxy traversal is outside the scope of ALSP and follows standard HTTP semantics.
+9. **Error handling and reconnect.** On transport failure (TLS or WebSocket), clients typically immediately re-establish a new WSS connection and resume ALSP synchronization per the ALSP state machine (hello/auth and channel resubscription rules defined elsewhere in this specification).
+10. **WebSocket close handling.** When ALSP protocol errors occur, implementations typically close the WebSocket with code 1002 (Protocol Error) and include the ALSP error\_code in the close reason where possible.
 
-## **14.3 Message Framing Rules**
+### **Message Framing**
 
-**Framing and message unit.** Each WebSocket **binary message** **MUST** contain exactly one ALSP envelope (the deterministic-CBOR Layer‑0 envelope, that contains the DPB JWS payload as defined elsewhere in this specification). WebSocket fragmentation is transport-internal and **MUST NOT** be observable at the ALSP layer.
-
-## **14.4 Performance Notes (Non-Normative)**
-
-*(Optional—summaries related to batching/effects.)*
-
-## **14.5 Future Transport Notes (Non-Normative)**
-
-*(Keep short.)*
+Each WebSocket binary message contains exactly one ALSP envelope (the deterministic-CBOR Layer‑0 envelope, that contains the DPB JWS payload as defined elsewhere in this specification). WebSocket fragmentation is transport-internal and is not observable at the ALSP layer.
 
 # **15. Node Topology and Deployment Models**
 
-ALSP's symmetric protocol design enables flexible deployment topologies ranging from centralized client-server architectures to distributed peer-to-peer networks. The choice of architecture is orthogonal to the protocol itself—any replica can serve sync requests to any other authorized replica regardless of network topology.
+ALSP can operate in a variety of network configurations due to the symmetry of the protocol. Every replica implements the same ALSP logic; the only practical distinction between nodes is whether they **accept inbound connections**, **initiate outbound connections**, or **do both**.
 
-## **15.1 Client/Server Model**
+**Unless explicitly stated otherwise, topology descriptions in this section are informational; only statements using RFC 2119 terminology are normative.**
 
-**Centralized Architecture**: The most common deployment pattern involves clients connecting to a centralized "server" that acts as both a data backup repository and primary replication partner. This server maintains authoritative copies of all channel logs and coordinates synchronization across multiple client replicas.
+Deterministic ordering (Section 12), authentication, and session semantics apply uniformly across all topologies. Each transport connection **MUST** establish a new ALSP session (Section 14).
 
-## **15.2 Peer-to-Peer Configurations**
+## **15.1 Client–Server Model (Informational)**
 
-**Distributed Architecture**: ALSP also supports loosely distributed sets of nodes where peers connect to peers without requiring a central authority. The specific peer discovery and connection configuration mechanisms are deployment-specific and not defined by this protocol specification.
+In a client–server deployment, multiple clients establish outbound connections to a common server. The server maintains a consolidated replica of each Channel Log and participates in synchronization with all connected clients.
 
-## **15.3 Connection Constraints**
+This model is common when replicas cannot directly reach each other or when a single shared replica simplifies operational management. The protocol behavior remains identical for all participants.
 
-**Servers**: Must accept inbound connections and serve sync requests from authorized clients. Servers never initiate outbound connections to clients, operating purely in a responsive mode for connection establishment. To classify as a server in the protocol, a server MUST take connections from multiple nodes. Servers MUST refuse to authenticate a session with a node\_id replica that already has an established connection.
+## **15.2 Peer-to-Peer Model (Informational)**
 
-**Clients/Peers**: Typically initiate outbound connections to their configured sync partners. Clients may optionally accept inbound connections from other peers, but this is not required for basic operation. Given the full-duplex and symmetrical nature of the protocol, the topology MUST be constructed such that peers only maintain a single point-to-point connection with each other. For peer-to-peer operation, a peer MUST NOT attempt to connect to another node that already has a connection established regardless of who established it.
+In a peer-to-peer deployment, replicas connect directly to one another in an ad hoc manner. Any replica may initiate outbound connections, accept inbound connections, or both. Nodes may maintain simultaneous sessions with multiple peers to improve resilience and reduce latency.
 
-## **15.4 Role Symmetry**
+Peer-to-peer topology does not alter ALSP semantics: ordering, divergence detection, and authentication all function exactly as in the client–server model.
 
-By definition, servers not only respond to sync requests and send channel updates to clients, but also actively request live updates from connected clients. When a client supports push mode, the server automatically receives new content via sync\_update messages. However, if a client does not support push mode, the server must periodically issue sync\_request messages to collect new client content and maintain up-to-date channel logs.
+## **15.3 Hybrid Model (Informational)**
 
-This bidirectional synchronization ensures that servers maintain comprehensive, current views of all channel activity across their connected client base, regardless of individual client capabilities.
+Hybrid deployments combine elements of both previous models. Some replicas form direct peer-to-peer connections, while others connect through one or more nodes that accept inbound connections. Hybrid topologies often arise naturally in environments with heterogeneous network constraints.
 
-## **15.5 Push Mode Synchronization**
+ALSP does not impose any restrictions on such mixed deployments. All replicas follow the same synchronization rules regardless of how they are connected.
+
+## **15.4 Push-Mode Subscription (Partially Normative)**
 
 ALSP operates in one of two synchronization modes:
 
@@ -1870,7 +1906,11 @@ ALSP operates in one of two synchronization modes:
 
 **Push Mode (Optional)**: After initial synchronization, the peer automatically sends sync\_update messages when new messages become available for subscribed channels.
 
-### **15.5.1** Negotiating Push Mode
+Push-mode is an optional optimization where a replica requests proactive delivery of new Channel Log entries. A replica requesting push-mode **MUST** be prepared to fall back to pull-mode if the peer does not advertise support.
+
+The sequence descriptions and examples for push-mode are **informational** and do not define a prescriptive state machine; only statements using RFC 2119 terminology are normative.
+
+### **15.4.1 Negotiating Push Mode**
 
 During the hello exchange, peers negotiate push capabilities:
 
@@ -1888,7 +1928,7 @@ This eliminates polling overhead and reduces latency for real-time synchronizati
 
 **Important**: Push subscriptions are unidirectional. If both peers want to receive automatic updates for the same channel, each peer must send its own sync\_request to subscribe. Otherwise, push updates will only flow in one direction.
 
-### **15.5.2 Channel Subscription State Machine**
+### **15.4.2 Channel Subscription State Machine**
 
 Channel Sync States are maintained per peer connection for nodes that handle multiple inbound connections:
 
@@ -1912,9 +1952,25 @@ Each replica MUST maintain a per-peer, per-channel subscription table tracking w
 - A sync\_request completes successfully
 - Explicitly cleared when a connection closes or authentication fails
 
+## **15.5 Multi-Peer Connectivity (Informational)**
+
+Replicas **MAY** maintain concurrent ALSP sessions with multiple remote endpoints. This is common in peer-to-peer and hybrid deployments and increases robustness against network partitions or partial failures.
+
+Regardless of connectivity pattern:
+
+- Ordering semantics **MUST** follow Section 12.
+- Session establishment and authentication **MUST** follow Section 8 and Section 14.
+- Divergence detection and recovery **MUST** follow Section 17.
+
+Topology does not affect any protocol guarantees.
+
 # **16. Error Handling**
 
 ALSP defines a structured error message used to signal protocol violations, authentication failures, authorization problems, and capability mismatches between replicas. Error messages are carried in the standard ALSP envelope and follow the same JWS signing and nonce-binding rules as all other ALSP messages.
+
+**Transport-Level Failures:**
+
+Transport-level failures (e.g., WebSocket disconnects, TLS alerts, timeouts) are not conveyed using ALSP error messages. Implementations MUST treat these events as error conditions and proceed with reconnection and resynchronization behavior as described in Section 16.5.
 
 ## **16.1 Error Message Format**
 
@@ -1965,17 +2021,17 @@ ALSP defines a structured error message used to signal protocol violations, auth
 
 ## **16.2 Error Codes**
 
-| Description          |                                                                                                                               |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| invalid\_auth        | Certificate does not match claimed identity or is untrusted.                                                                  |
-| unauthorized         | Replica is not permitted to access the requested channel.                                                                     |
-| hash\_mismatch       | A validation SHA-256 hash mismatch has occurred and this implies log divergence.                                              |
-| stale\_timestamp     | The message was rejected due to the timestamp being out-of -range. Replay attack is suspected.                                |
-| protocol\_violation  | Message structure or sequence violated ALSP semantics.                                                                        |
-| unsupported\_version | Peer sent an incompatible message format or spec version.                                                                     |
-| payload\_too\_large  | Message exceeds max\_alsp\_length or violates buffer constraints.                                                             |
-| internal\_error      | Sender encountered an unexpected failure.                                                                                     |
-| re-auth-required     | This error can be generated to force the termination of a sync session. The disconnect parameter MUST be true for this error. |
+| Description          | Force Disconnect?                                      | Notes                                                                                          |
+| -------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| invalid\_auth        | YES                                                    | Certificate does not match claimed identity or is untrusted.                                   |
+| unauthorized         | NO unless it appears to be a DoS attack                | Replica is not permitted to access the requested channel.                                      |
+| hash\_mismatch       | NO unless it appears to be a DoS attack                | A validation SHA-256 hash mismatch has occurred and this implies log divergence.               |
+| stale\_timestamp     | NO unless it appears to be a DoS attack                | The message was rejected due to the timestamp being out-of -range. Replay attack is suspected. |
+| protocol\_violation  | YES                                                    | Message structure or sequence violated ALSP semantics.                                         |
+| unsupported\_version | YES - after session authentication, otherwise OPTIONAL | Peer sent an incompatible message format or spec version.                                      |
+| payload\_too\_large  | NO unless it appears to be a DoS attack                | Message exceeds max\_alsp\_length or violates buffer constraints.                              |
+| internal\_error      | OPTIONAL                                               | Sender encountered an unexpected failure.                                                      |
+| re-auth-required     | YES                                                    | This error can be generated to force the termination of a sync session.                        |
 
 ## **16.3 Required Behavior**
 
@@ -1985,11 +2041,11 @@ When encountering invalid messages, replicas SHOULD log the error details and co
 
 Replicas MUST validate that all required fields are present and correctly typed before processing any sync message, and SHOULD send appropriate error responses for protocol violations.
 
-**Recovery model:** All error recovery follows the same pattern as normal sync operations - establish connection, negotiate capabilities via hello, and request missing data via sync\_request. The protocol's idempotent design ensures that reconnection after any failure is equivalent to resuming sync after offline operation.
+**Recovery model:** All error recovery follows the same pattern as normal sync operations - establish connection, negotiate capabilities via hello, and request missing data via sync\_request. After any transport or protocol failure, peers **MUST** initiate a new ALSP session and resume synchronization using sync\_request. ALSP’s idempotent message semantics ensure that this behavior results in deterministic recovery and eventual convergence.
 
 - Error messages may be sent in response to any ALSP message.
 - A hello response with an error code is a valid rejection of the handshake.
-- The receiver of an error message should log or report the error and must honor the disconnect directive if set to true.
+- The receiver of an error message SHOULD log the error and MUST honor the disconnect directive if set to true.
 
 ## **16.4 Error Handling During Sync**
 
@@ -2020,33 +2076,52 @@ Recommended backoff strategy:
 
 Replicas MAY implement more aggressive retry behavior for user-initiated sync operations, but automated background sync SHOULD respect these limits.
 
+## 16.6 Error Message Example (Non-Normative)
+
+```c
+{
+  "alsp_msg_type": "error",             // Error message type identifier
+  "timestamp": "<rfc-3339-timestamp>",  // Timestamp of this message
+  "error_code": "invalid_auth",
+  "reason": "Signature did not validate with referenced key",
+  "disconnect": true,
+  "suggested_action": "Re-establish trust material or re-bootstrap"
+}
+```
+
 # **17. Channel Log Health Check & Recovery**
 
 While ALSP ensures deterministic, convergent log synchronization under normal operation, real-world systems may encounter channel divergence due to implementation bugs, storage faults, or partial sync failures. This section defines normative and recommended practices for detecting and recovering from such divergence scenarios.
 
 ## **17.1 Digest Hash Exchange**
 
-Implementations MAY periodically compute a deterministic hash of the message log for each channel based on the canonical ordering of message IDs. This digest can be validated with any peer via any sync\_request message. This is done via the optional log\_digest parameter of the sync\_request message.
+Implementations **SHOULD** periodically compute a deterministic digest representing the current state of a Channel Log. When supported, the digest **MUST** be computed using the algorithm and canonical ordering defined below:
 
-- Hash inputs MUST include all logged message\_id values in canonical order.
-- Hashing only the Layer 0 message\_id metadata (not payloads) is sufficient for detection.
-- A mismatch signals possible divergence or incomplete sync.
-- One should only perform this check when one presumed that the peer has the specified range of messages available to it therefore this is best done once one believes the log is already up to date.
+- The digest **MUST** be sha256: followed by the hexadecimal SHA-256 output.
+- The digest **MUST** be computed over the concatenation of message\_id values (UUID value of 16 raw bytes) for all Layer-0 entries included in the Channel Log in **canonical log order**.
+- Canonical log order **MUST** be defined by the ordering rules of Section 12 (Lamport ordering with global tie-breaking).
 
-Important: Any receiver of a log\_digest value MUST compute the corresponding local log\_digest for the same set of messages its own replica, and if there is a mismatch, it MUST send a hash\_mismatch error to the original sender. No other actions are required, but the receiver MAY attempt a recovery operation per Section 17.3.
+Any implementation that includes log\_digest in a sync\_update message **MUST** follow this computation procedure.
+
+Any receiver of a log\_digest value in an ALSP message MUST compute the corresponding local log\_digest for the same set of messages its own replica, and if there is a mismatch, it MUST send a hash\_mismatch error to the original sender.
+
+No other actions are required, but the receiver MAY attempt a recovery operation per Section 17.3.
 
 ## **17.2 Range Consistency Checking**
 
-During sync\_request or sync\_response, replicas MAY evaluate:
+A mismatch **MUST** be interpreted as one or more of the following conditions:
 
-- Number of log entries
-- First and last lamport\_times in the log.
+- The local log is missing entries.
+- The local log includes extra entries not present on the peer.
+- The local log contains entries in a different order.
+- Local storage has been corrupted.
+- The peer is sending incorrect data due to misbehavior or implementation error.
 
-Peers can use this to identify range inconsistencies or unexpected log truncation.
+If a digest mismatch is detected, the receiving node **SHOULD** initiate divergence recovery as defined in Section 17.3.
 
 ## **17.3 Divergence Recovery Options**
 
-If divergence is detected, replicas MAY perform the following recovery options:
+If divergence is detected, implementations **SHOULD** attempt recovery using one or more of the following mechanisms:
 
 ### **1. Targeted Rehydration**
 
@@ -2065,9 +2140,9 @@ If divergence is detected, replicas MAY perform the following recovery options:
 
 ## **17.4 Merkle Tree Extensions (Non-Normative)**
 
-A Merkle tree structure per channel log MAY be implemented to support efficient range comparison, similar to Git or Hypercore. This enables detection of localized divergence with minimal hash exchange.
+In future versions of the specification a Merkle tree structure per channel log may be implemented to support efficient range comparison, similar to Git or Hypercore. This enables detection of localized divergence with minimal hash exchange.
 
-## **17.5 Operational Best Practices**
+## **17.5 Operational Best Practices (Informational)**
 
 Divergence Prevention Guidelines:
 
@@ -2125,21 +2200,67 @@ This prevents counter regression and maintains the best possible wall clock sort
 
 # **19. Security Considerations**
 
-*(To be built out more—will summarize threats, transport security, CAK hazards, identity handling.)*
+Security in ALSP is layered across the ASCP stack. Layer-0 provides integrity, ordering, authentication, and replay protection for Channel Log replication; confidentiality, authorship, and access control are defined in the Layer-1 and Layer-2 specifications. The following considerations summarize the intended security posture of ALSP. These topics will be expanded into a full Security Considerations section as the specification matures toward an Internet-Draft.
 
-### **19.1 Replay Protection**
+## **19.1 Intended Guarantees (High-Level)**
 
-To prevent replay attacks, receiving peers MUST validate the `timestamp` field in the `alsp_msg_header` against their local clock.
+ALSP aims to provide:
 
-Implementations MUST NOT accept messages with timestamps that differ from the receiver's local time by more than 300 seconds (5 minutes), as accepting messages beyond this threshold significantly increases replay attack vulnerability.
+- **Authenticated messaging** — all ALSP messages are JWS-signed and bound to a session nonce.
+- **Integrity and non-malleability** — tampered messages are rejected before processing.
+- **Replay resistance** — stale timestamps, reused nonces, or duplicate message identifiers are rejected.
+- **Deterministic ordering** — adversaries cannot induce divergent log orderings.
+- **Authorized replication** — only replicas with valid Channel Access Keys may replicate logs.
+- **Divergence detection** — digest mismatches allow detection of tampering or implementation faults.
 
-Implementations SHOULD reject messages whose `timestamp` value differs from the receiver's local time by more than 60 seconds. This recommended default provides strong replay protection while accommodating reasonable clock skew between peers and network latency.
+These form the minimum required security properties at Layer-0; confidentiality and authorship claims are handled by higher layers.
 
-When a message is rejected due to timestamp violation, the receiver MUST send an ALSP error message (Section 16) with an appropriate error code indicating the timestamp validation failure.
+## **19.2 Threats Under Consideration**
+
+The protocol is designed to resist:
+
+- Passive or active network attackers (tampering, replay, message substitution)
+- Malicious or misconfigured peers
+- Accidental or intentional divergence of channel logs
+- Resource-exhaustion behavior during sync sessions
+
+Further formal threat modeling will be incorporated in future drafts following RFC 3552 guidance.
+
+## **19.3 Interaction With Higher Layers**
+
+Because ALSP transports semantically opaque Layer-1 envelopes:
+
+- Confidentiality is provided by **Layer-1 JWE encryption**, not ALSP.
+- Authorship and governance semantics are provided by **Layer-2 articulation signatures**.
+- Identity binding and trust root management rely on the **ASCP Identity & Trust** specification.
+
+ALSP implementers MUST validate signatures and MUST NOT alter or reinterpret Layer-1 payloads.
+
+## **19.4 Areas for Future Expansion**
+
+As this specification moves toward an RFC track, this section will be expanded to include:
+
+- A formal threat model
+- Detailed attack classes and required mitigations
+- Privacy considerations
+- Operational guidance for key rotation, trust-root updates, and divergence handling
+- Cross-protocol substitution and downgrade-resistance analysis
+- DoS considerations and rate-limiting guidance
+- Security interactions with push-mode sync and multi-transport deployments
+
+These topics are intentionally deferred until the protocol has undergone further public review and practical implementation feedback.
 
 # **20. IANA Considerations**
 
-*(Currently empty placeholder.)*
+At this stage of the ALSP specification, **no IANA actions are requested**. As the protocol matures toward an Internet-Draft, this section will be expanded to define any required registries, including:
+
+- ALSP message types
+- ALSP error codes
+- ALSP WebSocket subprotocol identifiers
+- JOSE header parameter values specific to ALSP
+- Version negotiation tokens or transport-binding identifiers
+
+These registries will be specified once the wire format, error taxonomy, and transport bindings have stabilized through community review and early implementation experience.
 
 # **21. Examples (Non-Normative)**
 
