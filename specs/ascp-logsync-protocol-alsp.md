@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.4 — Informational (Pre-RFC Working Draft)  
+Version: 0.50 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -85,147 +85,147 @@ By limiting ALSP to synchronization, ordering, and replica-level security, the s
 
 This section defines terms used normatively throughout this specification. Terms not defined here carry their customary meaning within the ASCP architecture.
 
-### **ALSP (ASCP LogSync Protocol)**
+### **4.1 ALSP (ASCP LogSync Protocol)**
 
 The Layer 0 protocol of the ASCP stack responsible for transport-agnostic replication of append-only Channel Logs using deterministic ordering.
 
-### **Articulation**
+### **4.2 Articulation**
 
 A Layer 2 semantic unit representing structured shared cognition. Articulations are conveyed to Layer 0 as opaque JOSE JWS/JWE compact sequences encapsulated within Layer 1 message envelopes.
 
-### **ASCP (Agents Shared Cognition Protocol)**
+### **4.3 ASCP (Agents Shared Cognition Protocol)**
 
 A four-layer protocol suite enabling persistent, structured collaboration among humans and agents. ALSP defines Layer 0 of this stack.
 
-### **Bootstrap Log**
+### **4.4 Bootstrap Log**
 
 A log containing initial Channel references, identity material, certificates, and cryptographic keys. It serves as the trust root for Channel manifests, identity binding, and authorization.
 
-### **Canonical Order**
+### **4.5 Canonical Order**
 
 The total ordering over Channel Log entries defined as the tuple **(lamport\_time, message\_id)**, sorted first by Lamport clock value and then by the lexicographic ordering of the 16-byte message identifier.
 
-### **Challenge Flow**
+### **4.6 Challenge Flow**
 
-A server-side handshake path triggered when the receiving replica cannot fully validate the client’s identity using cached or known materials and therefore sends an auth\_challenge requesting additional identity data. Challenge Flow describes server behavior independent of the client’s credential mode.
+A server-side handshake path triggered when the receiving replica cannot fully validate the client's identity using cached or known materials and therefore sends an auth\_challenge requesting additional identity data. Challenge Flow describes server behavior independent of the client's credential mode.
 
-### **Channel**
+### **4.7 Channel**
 
 A uniquely identified, append-only stream of Layer 1 message envelopes. Channels define the unit of distribution and authorization within ASCP.
 
-### **Channel Access Key (CAK)**
+### **4.8 Channel Access Key (CAK)**
 
 An Ed25519 key pair used to authenticate access to a Channel at Layer 0. The public key is distributed in the Channel Manifest; the private key is held by authorized participants to produce Channel Access Proofs.
 
-### **Channel Log**
+### **4.9 Channel Log**
 
-A replica’s ordered sequence of Layer 1 message envelopes for a specific Channel. The log is append-only and synchronized across replicas using ALSP.
+A replica's ordered sequence of Layer 1 message envelopes for a specific Channel. The log is append-only and synchronized across replicas using ALSP.
 
-### **Channel Manifest**
+### **4.10 Channel Manifest**
 
 Channel metadata distributed via the bootstrap process, including Channel identifiers, access-control configuration, and the CAK public key.
 
-### **Digest Hash Exchange**
+### **4.11 Digest Hash Exchange**
 
 A Channel Log consistency check in which replicas compare a SHA-256 digest of message identifiers in canonical order to detect divergence.
 
-### **Direct Mode**
+### **4.12 Direct Mode**
 
-A client credential-supply mode in which the initiating replica includes all identity materials necessary for validation in its initial auth\_request. Direct Mode describes how the client packages credentials and does not imply anything about the server’s validation flow.
+A client credential-supply mode in which the initiating replica includes all identity materials necessary for validation in its initial auth\_request. Direct Mode describes how the client packages credentials and does not imply anything about the server's validation flow.
 
-### **Dot-Preserving Binary (DPB)**
+### **4.13 Dot-Preserving Binary (DPB)**
 
 A reversible binary encoding that transforms JOSE compact serialization into a more efficient on-wire representation by decoding Base64url segments while preserving literal dot separators. Used by Layer 0 to transport Layer 1 payloads without semantic interpretation.
 
-### **Hello Message**
+### **4.14 Hello Message**
 
 The message exchanged after authentication to negotiate session parameters, exchange lamport\_max values, advertise capabilities, and confirm mutual authorization before synchronization.
 
-### **Identity Key**
+### **4.15 Identity Key**
 
 The long-term cryptographic key pair representing a participant (human or agent) within ASCP. Represented as a JWK and bound to an identity via signed claim bundles defined outside this specification.
 
-### **Immediate Flow**
+### **4.16 Immediate Flow**
 
-A server-side handshake path in which the receiving replica can validate the client’s auth\_requestimmediately based on locally available trust material, allowing it to respond directly with hello without issuing an auth\_challenge.
+A server-side handshake path in which the receiving replica can validate the client's auth\_requestimmediately based on locally available trust material, allowing it to respond directly with hello without issuing an auth\_challenge.
 
-### **JWK (JSON Web Key)**
+### **4.17 JWK (JSON Web Key)**
 
 A JOSE structure used to encode public and symmetric keys, including Identity Keys, Bootstrap channel keys, and Channel Access Keys.
 
-### **JWS (JSON Web Signature)**
+### **4.18 JWS (JSON Web Signature)**
 
 The JOSE signature format used to authenticate all ALSP messages and to carry Channel Access Proofs.
 
-### **JWT (JSON Web Token)**
+### **4.19 JWT (JSON Web Token)**
 
 The JOSE token format used within ASCP for identity claims and trust establishment. JWT content is not interpreted by ALSP.
 
-### **JOSE (JavaScript Object Signing and Encryption)**
+### **4.20 JOSE (JavaScript Object Signing and Encryption)**
 
 A family of standards (JWS, JWE, JWK) used by ASCP for signatures, encryption, and key representation. ALSP is aware only of compact serialization encoding and does not interpret JOSE semantics.
 
-### **kid (Key Identifier)**
+### **4.21 kid (Key Identifier)**
 
 A structured identifier of the form ascp:\<type>:\<uuid> referencing key material obtained through the bootstrap process. Used in JWS and JWE protected headers.
 
-### **Lamport Clock**
+### **4.22 Lamport Clock**
 
 A monotonically increasing logical timestamp used by ALSP to provide deterministic ordering across distributed replicas.
 
-### **lamport\_max**
+### **4.23 lamport\_max**
 
 The highest Lamport clock value known to a replica at the time a message is sent. Propagated during sync to maintain logical time coherence across replicas.
 
-### **log\_digest**
+### **4.24 log\_digest**
 
 A SHA-256 digest of the sequence of message identifiers in canonical order, used for Channel Log consistency checks.
 
-### **message\_id**
+### **4.25 message\_id**
 
 A 16-byte universally unique identifier (UUID) assigned by ALSP to each Layer 1 message envelope for idempotence and ordering.
 
-### **node\_id**
+### **4.26 node\_id**
 
 A universally unique identifier for a replica participating in ALSP synchronization.
 
-### **payload**
+### **4.27 payload**
 
 The DPB-encoded JOSE compact serialization of a Layer 1 JWS/JWE message. ALSP treats payloads as opaque byte sequences.
 
-### **Provisioned Mode**
+### **4.28 Provisioned Mode**
 
 A client credential-supply mode in which the initiating replica includes only minimal identity references in its initial auth\_request, supplying full credentials only if requested via auth\_challenge. Provisioned Mode concerns client behavior, not server response.
 
-### **Pull Sync**
+### **4.29 Pull Sync**
 
 A synchronization mode in which replicas request Channel Log updates via sync\_request messages.
 
-### **Push Sync**
+### **4.30 Push Sync**
 
 A synchronization mode in which replicas automatically deliver new Channel Log entries via sync\_update messages after an initial synchronization.
 
-### **Replica**
+### **4.31 Replica**
 
 An authorized node storing and synchronizing one or more Channel Logs.
 
-### **Session**
+### **4.32 Session**
 
 A mutually authenticated communication context established between two ALSP replicas for the duration of message exchange. A session begins with the ALSP authentication handshake, binds all subsequent messages through session-specific nonces and signature rules, and persists until closed, terminated, or expired.
 
-### **session\_nonce**
+### **4.33 session\_nonce**
 
 A per-session, randomly generated 128-bit nonce created independently by each endpoint. During authentication, each replica includes its own `session_nonce` in the JWS protected header's `nonce` field. After authentication completes, each replica includes the peer's `session_nonce` in the `nonce` field instead. This cross-use of session nonces binds messages to a specific authenticated session and prevents replay attacks across connections.
 
-### **sync\_request**
+### **4.34 sync\_request**
 
 An ALSP message used by a replica to request Channel Log entries or verify log state.
 
-### **sync\_response**
+### **4.35 sync\_response**
 
 An ALSP message containing Channel Log entries provided in response to a sync\_request.
 
-### **sync\_update**
+### **4.36 sync\_update**
 
 An ALSP message used in push mode to deliver newly appended Channel Log entries without an explicit request.
 
@@ -891,7 +891,7 @@ This section defines the complete **Layer-0 ALSP message model**, including the 
 
 ## **10.1 Message Envelope Structure**
 
-This section specifies the on‑wire encoding for ALSP messages. It defines a compact CBOR envelope that batches Layer‑0 entries while carrying a flexible message header as a JSON blob. The entire CBOR envelope is integrity‑protected via a JWS signature forms the JWS payload. JWS must sign the entire CBOR bytes verbatim.
+This section specifies the on‑wire encoding for ALSP messages. It defines a compact CBOR envelope that batches Layer‑0 entries while carrying a flexible message header as a JSON blob. The CBOR envelope serves as the JWS payload and is integrity-protected by a JWS signature that signs the entire CBOR byte sequence verbatim.
 
 - **Envelope:** The ALSP envelope is encoded as **deterministic CBOR**.
 - **Header:** `alsp_msg_header` is a **CBOR byte string** whose contents are **UTF‑8 JSON**. The CBOR layer treats it as opaque.
@@ -1344,21 +1344,17 @@ Authentication messages do **not** grant channel access; they only establish the
   - **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17 for detailed semantics.
   - Receivers **MUST** use this digest for log health checking and divergence detection per Section 17.
 
-## **10.4 Message Authentication (JWS Layer)**
+## **10.4 Message Authentication**
 
-All ALSP messages are secured using JWS compact serialization, where the complete message structure (including headers and payload array) is cryptographically signed and encoded into the ALSP Dot Preserving Binart (DPB).
+ALSP protects message integrity and authenticity by wrapping each message in a JWS signature. The complete ALSP Envelope—including both the message header and any payload entries—is signed using the sender's private key, creating cryptographic proof of the message's origin and binding it to the active session. The resulting signed structure is then encoded using DPB (Section 7) to produce the final ALSP frame for transmission over the underlying transport (Section 14).
 
-After Session authentication completes, every message's JWS protected header must carry the peer's session nonce. All messages are signed with the sender's private key and verified using their registered public key, providing cryptographic proof of identity and session binding.
-
-Each ALSP session begins with authentication using one of two flows: Auth\_Request/Hello exchange for known peers, or Auth\_Request/Auth\_Challenge/Hello sequence for new identity binding. During establishment, both peers generate unique 32-character hexadecimal `session_nonce` values that provide replay protection for the entire session.
+This approach ensures that every message can be verified against the sender's registered public key, establishing both identity proof and session binding throughout the connection lifecycle. The authentication flows, nonce generation rules, and session establishment procedures that govern this signing process are detailed in Section 8.
 
 ### **10.4.1 JWS Header Requirements**
 
-All ALSP messages are integrity-protected using JWS.
+The **JWS Protected Header** MUST be a JSON object containing the fields defined below, SHOULD be serialized using RFC 8785 JCS canonical JSON, and MUST be encoded as UTF-8 prior to BASE64URL encoding as specified in RFC 7515.
 
-The **JWS Protected Header** MUST be a JSON object with the fields defined below and MUST be encoded using UTF-8 prior to BASE64URL encoding as specified in RFC 7515.
-
-#### **Protected Header:**
+#### **JWS Protected Header:**
 
 ```clike
 {
@@ -1400,29 +1396,21 @@ The **JWS Protected Header** MUST be a JSON object with the fields defined below
 - **MUST** be present with contents as specified in Section 8.1
 - Receivers **MUST** reject any message whose protected header contains an unexpected nonce to ensures session binding, replay protection, and cross-session separation.
 
-#### **JWS Payload:**
+### **10.4.2 JWS Payload**
 
-The JWS payload contains the complete ALSP envelope encoded as deterministic CBOR bytes, as defined in the Transport Bindings section. This envelope includes the ALSP version, message header (containing alsp\_msg\_type, timestamp, channel\_id, lamport\_max, etc. as UTF-8 JSON bytes), and optional payload array of Layer-0 wrapped Layer-1 articulation statement entries. This ensures cryptographic integrity protection for both routing metadata and articulation content at the transport layer. The `timestamp` field within the ALSP message header must be populated with the current time in RFC 3339 UTC format at message generation for replay protection.
+The ALSP Envelope (as defined in Section 10.1) serves as the JWS payload. The JWS signature cryptographically protects the entire envelope, including all routing metadata and message content.
 
-#### **Wire Format:**
+### **10.4.3 ALSP Frame (Wire Format)**
+
+An ALSP frame MUST be constructed as a DPB-encoded JWS compact serialization (see Section 7 for DPB encoding), formatted as:
 
 ```clike
-<DPB_encoded_JWS_bytes>
+DPB( <JWSprotectedHeader>.<JWSpayload>.<JWSsignature> )
 ```
 
-Where the DPB-encoded bytes represent the JWS compact serialization: `<JWSprotectedHeader>.<JWSpayload>.<JWSsignature>`
+It is the ALSP frame that travels "on the wire" using an underlying transport binding per section 14.
 
-### **10.4.2 Serialization and Encoding Requirements**
-
-#### **Canonical JSON**
-
-- The Protected Header JSON **SHOULD** be serialized using **RFC 8785 JCS canonical JSON** before BASE64URL encoding.
-
-#### **Encoding**
-
-- After JSON serialization, the Protected Header **MUST** be UTF-8 encoded, then BASE64URL encoded without padding, as defined in RFC 7515.
-
-### **10.4.3 Verification Rules**
+### **10.4.4 Verification Rules**
 
 Receivers **MUST** validate, in order:
 
@@ -1433,10 +1421,11 @@ Receivers **MUST** validate, in order:
 5. Algorithm and key resolution
 6. Nonce correctness
 7. Signature correctness over the CBOR envelope bytes
+8. Timestamp validation per Section 10.4.5
 
 Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
 
-## **10.5 Timestamp Validation**
+### **10.4.5 Timestamp Validation**
 
 Receiving peers MUST validate the `timestamp` field in the `alsp_msg_header` against their local clock.
 
@@ -1446,7 +1435,7 @@ Implementations SHOULD reject messages whose `timestamp` value differs from the 
 
 When a message is rejected due to timestamp violation, the receiver MUST send an ALSP error message (Section 16) with the `stale_timestamp` error code indicating the timestamp validation failure.
 
-## **10.6 Error Cases**
+## **10.5 Error Cases**
 
 Use the standard ALSP error message. For more guidance please reference to Section 16 on Error handling.
 
@@ -1556,8 +1545,6 @@ The CAP MUST be included in the credentials field of a sync\_request, e.g.:
 ```
 
 If the credentials field is present when a channel does *not* require a CAK, servers **MAY** ignore it.
-
-## **11.3 Server Verification Algorithm**
 
 ## **11.3 Server Verification Algorithm**
 
@@ -1870,7 +1857,7 @@ This section provides implementation guidance for establishing WebSocket connect
 
 ### **Message Framing**
 
-Each WebSocket binary message contains exactly one ALSP envelope (the deterministic-CBOR Layer‑0 envelope, that contains the DPB JWS payload as defined elsewhere in this specification). WebSocket fragmentation is transport-internal and is not observable at the ALSP layer.
+Each WebSocket binary message MUST contain exactly one ALSP Frame as defined in Section 10.4.3. WebSocket fragmentation is handled by the transport layer and is transparent to ALSP.
 
 # **15. Node Topology and Deployment Models**
 

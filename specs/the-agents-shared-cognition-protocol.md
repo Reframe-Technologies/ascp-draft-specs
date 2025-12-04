@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.51 — Informational (Pre-RFC Working Draft)  
+Version: 0.52 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -147,7 +147,7 @@ This section provides a complete reference to the ASCP specification suite, show
 | **Governance & Access Control**         | **ASCP Governance and Access Control**                       | Specifying participation, access control, permission inheritance, and role resolution        | Governance attributes (member, writer, owner), inheritance rules, groups and virtual groups, RACI-style roles, and the evaluation algorithm.                              |
 | **Bootstrap & Discovery**               | **ASCP: Bootstrap Process and Channel Discovery**            | First-time replica provisioning and channel discovery process.                               | Bootstrapping trust root, retrieving Bootstrap channels, validating trust graph, discovering channel manifests.                                                           |
 
-### Reading Order for Implementers
+### Suggested Reading Order for Implementers
 
 1. **The Agents Shared Cognition Protocol** (This Document) – Understanding the architecture, core concepts, and layered model.
 2. **ASCP Artipoint Grammar** – Implement the syntax/semantics for immutable coordination statements.

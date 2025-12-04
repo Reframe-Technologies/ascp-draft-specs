@@ -2,12 +2,12 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.61 — Informational (Pre-RFC Working Draft)  
+Version: 0.65 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
-# **Status of This Document**
+# **1. Status of This Document**
 
 This document is part of the ASCP specification suite and defines the grammar used to express immutable, addressable Artipoints within ASCP. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the Artipoint syntax and related semantics.
 
@@ -17,11 +17,11 @@ The key words “MUST”, “MUST NOT”, “SHOULD”, “SHOULD NOT”, and �
 
 Feedback from implementers, protocol designers, distributed systems researchers, and security reviewers is explicitly requested to guide further development toward a future Internet-Draft.
 
-# **Abstract**
+# **2. Abstract**
 
 This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). Artipoints are immutable, timestamped, and author-attributed statements forming the foundational units of the ASCP coordination graph. This grammar specifies the structure of Artipoints, articulation patterns, operator semantics, payload formats, and the ABNF definition required for deterministic parsing and interoperability.
 
-# **Introduction & Background**
+# **3. Introduction & Background**
 
 The Artipoint Grammar emerged in response to a fundamental gap in human-human and human-AI collaboration: the absence of durable, interpretable, and shared cognitive structure for coordination work. Most contemporary systems operate on ephemeral exchanges—messages, prompts, or transient memory updates—rather than persistent, structured meaning that makes collaborative work possible. What the web standardized for documents and APIs, ASCP seeks to standardize for **contextual coordination**.
 
@@ -38,7 +38,7 @@ Where RDF emphasizes universal description and Merkle DAGs emphasize verifiabili
 
 The result is a system that captures not just the final state of collaborative work, but the complete history of articulation decisions that built that shared understanding—creating a foundation for true shared cognition between humans and intelligent agents.
 
-# **Structural Model of the Grammar**
+# **4. Structural Model of the Grammar**
 
 The **Artipoint Grammar** defines a minimalist syntax for representing cognitive atoms—called **Artipoints**—as immutable, addressable statements. Multiple Artipoints form an **articulation sequence**, where each Artipoint is a semicolon-terminated line that captures a complete, atomic declaration of intent or structure.
 
@@ -52,7 +52,7 @@ The grammar is intentionally flat: **there is no nesting** within expressions. A
 
 ASCP's core innovation is recognizing that collaboration requires a **persistent, shared cognitive substrate**—the immutable structure of how work gets organized, connected, and reasoned about—distinct from the content itself. Think of ASCP as tracking the **cognitive scaffolding**: decisions about what's relevant, how pieces relate, which tasks depend on others. This scaffolding persists and remains auditable even as underlying documents and data evolve.
 
-## The Reference Principle
+## 4.1 The Reference Principle
 
 Key design insight: **Artipoints capture cognitive structure, not dynamic content itself**.
 
@@ -66,7 +66,7 @@ The core unit follows this (non-normative) pattern:
 
 Where the optional expression enables four fundamental articulation patterns: instantiation (creating new cognitive atoms), annotation (enriching existing ones), connection (linking atoms), and construction (creating and linking simultaneously).
 
-## **Immutability in Practice**
+## **4.2 Immutability in Practice**
 
 Because Artipoints capture the persistent cognitive substrate rather than dynamic content, each statement becomes a permanent, auditable decision point in the DAG. This design enables rich collaborative histories: an AI agent's relevance judgment, a human's organizational decision, or a team's dependency mapping all accumulate as an immutable record—even as the documents, data, and deliverables they reference continue to evolve externally.
 
@@ -84,13 +84,15 @@ Because Artipoints capture the persistent cognitive substrate rather than dynami
 
 This creates a permanent record: "this agent determined this paper was highly relevant to this project at this moment." The paper may be updated or moved, but the cognitive judgment—the structural relationship between paper and project—remains immutable and traceable.
 
-## Structural Benefits
+## 4.3 Structural Benefits
 
 This design enables teams to work within a common cognitive structure while maintaining appropriate privacy and scope. Team members contribute to the same underlying DAG—the shared "tree" of how work is organized—while potentially having private branches and nodes that others cannot see. Everyone benefits from the structural coherence without sacrificing information security or cognitive autonomy.
 
 The result is true **shared cognition**: not just exchanging messages or files, but building and evolving a persistent, jointly-accessible model of how the work itself is structured and interconnected.
 
-# **Artipoint Format**
+# **5. Core Articulation Elements**
+
+## **5.1 Artipoint**
 
 The core normative unit of an Artipoint in the grammar is as follows:
 
@@ -108,6 +110,8 @@ artipoint = "[" uuid "," author "," timestamp ["," expression ] "]"
 
 > Omitting the expression results in a "no-op" placeholder—a valid, referenceable cognitive atom that can be enriched or connected later.
 
+## 5.2 Articulation Statement
+
 Each Artipoint is a single, semicolon-terminated line (called an `artipoint-statement` in the formal grammar):
 
 ```bnf
@@ -115,14 +119,20 @@ articulation-statement = artipoint ";" [ end-of-line ]
 
 ```
 
-Multiple such statements form an `articulation-sequence`:
+The Articulation Statement forms a "Cognitive Atom"—a fully atomic unit that captures a specific statement, timestamp, and author.
+
+## 5.3 Articulation Sequences
+
+One or more Articulation Statements are then logically form into an `articulation-sequence`:
 
 ```abnf
 articulation-sequence = 1*(artipoint-statement)
 
 ```
 
-## **Articulation Statement Author**
+An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All Artipoints in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1.
+
+## **5.4 Statement Author**
 
 Every Artipoint represents a statement made by an **author**, creating a direct link between cognitive assertions and their originators. The author field contains a **uuidReference** that points to an **Identity Artipoint**—an immutable record containing the author's attributes including handles, decentralized identifiers (DIDs), email addresses, and cryptographic key material.
 
@@ -130,7 +140,22 @@ This design ensures that authorship becomes an integral part of the immutable DA
 
 The author field **MUST** contain a UUID reference to a valid Identity Artipoint. The grammar requires that author contains a UUID referencing an Identity Artipoint. Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field, maintaining clean separation between identity and identification methods.
 
-# **Articulation Patterns**
+## **5.4 Statement Recipients (Informational)**
+
+The Artipoint Grammar defines the structure and semantics of Artipoints and Articulation Sequences, but it **does not encode explicit recipients** or perform any distribution or access-control function.
+
+However, **governance itself is articulated through Artipoints**. Membership attributes, group definitions, and inheritance rules (normatively defined in the *ASCP Governance & Access Control* specification) determine **who is contextually part of a Space, Stream, or other collaborative structure**. These governance statements express the *semantic audience*—that is, who *ought* to participate in the coordination context.
+
+Actual delivery, visibility, and privacy are enforced solely by **ASCP Channels** (normatively defined in the *ASCP Channels: Secure Distribution Layer* specification). Channels determine **who receives, stores, and can decrypt** an Articulation Sequence.
+
+In short:
+
+- **Governance Artipoints** express *who is included* in a collaborative scope;
+- **Channels** enforce *who actually receives* articulated statements.
+
+This maintains strict layering: articulation semantics and governance live at Layer-2, while distribution and access-control are implemented at Layer-1.
+
+# **6. Articulation Patterns**
 
 The true power of Artipoints emerges through **composition**—how individual cognitive atoms combine to form complex, interconnected structures within the DAG. Each of the four articulation patterns defined below serves a distinct role in building and evolving this shared cognitive graph:
 
@@ -145,7 +170,7 @@ This compositional approach means that complex cognitive artifacts—project pla
 
 The following normative sub-sections detail each one of distinct kind of articulations one can make along with the associated grammar.
 
-## **Instantiation**
+## **6.1 Instantiation**
 
 ```bnf
 instantiation = "[" artipoint-type "," label "," payload "]" [ "." attribute-list ]
@@ -159,7 +184,7 @@ Declares a typed and labeled unit of meaning with an embedded or referenced payl
 - **payload**: The main content—can be a typed embedded inline structure (ie: typedBlock), literal numeric value using various encodings, or an ordinary quoted UTF-8 string which would typically be a URL.
 - **attribute-list**: Optional semantic metadata. See the section on Artipoint Attributes.
 
-## **Annotation**
+## **6.2 Annotation**
 
 ```bnf
 annotation = uuidReference "." attribute-list
@@ -168,7 +193,7 @@ annotation = uuidReference "." attribute-list
 
 Applies new attributes to an existing Artipoint. Used for modification, enrichment, or contextual update to prior context. Annotations and operators on them are fully explained in the **Artipoint Annotation Attributes** section.
 
-## **Connection**
+## **6.3 Connection**
 
 ```bnf
 connection = uuidReference verb-operator uuidSet
@@ -183,7 +208,7 @@ Establishes a semantic relationship between an existing source Artipoint (LHS) a
 
 See **Operator Semantics** for detailed definitions of structural, hierarchical, and Scoped Displacement Behavior effects.
 
-## **Construction**
+## **6.4 Construction**
 
 ```bnf
 construction = instantiation verb-operator uuidSet
@@ -198,7 +223,9 @@ A construction expression creates a new Artipoint and applies a verb-operator be
 
 See **Operator Semantics** for the definitions of topological, hierarchical, and SDB effects.
 
-# **Payloads and Typed Blocks**
+# **7. Payloads and Typed Blocks**
+
+## 7.1 Payload Types
 
 The normative pattern for the payload of an Artipoint MUST be according to the following:
 
@@ -220,21 +247,27 @@ The payload field, used both in instantiations and attribute values, accepts the
 
 The quoted-string form is just shorthand for the string typed block pattern and often will be a URL referencing the dynamic content or state of the artipoint.
 
+## 7.2 JSON Payloads
+
 The `jsonObject` pattern is intentionally opaque to the ASCP grammar. The Layer-2 parser identifies only the outer `{ ... }` boundaries and consumes everything between as a JSON payload. ASCP requires that these braces form a syntactically balanced region so the payload can be correctly delimited, but it does not enforce JSON's internal structure or semantics. JSON payloads are marked with a `json:` prefix and, when interpreted, must be well-formed JSON objects per [RFC 8259](https://datatracker.ietf.org/doc/html/rfc8259). All whitespace, formatting, and JSON-specific validation is handled externally. This separation keeps the ABNF grammar focused on articulation structure while allowing full JSON flexibility.
 
-**Normative Constraint:** Expressions **MUST NOT** appear inside payloads. Payloads are opaque content-bearing structures and cannot contain instantiation, annotation, connection, or construction expressions. Composition occurs **only** via referencing previously articulated Artipoints through UUIDs. Implementations **MUST** reject or treat as invalid any payload that attempts to embed grammar-level expressions.
+## **7.3 No Expressions in Payloads**
 
-**Payload Type Extensibility:** The standard payload types (`json`, `string`, `uri`, `data`, `uuid`) are fixed and defined by this specification. Custom payload types MAY be used for experimental or domain-specific purposes and, if proven valuable, MAY be incorporated into future versions of this standard. Implementations encountering unrecognized payload types SHOULD treat the typed block as opaque content and preserve it without interpretation.
+Expressions **MUST NOT** appear inside payloads. Payloads are opaque content-bearing structures and cannot contain instantiation, annotation, connection, or construction expressions. Composition occurs **only** via referencing previously articulated Artipoints through UUIDs. Implementations **MUST** reject or treat as invalid any payload that attempts to embed grammar-level expressions.
 
-# Articulation Operator Taxonomy and Semantics
+## **7.4 Payload Type Extensibility**
 
-## General Principles
+The standard payload types (`json`, `string`, `uri`, `data`, `uuid`) are fixed and defined by this specification. Custom payload types MAY be used for experimental or domain-specific purposes and, if proven valuable, MAY be incorporated into future versions of this specification. Implementations encountering unrecognized payload types SHOULD treat the typed block as opaque content and preserve it without interpretation.
+
+# 8. Articulation Operator Taxonomy and Semantics
+
+## 8.1 General Principles
 
 - Operators **do not** alter prior Artipoints; they define new relationships only.
 - Operators are **deterministic**: given the same inputs, every conforming client MUST produce the same resulting coordination graph.
 - Operators MAY be extended with future verbs, but unrecognized operators MUST be ignored without interpretation.
 
-## Verb Operator Structure and Hierarchy
+## 8.2 Verb Operator Structure and Hierarchy
 
 This table defines a set of verb-based operators used in the Artipoint grammar and classifies them by their semantic intent and structural behavior. Each verb enables fine-grained, semantically rich articulation of cognitive structure within the Cortex Layer, allowing both humans and agents to reason explicitly over relationships—from provenance chains to agenda construction to scoped replacements and incremental composition.
 
@@ -259,7 +292,7 @@ Table Column Definitions:
 - **Hierarchical**: Specifies if/how the relationship implies a structural or hierarchical containment or dependency.
 - **SDB**: Scoped Displacement Behavior (yes or no) indicates whether the operator produces scoped masking or displacement semantics within the contextual structures that contain both LHS and RHS. That is,  whether the operator suggests a semantic replacement, displacement, or archival of the RHS item.
 
-## **Scope and Masking**
+## **8.3 Scope and Masking**
 
 Some operators in the Artipoint Grammar produce **Scoped Displacement Behavior (SDB)**. This normative section defines the rules for how scope is determined and how displacement must be applied.
 
@@ -269,7 +302,7 @@ Some operators in the Artipoint Grammar produce **Scoped Displacement Behavior (
 4. **No Scope → No Displacement:** If the LHS and RHS share **no** contextual structure, displacement **MUST NOT** occur. Implementations **MAY** emit a diagnostic.
 5. **Non-Propagation:** Displacement effects **MUST NOT** apply outside shared scopes and MUST NOT propagate to unrelated structures.
 
-## **Operator Implications on the DAG**
+## **8.4 Operator Implications on the DAG**
 
 The verb-operator determines the complete structural effect of both **connection** and **construction** articulations. Operators define how the LHS relates to the RHS within the coordination DAG, including:
 
@@ -285,7 +318,7 @@ All operators MUST be applied atomically within a single articulation event, whe
 
 The semantics of each operator—its orientation, hierarchical rules, displacement profile, and DAG update effects—are normative and MUST be implemented exactly as defined in this section.
 
-## Operator Semantics Summary
+## 8.5 Operator Semantics Summary
 
 This section defines the **normative semantics** of each operator in the Artipoint Grammar. The purpose is to ensure that all compliant implementations interpret operator intent consistently, even as application views and UI materializations may differ.
 
@@ -302,9 +335,9 @@ This section defines the **normative semantics** of each operator in the Artipoi
 | adds       | Declares RHS is now included in the structure. Semantically equivalent to post-facto grouping.                                                                                                   |
 | removes    | Declares the RHS is excluded from the LHS structure within shared scope. RHS remains in history but MUST be masked in default views in which the relationship is evaluated.                      |
 
-## Detailed Description of each Operator
+## 8.6 Detailed Description of each Operator
 
-### references
+### 8.6.1 references
 
 Indicates that the LHS item semantically refers to or is informed by the RHS item, without implying dependency or structural inclusion.
 
@@ -321,7 +354,7 @@ Example:
 
 *A decision references a prior discussion point.*
 
-### replaces
+### 8.6.2 replaces
 
 Indicates semantic supersession: the LHS is intended to supersede or override the RHS. The RHS remains in history but is no longer active.
 
@@ -338,7 +371,7 @@ Example:
 
 *A new document replaces an older version.*
 
-### extracts
+### 8.6.3 extracts
 
 The LHS is a derived or excerpted sub-part of the RHS—typically in a child role. Used for derivation without supersession.
 
@@ -355,7 +388,7 @@ Example:
 
 *A snippet is extracted from a full document.*
 
-### groups
+### 8.6.4 groups
 
 LHS is a flat set or collection of RHS items, such as a pile or unordered list.
 
@@ -372,7 +405,7 @@ Example:
 
 *A pile groups together several items without implying order or structure.*
 
-### assembles
+### 8.6.5 assembles
 
 LHS is constructed as a structured whole from multiple RHS components. Hierarchical containment is implied.
 
@@ -389,7 +422,7 @@ Example:
 
 *An agenda is assembled from individual discussion points.*
 
-### promotes
+### 8.6.6 promotes
 
 LHS is a new, elevated form of RHS, which it displaces. Used when transforming one structure into a new one that absorbs its content.
 
@@ -402,7 +435,7 @@ Example:
 
 *A stream promotes an earlier pile, replacing it as the active structure.*
 
-### annotates
+### 8.6.7 annotates
 
 LHS provides a subordinate comment, note, or enrichment on the RHS item. It does not structurally alter the RHS.
 
@@ -419,7 +452,7 @@ Example:
 
 *A comment annotates a document or statement.*
 
-### supports
+### 8.6.8 supports
 
 LHS is a functional subcomponent or enabler of the RHS. Use for required substructure or infrastructural dependency.
 
@@ -440,7 +473,7 @@ Example:
 
 *A scene supports a stream.*
 
-### adds
+### 8.6.9 adds
 
 LHS includes new RHS items into an existing structure or set. This is a post-facto inclusion.
 
@@ -452,7 +485,7 @@ uuidPile adds {uuidNewDoc};
 
 *Adds a document to an existing pile.*
 
-### removes
+### 8.6.10 removes
 
 LHS excludes the RHS item from an existing structure, marking it as no longer active.
 
@@ -464,9 +497,13 @@ uuidPile removes {uuidOldDoc};
 
 *Removes a document from a collection.*
 
-# **Artipoint Annotation Attributes**
+# **11. Artipoint Annotation Attributes**
 
-Attributes are optional metadata attached to an Artipoint, particularly in annotations or bookmarks. The normative pattern for annotating Artipoints with attributes is as follows:
+Attributes are optional metadata attached to an Artipoint, particularly in annotations or bookmarks.
+
+## 11.1 Attribute Syntax
+
+The normative pattern for annotating Artipoints with attributes is as follows:
 
 ```
 attribute-list = "(" keyValuePair *(separator keyValuePair) ")"
@@ -476,9 +513,11 @@ keyValuePair   = [class "::"] key attr-operator ( payload / uuidReference )
 
 An attribute list is a collection of key-value metadata pairs. Each key may optionally include a class declaration using `::`, and values can be either a payload (string, typedBlock, or scalar-value) or a uuidReference to another Artipoint—giving attributes the same expressive power as instantiations.
 
-**Class-qualified keys:** When using the `class::key` pattern, implementations MUST NOT insert whitespace around the `::` separator. The class prefix, separator, and key form a single lexical token (e.g., `role::owner`, `signature::protocol`). Parsers encountering whitespace around `::` SHOULD emit a diagnostic warning but MAY accept the attribute as valid.
+## **11.2 Class-qualified keys**
 
-**Attribute Key Extensibility:** Attribute keys are fully extensible and represent open-ended domain vocabulary. Implementations MAY freely introduce custom attribute keys to support application-specific metadata needs. Common attributes (such as `member`, `owner`, `role::`, `signature::`) are defined in the Default Symbol Dictionary for efficient encoding, but the attribute namespace is not constrained to this set. Vendor-specific or application-specific attributes SHOULD use namespaced class prefixes (e.g., `myapp::custom_field`) to avoid conflicts. Implementations encountering unknown attributes MUST preserve them without error.
+When using the `class::key` pattern, implementations MUST NOT insert whitespace around the `::` separator. The class prefix, separator, and key form a single lexical token (e.g., `role::owner`, `signature::protocol`). Parsers encountering whitespace around `::` SHOULD emit a diagnostic warning but MAY accept the attribute as valid.
+
+## 11.3 Attribute Operators
 
 Operators modify the value using the following available semantic patterns:
 
@@ -489,7 +528,11 @@ Operators modify the value using the following available semantic patterns:
 | :=           | Assigns an explicit value displacing any previous value or set. You can think of this as rebasing the value. An empty value string can be used to, in effect, clear and remove the attribute. |
 | =            | Equivalence. The attribute is considered an alias or equivalent to whatever value is specified. In this way, it makes that attribute an alias to be referenced elsewhere.                     |
 
-Examples:
+## **11.4 Attribute Key Extensibility**
+
+Attribute keys are fully extensible and represent open-ended domain vocabulary. Implementations MAY freely introduce custom attribute keys to support application-specific metadata needs. Common attributes (such as `member`, `owner`, `role::`, `signature::`) are defined in the Default Symbol Dictionary for efficient encoding, but the attribute namespace is not constrained to this set. Vendor-specific or application-specific attributes SHOULD use namespaced class prefixes (e.g., `myapp::custom_field`) to avoid conflicts. Implementations encountering unknown attributes MUST preserve them without error.
+
+## 11.5 Attribute Examples (non-normative)
 
 ```
 (document_metadata :=
@@ -516,13 +559,13 @@ Examples:
 );
 ```
 
-# **Universally Unique Identifiers (UUIDs)**
+# **12. Universally Unique Identifiers (UUIDs)**
 
 Artipoints and Artipoint references use UUIDs as their canonical identifiers.
 
 Because these identifiers participate directly in DAG construction, causal evaluation, immutability semantics, and reference resolution, the UUID format is a compulsory part of the Artipoint Grammar.
 
-1. ### **UUID Version Requirement**
+### **12.1 UUID Version Requirement**
 
 UUIDs is ASCP are defined based on RFC-4122, but they **MUST** be generated as **UUID version 7** (time-ordered, Unix epoch milliseconds + randomness) as defined in \[IETF draft-peabody-dispatch-new-uuid-format].
 
@@ -534,7 +577,7 @@ UUIDv7 is required at the grammar layer because Artipoint UUIDs are not opaque t
 
 Implementations **MUST** reject Artipoints whose UUID field is not a valid UUIDv7.
 
-### **2. Encoding Patterns**
+### **12.2 Encoding Patterns**
 
 - In the ASCP Grammar when encoded in Hexadecimal form, they may be written with or without hyphens (both accepted)
 - Hyphens are never present in binary forms such as in Binary Value Island (BVI) or in wire encodings.
@@ -546,14 +589,14 @@ Implementations **MUST** reject Artipoints whose UUID field is not a valid UUIDv
 - Hex with hyphens → 550e8400-e29b-41d4-a716-446655440000
 - Hex without hyphens → 550e8400e29b41d4a716446655440000
 
-### **3. Validation Rules**
+### **12.3 Validation Rules**
 
 - The grammar accepts uppercase or lowercase hexadecimal.
 - Version nibble (bits 48–51) **MUST** equal 0111 (v7).
 - Variant bits **MUST** conform to RFC-4122 (10x).
 - Parsers **MUST** accept hyphenated and non-hyphenated hex, Base64URL encoding may be accepted as well, but implementations MUST normalize internally to raw 16-byte representation.
 
-### **4. UUID Role in DAG Construction**
+### **12.4 UUID Role in DAG Construction**
 
 UUIDv7 identifiers are **structural elements** of the Artipoint Grammar, not opaque tokens. UUIDs provide:
 
@@ -564,7 +607,7 @@ UUIDv7 identifiers are **structural elements** of the Artipoint Grammar, not opa
 
 Because the semantics of instantiation, reference, masking, and supersession require stable and time-sortable identifiers, UUIDv7 is a **normative structural requirement** of the grammar. The DAG **MUST** be evaluated using the UUID as the authoritative identity of each Artipoint.
 
-# **Timestamps**
+# **13 Timestamps**
 
 ```bnf
 timestamp = date "T" time [fraction] "Z"
@@ -584,7 +627,7 @@ Timestamps in ASCP Artipoints represent the **articulation time**—the moment w
 - No timezone offsets permitted in this grammar (reserved for future extensions)
 - Case-insensitive: both "T"/"Z" and "t"/"z" are valid per RFC 3339
 
-# **Provenance and Authorship**
+# **14. Provenance and Authorship**
 
 ```bnf
 author = uuidReference
@@ -597,7 +640,7 @@ Represents the author, signer, and generator of the Artipoint.
 
 Cryptographic integrity, privacy, and audience scoping are all handled by **ASCP channel encoding**, not the grammar.
 
-# **Strings and Escaping**
+# **15. Strings and Escaping**
 
 Strings **MUST** be double-quoted ("...") and support the full JSON standard string escaping mechanisms per RFC 8259:
 
@@ -630,24 +673,17 @@ safe-char  = %x20-21 / %x23-5B / %x5D-7E
 "File path: C:\\Users\\Documents\\file.txt"
 ```
 
-## **Collections and Structures**
+# **16. Collections and Structures**
 
 There is no nesting of expressions within expressions. Instead, **collections** (e.g. streams, piles, lists) are formed using the construction pattern with a bookmark that refers to an external document or resource.
 
 The **Artipoint's own UUID** serves as the persistent ID of that structure. Metadata lives in the referenced document; relations live in the DAG.
 
-## **Identity, Canonicalization, and Channels**
-
-- The UUID is the **immutable, canonical identity** of each Artipoint. It must be universally unique per RFC-4122 and deterministic (typically generated by a higher-layer tool or content hash).
-- Artipoints are **flat, line-based records** that can be serialized, signed, and version-controlled.
-- Canonicalization rules (e.g., key ordering in attributes, whitespace trimming) are external to the grammar and defined by ASCP transport layers.
-- **Recipients** and visibility are not embedded in the Artipoint itself—they are determined by the **ASCP channel** in which the Artipoint is distributed.
-
-## **Examples (Future Section)**
+# **17. Examples (Future Section)**
 
 Coming soon: a set of validated Artipoint examples including bookmarks, annotations, equivalence chains, collections, and agent-generated updates.
 
-## **Summary**
+# **18. Summary**
 
 This grammar defines a minimal but powerful **cognitive substrate**—a way to persistently structure thought, reasoning, and coordination into a universally interpretable form. It is:
 
@@ -659,7 +695,7 @@ This grammar defines a minimal but powerful **cognitive substrate**—a way to p
 
 It provides the foundational syntax for durable, auditable collaboration between humans and intelligent systems.
 
-## Future Considerations:
+# 19. Future Considerations
 
 In the future we could/should add sections covering:
 
@@ -667,7 +703,7 @@ In the future we could/should add sections covering:
 - **Unknown Element Handling**: How parsers should behave with unrecognized operators
 - **Lifecycle Management**: A deprecation model with clear phases and timelines
 
-# Appendix 1: The Formal ASCP Grammar in ABNF
+# Appendix A: The Formal ASCP Grammar in ABNF
 
 ```ebnf
 ; Artipoint Grammar Definition (ABNF)
@@ -831,15 +867,15 @@ UTF8-NonASCII = %xC2-DF UTF8-tail /
 UTF8-tail = %x80-BF
 ```
 
-# Appendix 2: ASCP Grammar Encodings
+# Appendix B: ASCP Grammar Encodings
 
-As formally specified in Appendix 1, the Layer-2 grammar is defined as **UTF-8 text** for human-friendly authoring and inspection. To reduce verbosity in frequently occurring constructs (UUIDs, timestamps, keywords, operators), ASCP defines compact **encoding conventions**. These allow binary or symbolic forms to appear directly in the grammar without changing semantics.
+As formally specified in Appendix A, the Layer-2 grammar is defined as **UTF-8 text** for human-friendly authoring and inspection. To reduce verbosity in frequently occurring constructs (UUIDs, timestamps, keywords, operators), ASCP defines compact **encoding conventions**. These allow binary or symbolic forms to appear directly in the grammar without changing semantics.
 
-When presenting the grammar to users, it should always be rendered per Appendix 1 specifications, however when encoding for Layer 1 channel processing, the full suite of compaction options SHOULD be used.
+When presenting the grammar to users, it should always be rendered per Appendix A specifications, however when encoding for Layer 1 channel processing, the full suite of compaction options SHOULD be used.
 
 The two key ways of achieving more compact encoding are through **Binary Value Islands (BVI)** and the **Default Symbol Dictionary (DSD)**, which are described in the following sections.
 
-## Binary Value Islands (BVI)
+## B.1 Binary Value Islands (BVI)
 
 For efficiency, ASCP reserves **0x1F** as a **binary island introducer**. A BVI carries a compact header so a parser knows exactly how many bytes to consume.
 
@@ -854,7 +890,7 @@ Where:
 - **ULEB128-length** = Variable-length encoding of payload byte count, but not used by all types as some types have fixed or self-encoded lengths.
 - **payloadBytes** = Raw binary data of the specified length
 
-### **Standard ValueTypes**
+### **B.1.1 Standard ValueTypes**
 
 | **Value Type** | **Description**    | ULEB128 Needed? | **Notes**                                                                                |
 | -------------- | ------------------ | --------------- | ---------------------------------------------------------------------------------------- |
@@ -869,7 +905,7 @@ Where:
 | 0x30–0x7F      | Reserved           |                 | Reserved for future standard types                                                       |
 | 0x80–0xFF      | Vendor/extension   |                 | Available for vendor-specific encodings                                                  |
 
-### **ULEB128 Length Encoding**
+### **B.1.2 ULEB128 Length Encoding**
 
 The segment length uses ULEB128 (Unsigned Little Endian Base 128), a variable-length integer encoding widely adopted in binary protocols including DWARF debugging information, WebAssembly, and Protocol Buffers. ULEB128 represents integers by breaking them into 7-bit chunks, with each byte's most significant bit serving as a continuation flag: 1 indicates more bytes follow, while 0 marks the final byte. The encoding is little-endian at the byte level, meaning the least significant 7-bit group is transmitted first.
 
@@ -877,7 +913,7 @@ For example, the value 1 encodes as a single byte 0x01, while 128 requires two b
 
 In the BVI, the ULEB128 length indicates the number of bytes to follow as the payload.
 
-### **UUID Encoding (Type = 0x20)**
+### **B.1.3 UUID Encoding (Type = 0x20)**
 
 Encodes a single UUID from textual representation into compact binary form.
 
@@ -923,7 +959,7 @@ Where:
 - Distinguished from UUID sets (Type 0x02) which contain multiple UUIDs enclosed by braces in the textual form
 - Required format for all Artipoint UUIDs and author identity references
 
-### **UUID Set Encoding (Type = 0x02)**
+### **B.1.4 UUID Set Encoding (Type = 0x02)**
 
 Encodes a collection of UUIDs from the textual { uuid1, uuid2, ..., uuidN } syntax into a compact binary representation.
 
@@ -1014,7 +1050,7 @@ The mixed form preserves brace syntax while allowing per-element encoding. The c
 
 This distinction ensures consistent interpretation of singleton UUIDs, compact binary sets, and alternate brace-preserving encodings.
 
-### Binary Values (Type = 0x00)
+### B.1.5 Binary Values (Type = 0x00)
 
 Encodes arbitrary binary data from hex or binary string representations into direct binary form.
 
@@ -1058,7 +1094,7 @@ Where:
 - **Case handling:** Accept both upper and lowercase hex digits
 - **Output format:** Always store as raw binary data
 
-### UTF-8 Strings (Type = 0x03)
+### B.1.6 UTF-8 Strings (Type = 0x03)
 
 Encodes UTF-8 text strings without requiring JSON-style escaping for common characters.
 
@@ -1103,7 +1139,7 @@ Where:
 - **Null bytes:** Not permitted in string content
 - **Validation:** Must be valid UTF-8 sequence
 
-### **Timestamps (Types = 0x21, 0x22)**
+### **B.1.7 Timestamps (Types = 0x21, 0x22)**
 
 Encodes RFC 3339 compliant UTC timestamps using variable-width binary formats optimized for typical precision requirements.
 
@@ -1161,11 +1197,11 @@ Where:
 - Case-insensitive 'T' and 'Z' characters accepted per RFC 3339
 - Leap seconds handled per RFC 3339 specification (time-second may be "60")
 
-## Default Symbol Dictionary (DSD v1)
+## B.2 Default Symbol Dictionary (DSD v1)
 
 Frequent grammar tokens can be replaced by a **two-byte escape** to reduce verbosity in commonly occurring constructs like verbs, operators, and type prefixes. This compression mechanism significantly reduces the size of encoded Artipoints while maintaining full semantic equivalence with the textual grammar.
 
-### **Escape Mechanism**
+### **B.2.1 Escape Mechanism**
 
 ```
 0x1E <code>
@@ -1173,7 +1209,7 @@ Frequent grammar tokens can be replaced by a **two-byte escape** to reduce verbo
 
 Where `0x1E` is the reserved **symbol dictionary escape** introducer and `<code>` is a single byte that selects a predefined token from the Default Symbol Dictionary.
 
-### **How It Works**
+### **B.2.2 How It Works**
 
 1. **Encoding:** When serializing Artipoints, producers can replace any occurrence of a dictionary token with its two-byte escape sequence. The encoder SHOULD consume all leading and trailing whitespace to the adjacent language tokens to minimize encoding size.
 2. **Decoding:** Parsers encountering `0x1E` read the following byte as a dictionary lookup and substitute the corresponding token. If the parsing process is outputting text to the ABNF grammar, the decoder MUST add any required or readability desired leading or trailing whitespace to maintain the tokens of the language.
@@ -1181,14 +1217,14 @@ Where `0x1E` is the reserved **symbol dictionary escape** introducer and `<code>
 4. **Semantic equivalence:** The escaped form is functionally identical to the full textual token with leading and trailing whitespace.
 5. **Optional optimization:** Encoder implementations MAY choose when to apply DSD substitutions based on size/speed/readability tradeoffs.
 
-### **Example Usage**
+### **B.2.3 Example Usage**
 
 ```
 uuidA 0x1E 0x00 {uuidB}    ; "references" compressed
 uuidC 0x1E 0x40 {data}     ; "json:" prefix compressed
 ```
 
-### **Dictionary Structure**
+### **B.2.4 Dictionary Structure**
 
 The DSD v1 organizes tokens into functional ranges to enable efficient lookup and future extension:
 
@@ -1269,9 +1305,9 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 | --------- | ----------------------------- |
 | 0x80–0xFF | Vendor/extension dictionaries |
 
-## Compliance
+# Appendix C: Compliance
 
-### Core Requirements
+## C.1 Core Requirements
 
 1. **Signing:** At Layer-1 Channel encoding, producers sign the payload as emitted. No re-serialization or normalization.
 2. **Reserved Bytes:** 0x1E and 0x1F are reserved as escape introducers for DSD and BVI respectively.
@@ -1282,7 +1318,7 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 5. **Extensibility:** Unknown codes in the reserved/vendor ranges MUST cause parse error unless explicitly declared in a profile.
 6. **Round-tripping:** Tools MAY expand escapes back to full text for readability, but any rewrite produces a distinct artifact with a new Layer-1 signature.
 
-### Textual Format Recommendations
+## C.2 Textual Format Recommendations
 
 Articulation Statements SHOULD follow these formatting conventions:
 
@@ -1292,7 +1328,7 @@ Articulation Statements SHOULD follow these formatting conventions:
 - **Spacing:** SHOULD have a single space after commas and semicolons, except when at end of line
 - **Attribute Ordering:** Attribute lists SHOULD be ordered alphabetically by key
 
-### JSON Payload Formatting
+## C.3 JSON Payload Formatting
 
 JSON payload formatting within the grammar (e.g., `json:` blocks or attribute values) SHOULD follow these conventions:
 
@@ -1305,17 +1341,17 @@ JSON payload formatting within the grammar (e.g., `json:` blocks or attribute va
 
 **NOTE:** The formatting conventions in "Textual Format Recommendations" and "JSON Payload Formatting" are **not required for signature correctness**, but are highly encouraged to promote consistent encoding, diffability, and tooling interoperability across ASCP implementations.
 
-# Appendix 3: Validation and Error Handling (Normative) 
+# Appendix D: Validation and Error Handling (Normative) 
 
 This section defines **accept‑and‑record** behavior for an immutable log. Once an articulation enters a channel log, it is **never altered or removed** by protocol action. All implementations MUST converge on identical handling by following the rules below.
 
-## Core Principles
+## D.1 Core Principles
 
 - **Immutability:** Clients MUST store every received, well‑formed Layer‑1 envelope exactly as emitted. No rewriting, normalization, or redaction.
 - **Report‑and‑proceed:** Validation errors are **reported** via diagnostics; evaluation/materialization proceeds with deterministic **no‑op defaults** where applicable.
 - **Determinism:** Given the same sequence, all conforming implementations MUST produce identical DAG effects (including when effects are intentionally **no‑op**).
 
-## Validation Phases
+## D.2 Validation Phases
 
 1. **Envelope Validation (Layer‑1):** Signature, integrity, audience/recipient checks.
    - **FAIL** ⇒ The envelope MUST NOT be passed to Layer-2 and should be marked invalid in the local log.
@@ -1326,7 +1362,7 @@ This section defines **accept‑and‑record** behavior for an immutable log. On
 3. **Semantic Validation (Layer‑3):** Operator, reference, and attribute semantics.
    - **FAIL (non‑critical)** ⇒ Admit and index fully; apply DAG effect per decision table (often **no‑op**); attach diagnostic code(s).
 
-## Deterministic Handling Table
+## D.3 Deterministic Handling Table
 
 Use the following decision table to produce identical outcomes across implementations.
 
@@ -1345,20 +1381,20 @@ Use the following decision table to produce identical outcomes across implementa
 
 > **no‑op** means: do not add edges, masks, inclusions, or exclusions implied by the failing part. The remainder of the statement (e.g., an instantiation) remains effective if valid.
 
-### Masking & Supersession Determinism
+## D.4 Masking & Supersession Determinism
 
 - replaces and promotes **mask** their RHS **only within the same applicable scope** (e.g., same parent collection/structure as established by accompanying relations or application context). If scope cannot be resolved (E7), **no mask occurs**.
 - removes excludes RHS from the addressed structure only; history is unaffected.
 
-### Diagnostics (SHOULD)
+## D.5 Diagnostics (SHOULD)
 
 Implementations SHOULD expose a diagnostics feed with fields like { uuid, envelope\_id, phase, code, details, first\_seen\_at }. Clients MAY surface these to users/agents.
 
-### Forward Compatibility
+## D.6 Forward Compatibility
 
 - Unknown verbs/types/codes MUST NOT block ingestion. They are preserved for future interpreters and evaluated as **no‑op** today per E1/E2/E10.
 - Profiles MAY further constrain acceptance (e.g., disallow certain typed blocks) but MUST still follow these deterministic outcomes.
 
-## Conformance
+## D.7 Conformance
 
 Implementations MUST demonstrate, via test vectors, that given identical articulation sequences they yield identical DAG effects and identical diagnostics for all cases E1–E10.

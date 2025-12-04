@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.21 — Informational (Pre-RFC Working Draft)  
+Version: 0.22 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -79,16 +79,18 @@ Governance in ASCP is defined by three principles:
 2. Inheritance with Explicit Override
 3. Composable Participant Sets
 
-Applications MAY use governance attributes for authorization, routing, notifications, workload assignment, role resolution, or context rendering.
+Applications MAY use governance structures as the basis for authorization, routing, notifications, workload assignment, role resolution, or context rendering.
 
 ## Governance Attributes
 
-All Governance attributes defined in this specification are **Structure-agnostic**. They **MAY** apply to Spaces, Streams, Piles, Channels, Groups and other future Artipoint types.
+All Governance attributes defined in this specification are **Coordination Contruct** agnostic. They **MAY** apply to Spaces, Streams, Piles, Channels, Groups and other future Artipoint types.
 
 This enables a consistent governance model across ASCP while preserving the independence between:
 
-- **semantic coordination structures** (Spaces, Streams, Piles)
-- **cryptographic distribution structures** (Channels)
+- **Contextual Constructs** (Spaces, Streams, Piles)
+- **Addressing Contructs** (Identities, Groups)
+- **Distribution Contructs** (Channels)
+- **Security Contructs** (Certificates, Tokens)
 
 ### Membership
 
