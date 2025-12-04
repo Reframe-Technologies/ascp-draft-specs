@@ -36,8 +36,10 @@ You may contribute:
 
 # 🛠 Contribution Process
 
-We use a **Developer Certificate of Origin (DCO)** workflow.  
-No separate CLA is required at this stage.
+We use a **Developer Certificate of Origin (DCO)** workflow.
+
+This means each commit must include a `Signed-off-by:` line stating that you have the right to contribute the changes under the project’s licenses.
+No separate Contributor License Agreement (CLA) is required.
 
 To contribute:
 
@@ -49,7 +51,7 @@ To contribute:
 5. Submit a Pull Request
 6. Participate in discussion and revision if needed
 
-Every commit must contain the `Signed-off-by:` line that states you have the right to contribute the code/text under the project licenses.
+Please confirm all commits in the feature branch have the required `Signed-off-by:` before submitting your Pull Request.
 
 ---
 
