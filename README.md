@@ -18,7 +18,7 @@ This repository contains the evolving specifications for the **Agents Shared Cog
 
 This is an early-stage, **collaborator-controlled** repository. It is not yet an open standard but is being shared for review, issue tracking, and early implementation planning.
 
-We’re building toward having drafts of:
+We’re building toward having first pass full drafts of:
 
 - ✅ Complete grammar and top-level spec
 - ✅  Secure distribution layer (Channels)
@@ -91,7 +91,7 @@ This repository serves as:
 - 🗂 A **version-controlled changelog** as the protocol evolves
 - 🛠 A **place to file issues and track design decisions**
 - 🧪 The **future home for reference implementations** in Python and Rust
-- Clarifying the boundary between the **open, public-good protocol** (ASCP) and Reframe’s **proprietary experience layer** (Cortex Layer™, Reframe Cloud™, Reframe OWE™).
+- Documenting the boundary between the **open, public-good protocol** (ASCP) and Reframe’s **proprietary experience layer** (Cortex Layer™, Reframe Cloud™, Reframe OWE™).
 
 ## 🗺 Planned Structure
 
@@ -133,7 +133,7 @@ ASCP is intentionally designed as an **open, vendor-neutral, public-good protoco
 - All **specification text** in this repository is licensed under terms consistent with the *IETF Trust Legal Provisions (TLP)*, allowing open redistribution and derivative works (with attribution and non-falsification requirements).
 - Upon submission of ASCP Internet-Drafts, the related specification text will fall under the *IETF Trust*, ensuring long-term neutrality.
 - **Code components** (grammar, examples, schemas) are BSD-2 licensed, consistent with IETF norms and enabling free incorporation into independent implementations.
-- **Reference implementations** are Apache-2.0 licensed, encouraging broad, permissive use with explicit patent grants.
+- **Reference implementations** are Apache-2.0 licensed, encouraging broad, permissive use with explicit patent grants if/as needed.
 
 ### **What Does Not Transfer to the IETF**
 
@@ -142,7 +142,7 @@ While the ASCP **protocol** is a public good, a few things remain the long-term 
 - **Cortex Layer™ -** Reframe’s branded conceptual model and human-aligned experience built on top of ASCP.
 - **Reframe’s product ecosystem -** including the Reframe OWE, AI Desktop, Reframe Cloud, developer tooling, UX patterns, and other first-party applications built using the protocol.
 - **Reframe tradenames and trademarks -** such as “Reframe,” “Cortex Layer,” “Reframe Cloud,” and any future marks representing our products or certification programs.
-- **Reframe-hosted services -** including secure ASCP cloud hosting, governance dashboards, auditing tools, enterprise compliance layers, and premium operational infrastructure.
+- **Reframe-hosted services -** including secure ASCP protocol based cloud hosting, governance dashboards, auditing tools, enterprise compliance layers, and premium operational infrastructure.
 
 These elements constitute Reframe’s commercial stack **above** the public protocol.
 
@@ -151,12 +151,12 @@ These elements constitute Reframe’s commercial stack **above** the public prot
 Reframe does **not** extract value by restricting the protocol. Instead:
 
 - We contribute ASCP freely to the open ecosystem.
-- We encourage independent hosting and cloud deployments by any vendor.
+- We encourage independent hosting and cloud deployments by any vendor, including via direct use of and and all code in this repository.
 - We focus on delivering world-class **products, experiences, and infrastructure** that sit *above* the protocol.
 - A healthy, diverse ASCP ecosystem benefits everyone—including Reframe.
-- Reframe may offer **certification programs** (e.g., “Cortex Layer Compatible™”) that validate interoperability and trustworthiness without limiting participation.
+- Reframe may offer voluntary **certification programs** (e.g., “Cortex Layer Compatible™”) that validate interoperability and trustworthiness without limiting participation.
 
-This approach mirrors successful open-protocol strategies seen in the evolution of the Internet, Linux, Git, Kubernetes, and Postgres:
+This approach mirrors successful open-protocol strategies seen in the evolution of the Internet, Linux, Git, Kubernetes, and Postgres.
 
 **Open standards at the bottom, shared value at the top.**
 
