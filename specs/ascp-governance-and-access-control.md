@@ -41,6 +41,14 @@ The governance model is built on three core principles:
 
 This specification defines the governance attributes that express participation and authority within ASCP structures, including Group composition for reusable participant sets, RACI-style coordination roles for responsibility assignment, and inheritance rules that propagate governance from parent to child structures. It further specifies deny and expiration semantics for overriding and time-limiting grants, virtual group resolution for dynamic participant references, and the normative evaluation algorithm for computing the effective governance set from the structural DAG.
 
+#### Syntax vs. Semantics Boundary
+
+The ASCP Artipoint Grammar specification defines syntax and ABNF for expressing Artipoints, including the structural form of types, attributes, operators, and payloads. It does not declare or assign semantics to specific Artipoint types or attribute keys.
+
+This specification provides the normative semantic definitions for governance-related Constructs (eg: `Space`, `Stream`, `Group`) and governance attributes (eg: `member`, `writer`, `owner`). These constructs and attributes are formally defined only within this document or other normative ASCP subspecifications.
+
+Implementations MUST use the ASCP Artipoint Grammar for syntactic validity and MUST use this specification for semantic interpretation, evaluation rules, inheritance behavior, and effective governance computation.
+
 ## 3.3 Out of Scope
 
 This specification does not define application-level UI behavior or runtime enforcement mechanisms, as these are implementation-specific concerns left to individual applications. Transport-layer access enforcement, including cryptographic access control and key distribution, is addressed in either Layer-0 **ASCP LogSync Protocol** or Layer-1 **ASCP Channels** specification. Security Constructs such as Certificates and Tokens are defined in the **ASCP Identity & Trust** and **ASCP Channels** specifications, which together establish the cryptographic foundation upon which this governance model operates.
