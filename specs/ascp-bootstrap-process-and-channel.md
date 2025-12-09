@@ -2,12 +2,14 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.23 — Informational (Pre-RFC Working Draft)  
-November 2025
+Version: 0.11 — Informational (Pre-RFC Working Draft)  
+December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
-1. # **Status of This Document**
+# **1. Status of This Document**
+
+``
 
 This document is part of the ASCP specification suite and defines the **bootstrap process and channel discovery mechanisms** that establish the root of trust for ASCP repositories. It specifies how new replicas are rooted with secure organizational trust anchors, discover available channels, and initialize synchronized operation within the distributed coordination framework. It is published at this time to gather community feedback on the governance model and evaluation semantics.
 
@@ -218,7 +220,7 @@ To be completed:
 
 > *Formal definitions for certificate, rootCA, and identity Artipoints are provided in **Trust & Identity § Security and Identity Artipoints**, which should be used when authoring or parsing bootstrap manifests containing trust material.*
 
-# 11. Need Context through Bootstrapping
+# 11. Needed Context through Bootstrapping
 
 Information to be built up from the bootstrapping process
 
