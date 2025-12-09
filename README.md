@@ -1,14 +1,14 @@
 # Agents Shared Cognition Protocol (ASCP)
 
-**A Git-like Protocol for Context instead of Code**
+**A Git-like Structure for Context instead of Code**
 
-This repository contains the evolving specifications for the **Agents Shared Cognition Protocol (ASCP)** — a foundational protocol for shared cognition between humans and intelligent agents. ASCP introduces the [**Cortex Layer**](https://blog.reframetech.com/building-the-missing-cortex-layer): a persistent, secure, and structured substrate for collaborative context.
+This repository contains the evolving specifications for the **Agents Shared Cognition Protocol (ASCP)** — a foundational protocol for shared cognition between humans and intelligent agents. ASCP introduces a type of "[**Cortex Layer**](https://blog.reframetech.com/building-the-missing-cortex-layer)": to form a persistent, secure, and structured substrate for collaborative context.
 
 > Just as HTTP standardized the web, ASCP standardizes shared context—making intent, memory, and coordination first-class digital artifacts.
 
 ## Background 📚 
 
-**You can think of ASCP as a Git-like Protocol for context instead for code and content.** The following blog posts should be very helpful additional context on the basis behind, and inspiration for, ASCP:
+**One could metaphorically think of ASCP as a Git-like structure for shared context instead for code and content.** The following blog posts should be very helpful background on the basis behind, and inspiration for, ASCP:
 
 1. [**The Pathway to AGI isn’t Intelligence, it’s Shared Cognition**](https://blog.reframetech.com/the-pathway-to-agi-isnt-intelligence-its-shared-cognition) - *Discover why shared cognition, and the Cortex Layer, is the real pathway to AGI.* This post and manifesto of sorts by Reframe Founder & CEO argues that the pathway to AGI is not greater intelligence but "Shared Cognition"—persistent, structured context that enables continuous collaboration between humans and AI agents. He proposed the Cortex Layer as open infrastructure to solve AI's "amnesia problem," where current systems lack memory across interactions, preventing them from becoming true collaborative partners rather than isolated task executors. This post, in effect, defines the technical box that ASCP lives in.
 2. [**Building the Missing Cortex Layer**](https://blog.reframetech.com/building-the-missing-cortex-layer) - *Closing the Gap Between Chat and Full Human-AI Collaboration.* This post examined existing agent infrastructure protocols (MCP, A2A, ACP, ANP) and identified their shared limitation: none provide persistent, human-centered context for collaborative reasoning across sessions and tools. It explains the Cortex Layer concept and previews the Agent Shared Cognition Protocol (ASCP) as complementary infrastructure designed to enable durable shared memory between humans and AI agents.
@@ -25,10 +25,10 @@ We’re building toward having first pass full drafts of:
 - ✅ Channels: Secure distribution layer
 - ✅ ASCP Log synchronization protocol (ALSP)
 - ✅ Governance & Access Control
-- 🔜 Identity & Trust Model
-- 🔜 Bootstrap model - building a new org repository
-- 🔜 Reference implementations in Python and Rust
-- 🔜 Conformance test suite and example fixtures
+- 🔜 Identity & Trust Model **_(mostly there, but not complete)_**
+- 🔜 Bootstrap model - building a new org repository **_(roughly sketched out, very imcomplete)_**
+- 🔜 Reference implementations in Python and Rust **_(planning stage)_**
+- 🔜 Conformance test suite and example fixtures **_(after the reference implementations)_**
 
 We welcome feedback via GitHub Issues. Public contributions are currently fairly limited but will expanded soon as the protocol stabilizes and reference implementations emerge.
 
@@ -55,13 +55,13 @@ ASCP is a protocol that turns coordination context into a durable, addressable d
 - ✅ End-to-end encrypted distribution
 - ✅ Decentralized, audit-friendly collaboration
 
-ASCP is the infrastructure behind the **Cortex Layer**—the missing coordination substrate that allows AI agents to become trustworthy collaborators instead of stateless tools.
+ASCP is the infrastructure behind the Reframe concept of a **Cortex Layer**—the missing coordination substrate that allows AI agents to become trustworthy human-like collaborators instead of stateless tools.
 
 ## Key Concepts
 
 - **Artipoints** – Immutable, addressable coordination statements (the cognitive atoms of ASCP)
 - **Articulation Statements** – Bundled, signed expressions of collaborative intent
-- **Streams / Spaces / Piles** – Human-aligned coordination structures (threads, workspaces, buckets)
+- **Streams / Spaces / Piles** – Human-aligned coordination structures (work threads, workspaces, units of work)
 - **Channels** – Cryptographically scoped knowledge-sharing domains
 - **Flags & Roles** – Attention tracking, authorship, access, and accountability
 
