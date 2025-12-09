@@ -9,7 +9,7 @@ December 2025
 
 # **1. Status of This Document**
 
-``
+`LIVE WORK IN PROCESS - NOT YET COMPLETE`
 
 This document is part of the ASCP specification suite and defines the **bootstrap process and channel discovery mechanisms** that establish the root of trust for ASCP repositories. It specifies how new replicas are rooted with secure organizational trust anchors, discover available channels, and initialize synchronized operation within the distributed coordination framework. It is published at this time to gather community feedback on the governance model and evaluation semantics.
 
