@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.43 — Informational (Pre-RFC Working Draft)  
+Version: 0.45 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -529,7 +529,7 @@ It MAY additionally include:
 - PKI metadata
 - Alternative encodings of the same key
 
-These additional encodings MUST NOT contradict the JWK fingerprint (RFC 7638).
+These additional encodings MUST NOT contradict the JWK thumbprint (RFC 7638).
 
 ### **7.2.5 Endorsements (PKI, OIDC, DID, TSA)**
 
@@ -537,7 +537,7 @@ Certificates MAY have any number of endorsement attributes attached via annotati
 
 Each endorsement MUST:
 
-- Bind to the certificate’s RFC-7638 fingerprint
+- Bind to the certificate’s RFC-7638 thumbprint
 - Contain an issuer mechanism and evidence consistent with Section 8
 - Include timestamps enabling temporal validation
 
@@ -580,7 +580,7 @@ A RootCA Artipoint MUST use:
 
 ```c
 [uuid, author, timestamp,
-  ["rootca", <org-label>, json:{ <root JWK> }
+  ["rootca", <label>, json:{ <root JWK> }
   ]
 ]
 ```
@@ -605,7 +605,7 @@ A RootCA Artipoint **MUST** conform to the Artipoint Grammar specification. The 
 
 ### **7.3.3 Required Attributes**
 
-- `purpose::assert` - Must contain the JWK fingerprint of the RootCA key.
+- `purpose::assert` - Must contain the JWK thumbprint of the RootCA key.
 
 ### **7.3.3 Provenance Requirements**
 
@@ -1341,6 +1341,7 @@ This procedure defines the normative steps for constructing a `recovery_envelope
    - An implementation MUST generate or register a separate EC keypair for recovery purposes
    - The recovery private key MUST be stored in a secure location distinct from the identity key (e.g., second device, hardware token, secure backup)
    - The recovery public key MUST be published in a separate Certificate Artipoint
+   - The Certificate Artipoint MUST include the attribute `purpose::keyAgreement`.
 3. **Derive Password-Based Encryption Key (Key C)**
    - An implementation MUST derive an AES-256 key from a user-provided passphrase
    - The derivation MUST use PBKDF2 (minimum 600,000 iterations) or Argon2id
@@ -1371,7 +1372,7 @@ This procedure defines the normative steps for recovering an identity private ke
 2. **Extract recovery\_envelope Structure**
    - An implementation MUST parse the `recovery_envelope` attribute value as JSON conforming to the schema defined in Section 8.3
    - The implementation MUST extract the `user_key_jwe` field value (the `user-key-envelope` string)
-   - The implementation MUST extract the `recovery_cert` field value (UUID of the recovery Certificate Artipoint)
+   - The implementation MUST extract the `recovery_cert` field value (UUID of the recovery Certificate Artipoint) which MUST be confirmed to already include the attribute `purpose::keyAgreement`.
    - The implementation SHOULD extract the `kdf_params` field for password derivation
 3. **Decrypt Outer JWE Layer**
    - An implementation MUST locate the Certificate Artipoint referenced by `recovery_cert` and retrieve the recovery private key (Key B)
