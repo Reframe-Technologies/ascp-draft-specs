@@ -1,0 +1,33 @@
+name: "Enhancement Proposal (New Feature / Extension)"
+description: "Propose an extension, new operator, new construct, or future enhancement."
+labels: ["enhancement", "proposal"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: "Summary of Proposal"
+      description: "Short explanation of the enhancement."
+      placeholder: "Introduce a 'merges' operator for DAG blending across Streams."
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "Motivation"
+      description: "What problem does this solve? Why is it needed?"
+
+  - type: textarea
+    id: design
+    attributes:
+      label: "Proposed Design"
+      placeholder: "Describe expected semantics, grammar, or cryptographic interactions."
+
+  - type: textarea
+    id: backwards
+    attributes:
+      label: "Backward Compatibility"
+      description: "Does this introduce breaking changes?"
+
+  - type: textarea
+    id: references
+    attributes:
+      label: "References / Examples / Research"

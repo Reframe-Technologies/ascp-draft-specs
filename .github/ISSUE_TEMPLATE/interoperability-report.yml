@@ -1,0 +1,48 @@
+name: "Implementation Feedback / Interoperability Report"
+description: "Report behavior from real implementations, test harnesses, or prototype integrations."
+labels: ["interop", "implementation", "feedback"]
+body:
+  - type: textarea
+    id: implementation
+    attributes:
+      label: "Implementation Name / Version"
+      placeholder: "ascp-client-js v0.3.1 / ascplab-go v0.1"
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "Languages, libraries, OS, network conditions."
+      placeholder: "Node 20, WebCrypto, Local-first sync via WebRTC"
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: "Observed Behavior"
+      description: "What happened? Please include logs or traces if possible."
+      placeholder: "Channel envelope verification failed when two keyframes overlapped…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behavior"
+      description: "What should have happened according to the spec?"
+
+  - type: textarea
+    id: spec-links
+    attributes:
+      label: "Relevant Spec Sections"
+      placeholder: "Channels §6.4.3, Governance §5.2"
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce"
+
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: "Logs / Payloads / Test Vectors"
+      render: shell

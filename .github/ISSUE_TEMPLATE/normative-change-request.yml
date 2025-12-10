@@ -1,0 +1,54 @@
+name: "Normative Change Request"
+description: "Propose a change that affects protocol behavior, MUST/SHOULD rules, security, or interoperability."
+labels: ["normative", "spec-change"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Use this template to propose a modification to normative rules** within the ASCP specification suite.  
+        Normative changes affect interoperability, compliance, required behaviors, cryptographic semantics, or any MUST/SHOULD-level requirement.
+
+        Please discuss major changes in a GitHub Discussion first if possible.
+
+  - type: textarea
+    id: affected-spec
+    attributes:
+      label: "Which spec(s) does this affect?"
+      description: "e.g., Artipoint Grammar, Channels, Governance, ALSP, Identity & Trust, Bootstrap"
+      placeholder: "ASCP Channels: Secure Distribution Layer (§6.4 kid interpretation)"
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem Statement"
+      description: "Describe the issue clearly. What ambiguity, contradiction, or gap exists?"
+      placeholder: "The current kid scoping rules do not define behavior when two keyframes reference the same UUID..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Proposed Normative Change"
+      description: "Quote or describe the exact MUST/SHOULD/MAY rules you propose adding or altering."
+      placeholder: "Replace §6.4.3 with: 'Implementations MUST resolve kid collisions using chronological Keyframe ordering...'"
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: "Rationale"
+      description: "Why is this change necessary? What breaks without it?"
+      placeholder: "Without deterministic kid ordering, replicas may diverge in JWE decryption behaviors."
+
+  - type: textarea
+    id: impacts
+    attributes:
+      label: "Interoperability / Security Impacts"
+      description: "Describe potential impacts on implementations."
+      placeholder: "This would require implementations to track Keyframe precedence explicitly."
+
+  - type: textarea
+    id: references
+    attributes:
+      label: "References or Related Discussions"
+      placeholder: "Link discussions, PRs, external standards, or research papers."

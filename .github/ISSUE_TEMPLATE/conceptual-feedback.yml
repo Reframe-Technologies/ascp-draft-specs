@@ -1,0 +1,41 @@
+name: "Conceptual / Architectural Feedback"
+description: "Feedback on ASCP architecture, semantics, constructs, layering, motivations, or conceptual framing."
+labels: ["conceptual", "discussion-needed"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to propose conceptual changes or discuss architectural questions.  
+        This includes Streams/Spaces semantics, operator taxonomy, layering, trust models, or mental-model alignment.
+
+  - type: textarea
+    id: area
+    attributes:
+      label: "Area of Feedback"
+      description: "Which conceptual area does this relate to?"
+      placeholder: "Scoped Displacement Behavior (SDB), Governance inheritance, Layering model…"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Describe Your Feedback"
+      description: "Explain your perspective, question, or concern."
+      placeholder: "I believe SDB may need a different inheritance pattern in nested Spaces…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reasoning
+    attributes:
+      label: "Reasoning / Context"
+      description: "Why does this matter? How does it affect ASCP's evolution?"
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Possible Alternatives or Variants"
+
+  - type: textarea
+    id: references
+    attributes:
+      label: "Links / Research / Related Discussion"

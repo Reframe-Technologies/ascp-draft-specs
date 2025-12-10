@@ -1,0 +1,25 @@
+name: "Editorial Fix"
+description: "Report typos, formatting issues, unclear wording, or non-normative errors."
+labels: ["editorial"]
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: "Location"
+      description: "File and section number if possible."
+      placeholder: "ASCP Artipoint Grammar §7.3"
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: "Issue Description"
+      description: "Describe the editorial problem."
+      placeholder: "Missing semicolon in the ABNF example."
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested
+    attributes:
+      label: "Suggested Fix"
+      placeholder: "Propose corrected wording or formatting if you have it."
