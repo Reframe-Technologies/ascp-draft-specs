@@ -926,7 +926,7 @@ Governance MUST resolve semantic revocation; Layer-1 MUST NOT.
 
 The following structure defines the JSON format for \<channel-key-envelopes> that appear as the value of an envelope attribute targeted for a specific user in Keyframe artipoints. It MUST contain these fields:
 
-```
+```json
 {
   "type": "channel-key-envelope",
   "version": "1.0",

@@ -1,4 +1,4 @@
-# ASCP: **Bootstrap Process and Channel Discovery**
+# ASCP **Bootstrap Process and Channel Discovery**
 
 **Public Comment Draft -** *Request for community review and collaboration*
 

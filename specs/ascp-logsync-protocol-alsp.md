@@ -278,7 +278,7 @@ This architecture enables ALSP to synchronize structured articulation content wh
 
 ALSP guarantees **eventual consistency** across authorized replicas through a hierarchical model of immutability and deterministic ordering.
 
-**At the articulation staement level**, each articulation is globally unique and immutable with verifiable authorship and timestamps. The protocol prevents duplication or mutation once messages are replicated, ensuring message integrity across the network.
+**At the articulation statement level**, each articulation is globally unique and immutable with verifiable authorship and timestamps. The protocol prevents duplication or mutation once messages are replicated, ensuring message integrity across the network.
 
 **At the log level**, each channel maintains an append-only stream where deletions and overwrites are prohibited. Messages are stored and transmitted in canonical lamport clock order using the message\_id for tie-breaking the order, providing deterministic sequencing within each channel and also globaly across logs.
 

@@ -108,13 +108,11 @@ Governance attributes such as `member`, `writer`, `owner`, `role::*`, `deny::*`,
 
 Governance defines **semantic authority** and **coordination meaning**. It does not enforce cryptographic access. Governance attributes are interpreted through DAG evaluation at Layer-2 and Layer-3, producing a semantic model of participation and rights. Cryptographic enforcement—including access to encrypted payloads and distribution scopes—is the responsibility of Layer-1 Channels, which receive their effective participant sets and key provisioning instructions from the governance state evaluated at Layer-3.
 
-The result of governance evaluation at Layer-3 is called the **effective governance set**: the resolved set of participants, roles, and permissions after applying inheritance, overrides, denies, expirations, and group resolution.
-
-Coodination 
+The result of governance evaluation at Layer-3 is called the **effective governance set**: the resolved set of participants, roles, and permissions after applying inheritance, overrides, denies, expirations, and group resolution. 
 
 # 6. Governance Attributes
 
-All Governance attributes defined in this specification are **Coordination Contruct** agnostic. They **MAY** apply to Spaces, Streams, Piles, Channels, Groups and other future Artipoint types.
+All Governance attributes defined in this specification are **Coordination Construct** agnostic. They **MAY** apply to Spaces, Streams, Piles, Channels, Groups and other future Artipoint types.
 
 ## 6.2 Writer
 
@@ -157,7 +155,7 @@ expiration::<attribute> := (<participant>, <timestamp>)
 
 Expired grants MUST NOT be effective after the timestamp.
 
-# 7. Addressing Attritbutes
+# 7. Addressing Attributes
 
 ## 7.1 Member
 
@@ -200,10 +198,10 @@ A **Bookmark** is a Layer-2 Artipoint of type `bookmark` that represents the mos
 
 ### **8.1.1 Canonical Form**
 
-```clike
+```asciidoc
 [uuid, author, timestamp,
   ["bookmark", "<bookmark title>",
-   uri:"https://github.com/Reframe-Technologies/ascp-draft-specs"
+    uri:"https://github.com/Reframe-Technologies/ascp-draft-specs"
   ]
 ]
 ```
@@ -247,11 +245,9 @@ A **Pile** is a Layer-2 Artipoint of type pile that represents a **flat, themati
 
 ### **8.2.1 Canonical Form**
 
-```c
+```asciidoc
 [uuid, author, timestamp,
-  ["pile", "<pile title>",
-   payload
-  ]
+  ["pile", "<pile title>", payload ]
 ]
 ```
 
@@ -271,7 +267,6 @@ A Pile Artipoint **MUST** conform to the Artipoint Grammar defined in the ASCP A
   - A payload field **MUST** be present.
   - The payload **MAY** be an empty quoted string or typed block.
   - If typed, the payload usage is... (TBD)
-  - The payload **MUST NOT** contain Artipoint grammar constructs or embedded articulation expressions.
 
 ### **8.2.3 Required Attributes**
 
@@ -293,11 +288,9 @@ A **Stream Artipoint** is a Layer-2 Artipoint of type stream that represents a *
 
 ### **8.3.1 Canonical Form**
 
-```c
+```asciidoc
 [uuid, author, timestamp,
-  ["stream", "<stream title>",
-   payload
-  ]
+  ["stream", "<stream title>", payload ]
 ]
 ```
 
@@ -316,7 +309,6 @@ A Stream Artipoint **MUST** conform to the Artipoint Grammar specification. The 
   - A payload field **MUST** be present.
   - The payload **MAY** be a quoted string or typed block.
   - If typed, the payload **SHOULD** use the uri: prefix referencing the Stream’s external representation.
-  - The payload **MUST NOT** embed Artipoint grammar or nested expressions.
 
 ### **8.3.3 Required Attributes**
 

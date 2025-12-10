@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.45 — Informational (Pre-RFC Working Draft)  
+Version: 0.46 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -178,7 +178,7 @@ Defines the **Security Construct Artipoints**—Identity, Certificate, RootCA, e
 - how endorsements strengthen provenance
 - how trust anchors are introduced and rotated
 
-### **Layer-2: Artipoint Grammer**
+### **Layer-2: Artipoint Grammar**
 
 The Layer-2 ASCP Grammar defines the encoding and decoding rules for the Collaborative Constructs such as the Security Construct Artipoint defined by this specification, but does **not** define transport, replication, or governance semantics of these Constructs, which all happens at Layer-3.
 
@@ -449,7 +449,7 @@ An Identity Artipoint MUST be articulated with the identity type in the primary 
 
 ```c
 [uuid, author, timestamp,
-  ["identity", <label>, <optional-uri>
+  ["identity", <label>, <payload>
   ]
 ]
 ```
@@ -469,6 +469,7 @@ An Identity Artipoint **MUST** conform to the Artipoint Grammar specification. T
   - A payload field **MUST** be present.
   - The payload **MAY** be a quoted string or typed block with a uri: prefix
   - The payload SHOULD contain an email address in mailto:user\@domain" form or a URI pointing to the agent process the identity assoicates with.
+  - The payload here is what is typically presented as `user_identity` during ALSP authentication. (ALSP §10.2.1)
 
 ### **7.1.2 Required Attributes for Bound Identities**
 
@@ -589,7 +590,7 @@ The root certificate MUST be self-signed and MUST appear in the **Bootstrap Chan
 
 ### **7.3.2 Field Requirements (Normative)**
 
-A RootCA Artipoint **MUST** conform to the Artipoint Grammar specification. The following requirements apply specifically to BootCA instantiation:
+A RootCA Artipoint **MUST** conform to the Artipoint Grammar specification. The following requirements apply specifically to RootCA instantiation:
 
 - **type**
   - The instantiation expression **MUST** include a type field.
@@ -716,7 +717,7 @@ This distinction prevents semantic overload common in DID Documents and PKI and 
 
 ### **8.1.3 Endorsement Schema**
 
-All endorsements MUST follow this schema:
+All endorsements MUST follow the schema below. While inspired by the structural conventions of the W3C Verifiable Credentials model—particularly the separation of subject, issuer, claim, and proof—ASCP endorsements remain JOSE-native constructs without reliance on JSON-LD or VC processing rules:
 
 ```json
 {
@@ -776,7 +777,7 @@ Endorser is another ASCP identity; the JWS MUST reference its certificate via JO
 
 #### **c. oidc-icb (OIDC IdentityClaimBundle)**
 
-Evidence MUST contain a structured OIDC claim binding the certificate’s fingerprint to an account identifier.
+Evidence MUST contain a structured OIDC claim binding the certificate’s fingerprint to an account identifier. Note: This endorsement doesn't strictly require the use of OIDC, only a trusted Identity Provider that generates an Identity Token conformant to this specification.
 
 #### **d. did-jws (Decentralized Identifier Endorsement)**
 
@@ -895,7 +896,7 @@ A JSON structure as follows:
 - `recovery_purpose` (optional) — Intended use case for this recovery envelope
 - `created` — Timestamp when the recovery envelope was generated
 
-See Section 11 for all details around contructing the recovery envelope and in particular the contruction and decoding process of the `user-key-envelope`populating the `user_key_jwe` JSON field.
+See Section 11 for all details around constructing the recovery envelope and in particular the construction and decoding process of the `user-key-envelope` populating the `user_key_jwe` JSON field.
 
 ## **8.4 Example Attribute Annotations (Informative)**
 
@@ -964,8 +965,6 @@ See Section 11 for all details around contructing the recovery envelope and in p
     )
 ];
 ```
-
-
 
 # **9. Identity Claim Bundles (ICB)** 
 
@@ -1259,7 +1258,7 @@ Example showing an Identity Artipoint, Certificate Artipoint, and resulting endo
 
 # 10. Identity: Certificate Binding & Rotation
 
-In ASCP, every user or agent that contributes immutable entries to the articulation log must have its own cryptographic key pair. The private key is used to sign all Artipoints authored by that identity. The public key is published in the log to establish verifiable provenance.
+Every user or agent that contributes immutable entries to an ASCP articulation log operates with its own cryptographic key pair. The private key is used to sign all Artipoints authored by that identity, while the corresponding public key is published to the log in a self-signed manner to establish verifiable provenance. This approach provides a straightforward and explicit binding mechanism that mirrors the channel keyframe activation model used elsewhere in ASCP. Because certificates remain in the log indefinitely, old keys remain verifiable for historical signatures without requiring additional bookkeeping or revocation infrastructure.
 
 ## **10.1 Default: Privacy‑First Local Key Generation**
 
@@ -1276,7 +1275,7 @@ Use `certificate::kid` on the identity to set the current active signing key.
 ## **10.2 Set or Rotate the Active Key:**
 
 ```bnf
-[rot-uuid, alice@example.com, 2025-08-12T09:00:00Z,
+[rot-uuid, author, timestamp,
   identity-uuid .
   ( certificate::kid := "ascp:cert:<new-cert-uuid>" )
 ];
@@ -1284,11 +1283,6 @@ Use `certificate::kid` on the identity to set the current active signing key.
 ```
 
 Layer-3 clients are responsible for selecting which Certificate is active for authorship and interpreting governance state to determine whether authorship is semantically permitted. Identity & Trust does not perform or define this evaluation.
-
-## **10.3 Why this is right**
-
-- Simple, explicit, and mirrors channel keyframe activation.
-- Old keys remain verifiable for historical signatures; no extra bookkeeping.
 
 # **11. Key Escrow and Recovery Strategy**
 
@@ -1510,3 +1504,104 @@ ASCP's log-anchored trust architecture solves the fundamental challenges of dist
 The system enables both privacy-first and enterprise deployments through self-sovereign key generation, optional PKI anchoring, and secure recovery mechanisms. Most critically, it establishes verifiable trust relationships between humans and autonomous agents with identical cryptographic guarantees.
 
 ASCP delivers a trust infrastructure that integrates with existing PKI systems today while providing the foundation for scalable human-AI coordination.
+
+# **Appendix A: Design Rationale**
+
+The ASCP Trust and Identity Architecture is grounded in a set of principles that guide how identities, certificates, endorsements, and trust anchors interoperate across distributed environments. While the normative sections of this specification focus on precise requirements and behaviors, the design rationale presented here provides the conceptual framing behind those choices. Its purpose is to help reviewers understand why the protocol is structured as it is, how optional features fit into the larger system, and what trade-offs informed particular architectural decisions. These explanations are non-normative and offer additional insight into the model’s intent and the reasoning that supports it.
+
+## **A.1 Log-Anchored Trust and Historical Verifiability**
+
+ASCP places trust not in online authorities or ephemeral validations, but in immutable records captured at the moment coordination occurs. This design ensures that every trust decision can be reevaluated in the future based on the state of evidence that existed at the time the statement was made. The log, rather than a central authority, becomes the locus of trust.
+
+Historical verifiability is central to this approach. Certificate chains may expire, identity providers may rotate keys, and external systems may change policies or even disappear. By ensuring that endorsements, attestations, and evidence are captured alongside the statements they support, ASCP allows participants to reconstruct trust decisions long after external systems have changed. A signature validated today must remain valid decades later, independent of the stability or availability of the systems that originally supported it.
+
+The log-anchored model also supports autonomy. Each participant, or replica, carries a complete copy of the trust-relevant history for the channels it has joined. No participant must ask for permission to trust: verification becomes a local, deterministic operation, influenced only by immutable history and locally configured policies. This autonomy is vital in distributed environments, particularly where human agency, offline operation, or cross-organizational collaboration require independence from continuous reliance on external validation infrastructures.
+
+## **A.2 Self-Sovereign Keys, Proof of Possession, and Self-Signing**
+
+At the heart of each ASCP identity is a self-generated key pair. This reflects an intentional commitment to self-sovereignty: identities should not depend on any external authority for their creation or basic operation. By requiring that public keys be self-signed and introduced through authenticated sessions, the system ensures that the holder of the private key is demonstrably the same entity initiating participation.
+
+Self-signing establishes proof of possession at the moment the key is introduced. It binds the key to a specific historical point in the log and provides permanent provenance for that binding. Even when later endorsements, attestations, or RootCA signatures strengthen a certificate’s credibility, the root of that trust remains the participant’s self-generated proof.
+
+This approach also enables seamless migration across devices and environments. Because the key pair originates with the participant, the system avoids introducing assumptions about centralized key issuance, escrow by default, or authority-managed identity creation. Optional enterprise integrations may exist, but they build atop this self-sovereign core.
+
+## **A.3 Why and When to Use RootCA Signing**
+
+Many deployments will not require RootCA signing of participant keys, as self-signing and endorsements are often sufficient for establishing authorship and identity provenance within a trust domain. However, some scenarios call for additional layers of assurance that RootCA signing is specifically designed to provide.
+
+RootCA signing becomes relevant when participants must be verifiably tied to an organization’s internal identity authority. Enterprises may enforce policies requiring all participant keys to be blessed by the organization’s RootCA in order to ensure they conform to internal security requirements. Similarly, cross-organizational collaboration may require presenting externally verifiable assurances that a particular certificate originates from a specific entity.
+
+Anchoring participant keys to the RootCA also supports recovery workflows where enterprise-managed escrow keys facilitate restoration of corporate access. Although individual participants retain self-sovereignty over their private keys, RootCA signatures enable organizations to layer their own expectations for governance, accountability, and compliance without altering the participant-centered trust model.
+
+In ASCP, RootCA signing is intentionally optional. It is a mechanism for strengthening confidence, not a prerequisite for authorship or participation. This flexibility allows ASCP to support both privacy-forward deployments and tightly controlled enterprise environments without compromising the integrity of the core trust model.
+
+## **A.4 Enterprise Escrow and Deployment Considerations**
+
+Key recovery is an essential feature for both individuals and organizations, but the motivations differ. Individual users often require recovery mechanisms to protect against device loss or failure. Enterprises, meanwhile, may be legally or operationally compelled to ensure business continuity in the face of employee turnover, device loss, or forensic requirements.
+
+To accommodate these differing needs, ASCP introduces recovery envelopes as a flexible mechanism for encrypting private keys in a layered structure. The model preserves confidentiality through double encryption: once with a user-derived key and once with a recovery key stored separately. The log-anchored publication of the recovery envelope enables deterministic retrieval during a recovery operation while avoiding any exposure of sensitive material.
+
+For personal deployments, recovery keys typically reside on a secondary device or hardware token, reinforcing the principle that no centralized service should hold unilateral control over the participant’s private keys. In enterprise-managed deployments, recovery keys may be controlled by the organization, allowing recovery actions under well-defined governance policies. Even in those cases, ASCP emphasizes transparency: the fact of recovery, the scope of materials involved, and the provenance of recovery actions should appear in the log for auditability whenever appropriate to the deployment’s trust model.
+
+The architecture ensures that recovery mechanisms remain orthogonal to governance semantics. Recovering a key does not grant or revoke membership, roles, or authorship permissions; it merely restores cryptographic capability. This separation helps maintain clarity in distributed environments where cryptographic identity and governance authority often intersect but must remain conceptually distinct.
+
+## **A.5 Orientation for Reviewers**
+
+ASCP’s trust architecture spans foundational infrastructure, cryptographic constructs, and workflow-level mechanisms such as identity bootstrap and recovery. Reviewers approaching this specification for the first time may find it helpful to consider the document in terms of three conceptual layers.
+
+The first layer establishes the trust primitives: identities, certificates, endorsements, and trust anchors. These represent the building blocks from which all trust decisions are made. The second layer defines how these primitives interplay within the ASCP log to provide cryptographically verifiable authorship, provenance, and trust evaluation. The third layer focuses on lifecycle processes: how participants join, how they rotate keys, how they bind external evidence to their identities, and how lost keys may be restored.
+
+Understanding these layers clarifies the intent of the protocol. ASCP does not treat identity as a monolithic construct but instead decomposes it into composable, auditable parts that better reflect the ways in which people and systems operate across devices, organizations, and time. This layered structure also ensures that deployments can adapt to their specific requirements without altering the underlying trust model, preserving interoperability while accommodating variability in governance or operational policies.
+
+## **A.6 Concluding Perspective**
+
+The design of ASCP’s trust architecture reflects a commitment to durable provenance, human-centered autonomy, and long-term verifiability. By grounding trust in immutable history rather than transient systems, and by privileging participant-generated keys over externally issued identities, ASCP offers a trust substrate capable of supporting the evolving relationship between humans and intelligent agents.
+
+These guiding principles shape every normative requirement in the main specification. While implementers need not internalize every nuance of the rationale to build compliant systems, understanding these motivations helps illuminate why ASCP prioritizes verifiable history, explicit declarations, and cryptographic self-sovereignty. It also underscores the protocol’s role as a foundational layer for richer forms of coordination and collaboration in distributed, multi-agent ecosystems.
+
+# **Appendix B: Deployment Models**
+
+ASCP is designed to operate across a wide spectrum of deployment environments, from lightweight personal workspaces to large-scale organizational infrastructures and cross-institution collaboration networks. Although the normative behavior of the protocol remains the same in all cases, the practical realities of deployment often introduce distinct expectations around identity onboarding, key lifecycle management, recovery, and interoperability. This appendix provides a conceptual overview of the primary deployment models for ASCP, offering non-normative guidance that helps situate the Trust and Identity Architecture within real operational contexts.
+
+## **B.1 Personal and Local-First Deployments**
+
+In personal or small-team environments, ASCP typically begins with a single-user bootstrap, a self-generated RootCA, and a minimal identity and certificate set. The design philosophy in this context emphasizes privacy, autonomy, and resilience. Users generate their own identity keys locally, maintain exclusive control of private key material, and often employ a second device or hardware token as the recovery key for optional key backup.
+
+These deployments benefit from the self-sovereign nature of ASCP’s identity architecture. Because no external certificate authority or institutional identity provider is required, a user can operate an ASCP instance entirely offline or across intermittent connectivity. The log-anchored structure ensures that authorship and provenance remain verifiable even without access to external systems. Recovery workflows are similarly self-contained: a locally stored double-encrypted envelope, together with a recovery key kept on a trusted secondary device, enables secure device migration without reliance on third parties.
+
+Personal deployments often evolve organically. Additional devices may join the trust domain over time, each establishing its own certificate and purpose bindings. Cross-device verification occurs through replication of the log and validation of historical signatures. These deployments illustrate ASCP’s capacity to support human-scale workflows where durability, sovereignty, and privacy are paramount.
+
+## **B.2 Enterprise and Organizational Deployments**
+
+Enterprises frequently have requirements that extend beyond the needs of individual users. These may include identity governance, continuity of operations, legal and compliance obligations, and integration with existing security infrastructures. ASCP accommodates these needs without compromising the core trust model by layering enterprise controls on top of self-sovereign identities.
+
+In organizational deployments, identity bootstrap may use corporate identity providers such as Azure AD, Okta, or custom OIDC services. These providers supply authoritative user assertions, which ASCP binds directly to participant-generated keys through IdentityClaimBundles. Enterprises may also elect to sign participant keys using the RootCA, allowing internal systems to verify that keys have been formally recognized or authorized by organizational policy.
+
+Recovery expectations differ in this environment as well. While ASCP’s standard envelope mechanism allows users to maintain private control of their identity keys, enterprises may require recovery keys held in a secure, organization-managed hardware module or escrow service. Such configurations provide business continuity while preserving the cryptographic and audit protections built into the envelope structure. Recovery operations can be logged, enabling transparency and traceability consistent with institutional oversight.
+
+Governance in enterprise deployments typically relies on additional ASCP specifications that define roles, membership semantics, and authorization rules. Those governance attributes, when combined with the trust primitives defined in this specification, enable organizations to enforce structured collaboration without centralizing control of private keys or undermining the durability of the log-anchored trust model.
+
+## **B.3 Federated and Multi-Organization Deployments**
+
+In cross-institution collaborations—whether between companies, research groups, agencies, or distributed teams—ASCP’s architecture provides mechanisms for independently governed trust domains to interoperate without requiring a shared global identity authority. Each organization maintains its own RootCA and identity onboarding process, while ASCP enables trust relationships to form at the boundary between these domains.
+
+Endorsements play a crucial role here. When a participant from one ASCP instance wishes to collaborate with another, their certificates may carry endorsements from trusted external identity providers, enterprise CAs, or DID-based controllers. These endorsements offer portable, verifiable evidence of identity provenance, allowing the receiving instance to make trust decisions without giving up autonomy or requiring pre-established bilateral agreements.
+
+Federated deployments also make use of selective replication. Instead of merging trust domains, each organization retains control over its own channels and logs, replicating only those necessary for shared work. The immutability of the log ensures that participants can audit each other’s contributions independently, while the layered trust model allows each domain to evaluate evidence according to its own policies.
+
+These deployments highlight ASCP’s ability to create trust “bridges” while preserving local identity authority. Rather than imposing a global PKI or universal naming scheme, ASCP allows trust to emerge from verifiable, composable evidence, anchored in each domain’s own immutable history.
+
+## **B.4 Hybrid Deployments and Evolution Over Time**
+
+Many real-world deployments do not neatly fit into a single category. An individual may begin with a personal ASCP instance and later integrate with an organizational one. A team may adopt ASCP internally before opening channels to external collaborators. Enterprises may gradually introduce ASCP into their workflows, first as a coordination tool and later as a governance substrate.
+
+ASCP is designed for this fluidity. Because identities are self-sovereign and certificates accumulate provenance over time, the same cryptographic foundations can persist across shifting contexts. A participant who later joins an enterprise deployment can attach new endorsements without altering earlier evidence. Recovery mechanisms remain compatible across device migrations and deployment boundaries. RootCA provenance allows institutions to evolve their trust anchors without invalidating historical signatures.
+
+This adaptability ensures that ASCP can support long-lived collaboration, even as its participants, organizations, and infrastructures change. Trust grows cumulatively: new endorsements, new certificates, and new purposes extend a participant’s history rather than replacing it. The log becomes a durable narrative of trust formation and evolution.
+
+## **B.5 Closing Perspective on Deployment Diversity**
+
+ASCP’s trust and identity architecture is intentionally deployment-agnostic. Its primitives—Identity Artipoints, Certificate Artipoints, endorsements, purposes, and recovery envelopes—operate consistently whether used by an individual, an enterprise, or a federation of organizations. What varies is not the protocol itself but the policies, evidence sources, and operational expectations layered atop it.
+
+By grounding trust in immutable history and participant-controlled keys, ASCP provides a stable substrate capable of supporting a wide variety of real-world collaboration patterns. Whether deployed privately on a single machine, across a corporate boundary, or within a global ecosystem of agents and organizations, the same foundational mechanisms ensure verifiable provenance, durable identity, and trustworthy coordination. This appendix offers a conceptual guide to those possibilities, helping reviewers understand how the normative requirements of the specification translate into practical deployment scenarios.
+
