@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: "Start a Discussion"
+    url: "https://github.com/Reframe-Technologies/ascp-draft-specs/discussions"
+    about: "For architectural questions, conceptual ideas, or high-level feedback."
+
+  - name: "Q&A / Help"
+    url: "https://github.com/Reframe-Technologies/ascp-draft-specs/discussions/categories/q-a"
+    about: "Use this category for general questions or clarifications on the ASCP specifications."
+
+  - name: "Security Disclosure"
+    url: "mailto:security@reframetech.com"
+    about: "Report potential security vulnerabilities privately via email."
