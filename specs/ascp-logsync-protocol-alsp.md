@@ -5,7 +5,7 @@
 **Public Comment Draft -** *Request for community review and collaboration*
 
 Version: 0.50 — Informational (Pre-RFC Working Draft)  
-November 2025
+December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -247,6 +247,12 @@ This separation serves distinct security purposes across layers:
 **Layer 1 (ASCP Message Layer) Security**: Protects the meaning and content of articulation statements through JWS signatures, JWE encryption, keyframes, and certificate chains. While Layer 0 understands the JOSE compact serialization format for transport optimization, it remains semantically agnostic to the protected content within these structures.
 
 This architectural separation means Layer 0 ALSP operates as a **secure replication and synchronization mechanism** that can efficiently encode and transmit Layer 1's JOSE-formatted messages while Layer 1 handles all semantic security. The two security models are complementary, not redundant: Layer 0 ensures that Layer 1's cryptographically secured articulation statements reach all authorized replicas with identical content and ordering, while Layer 1 ensures that the meaning and content itself remains cryptographically protected regardless of transport encoding optimizations.
+
+### **Note on Transparency Systems**
+
+ALSP’s security model is intentionally limited to authenticated transport, deterministic ordering, and integrity of replicated logs. Unlike Certificate Transparency (CT) or other Verifiable Data Structure (VDS) architectures, ALSP does not require globally comparable Merkle trees nor an untrusted log operator. Trust derives from authorship signatures at Layer 1 and scoped channel authorization, not from public auditability.
+
+**Future revisions of this specification** *may* introduce Merkle-based summary structures solely to assist with replica-convergence checks (See Section 9.9), but such mechanisms would serve as transport-level optimizations rather than trust anchors and would not alter any Layer-1 or Layer-2 semantics.
 
 ## **5.2 Relationship to Channels and Higher ASCP Layers**
 
@@ -528,11 +534,11 @@ The choice of flow is **entirely server-driven** and **independent** of whether 
 
 In both flows:
 
-- Each peer generates a fresh `session_nonce` and includes it in all authentication messages.
+- Each peer generates a fresh `session_nonce` and includes it in all message headers.
 - Each peer MUST validate the peer’s identity, `session_nonce`, and `timestamp` freshness before proceeding.
 - No Channel Log queries or updates may occur until the handshake completes.
 
-The handshake concludes when each side has received a valid hello from the other, at which point the session transitions into the AUTHENTICATED state (Section 8.4). After this transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.1.
+The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions into the AUTHENTICATED state (Section 8.4). After this transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.1.
 
 *Non-normative note:*
 
@@ -636,53 +642,90 @@ This strict failure behavior ensures that misconfigured clients, replay attempts
 
 ## **8.5. Authentication Modes**
 
-The ALSP session authentication handshake supports two client-side credential-supply modes. These modes define *how the initiating replica packages its identity materials* in the initial `auth_request`. The authentication **flow** taken by the receiving replica is independent and is determined solely by whether the server has sufficient trust material to validate the client.
+During session authentication, a client establishes its identity using one of two credential-supply modes: **Direct Mode** or **Provisioned Mode**. These modes describe *how* the client supplies identity material to the server. The concrete fields used to carry this material are defined in Section 10.2; this section defines only the normative behavior and constraints associated with each mode.
 
-## **8.5.1 Direct Mode**
+A server determines the client’s mode based solely on the presence or absence of certain authentication fields in the **initial authentication request**, as described in Section 8.5.3. Mode selection is not signaled explicitly by the client.
 
-In **Direct Mode**, the initiating replica includes all identity materials required for validation in its initial `auth_request`. This includes the identity certificate, any intermediate certificates, and any proof-of-possession structures required to validate the presented identity key.
+### **8.5.1 Direct Mode**
 
-A receiver **MUST NOT assume** that a Direct Mode request guarantees successful immediate validation. Even when all materials are provided, the receiver MAY still need to issue an `auth_challenge` if:
+In **Direct Mode**, the client already possesses its long-term identity credentials. The client authenticates by presenting its identity certificate (or equivalent identity package) in the initial authentication request.
 
-- its local trust cache is outdated,
-- it lacks a necessary trust anchor, or
-- it requires additional freshness proofs.
+A client operating in Direct Mode:
 
-*Non-normative note:*
+- **MUST** include its identity certificate field in the initial authentication request.
+- **MUST** sign all authentication messages with the private key corresponding to that certificate.
+- **MUST** include a key identifier referencing that certificate’s verification key.
+- **MUST NOT** include a recovery certificate in the initial authentication request.
+- **MUST** continue to supply identity material in any retransmission of the authentication request.
 
-Direct Mode optimizes for the common case where replicas have previously exchanged or cached the relevant trust materials, enabling an Immediate Flow (Section 8.3). However, no such outcome is guaranteed.
+If the server possesses sufficient trust metadata to validate the client’s identity, it **MAY** complete authentication immediately using the Immediate Flow defined in Section 8.4.1. Otherwise, the server **MAY** issue an authentication challenge to request additional identity artifacts.
 
-## **8.5.2 Provisioned Mode**
+Direct Mode is appropriate for clients that have been fully provisioned by their operators or by prior participation in the ASCP Bootstrap Process.
 
-In **Provisioned Mode**, the initiating replica includes only a minimal identity reference in its initial `auth_request`. The client expects the server to request additional materials if needed.
+### **8.5.2 Provisioned Mode**
 
-When operating in Provisioned Mode:
+In **Provisioned Mode**, the client does not yet possess its long-term identity credentials and relies on the server to provision them during authentication. The client initiates authentication using a recovery certificate that permits the server to deliver identity key material securely.
 
-- The initial `auth_request` MUST advertise the identity reference(s) necessary for the server to determine whether a challenge is required.
-- If the server issues an `auth_challenge`, the client MUST respond with an updated `auth_request` containing the requested credential materials.
-- The client MUST NOT send partial or incremental credential updates; each response to an `auth_challenge` MUST include all materials requested in the challenge.
+A client operating in Provisioned Mode:
 
-Provisioned Mode is functionally equivalent to Direct Mode from ALSP’s perspective; it merely defers credential presentation until requested. Provisioned Mode does **not** imply a Challenge Flow, and Direct Mode does **not** imply an Immediate Flow.
+- **MUST NOT** include an identity certificate field in the initial authentication request.
+- **MUST** include a recovery certificate field in the initial authentication request.
+- **MUST** sign the initial authentication request using the private key associated with the recovery certificate.
+- **MUST** use an empty key identifier value in the protected header of the initial authentication request.
 
-## **8.5.3 Independence of Modes and Flows**
+If the server determines that additional identity material is required, it **MUST** issue an authentication challenge. The client’s response to this challenge:
 
-ALSP explicitly separates *client mode* from *server flow*:
+- **MUST** include its newly provisioned identity certificate or identity package.
+- **MUST** sign subsequent authentication messages using the newly provisioned identity key.
+- **MUST** include a key identifier referencing that identity key.
+- **MUST NOT** include the recovery certificate.
 
-- **Modes** (Direct / Provisioned) describe how the **initiating replica** packages credentials.
-- **Flows** (Immediate / Challenge) describe how the **receiving replica** validates the request.
+Provisioned Mode allows clients without preexisting identity credentials to participate in ALSP Channels using identity materials issued securely during the session establishment.
 
-Thus:
+### **8.5.3 Mode Determination (Server Behavior)**
 
-- A Direct Mode request MAY result in either Immediate Flow or Challenge Flow.
-- A Provisioned Mode request MAY result in either Immediate Flow or Challenge Flow.
+The server determines the client’s credential-supply mode by inspecting the **initial authentication request**. The following rules apply:
 
-Receivers MUST determine the appropriate flow based solely on their local trust material—not the client’s chosen mode.
+A server **MUST** classify the client as operating in:
 
-## **8.5.4 Initial Identity Bootstrap (Informative)**
+**Direct Mode** if and only if:
 
-In deployments where a replica possesses only a bootstrap identity (e.g., at first activation), its identity materials may not yet be known by peers. This may cause servers to consistently take the Challenge Flow until normal trust material circulation occurs.
+- the identity certificate field is present in the initial authentication request.
 
-Bootstrap identity establishment, credential issuance, and long-term trust establishment are defined in the **ASCP Trust & Identity Architecture** and are outside the scope of ALSP. ALSP’s only requirement is that, regardless of bootstrap state, replicas MUST complete the authentication handshake before entering the AUTHENTICATED state.
+**Provisioned Mode** if and only if:
+
+- the identity certificate field is absent, and
+- the recovery certificate field is present, and
+- the key identifier in the protected header of the request is an empty string.
+
+Any other combination of these fields in the initial authentication request:
+
+- **MUST** result in an authentication\_error,
+- **MUST** terminate the session, and
+- **MUST NOT** trigger a challenge flow.
+
+These rules ensure that mode detection is deterministic and that clients cannot enter inconsistent or partially defined authentication states.
+
+### **8.5.4 Invalid Combinations**
+
+A server **MUST** treat the following conditions as invalid and terminate authentication with an appropriate error:
+
+- Both an identity certificate field **and** a recovery certificate field are present in the initial authentication request.
+- An identity certificate field is absent in the initial authentication request and the recovery certificate is also absent.
+- A recovery certificate is present in the challenge-response authentication request.
+- The initial authentication request contains a non-empty key identifier while omitting the identity certificate field.
+- The challenge-response authentication request omits the identity certificate field.
+
+Invalid combinations prevent interoperable implementations and may indicate misconfiguration or an attempted downgrade attack.
+
+### **8.5.5 Relation to Authentication Flows**
+
+Credential-supply mode selection is orthogonal to the handshake flow selection defined in Section 8.4:
+
+- Direct Mode **may** use either Immediate Flow or Challenge Flow, depending on the server’s trust state.
+- Provisioned Mode **always** begins with a preliminary request and, if successful, continues via a Challenge Flow to complete identity provisioning.
+
+Mode selection determines *what* identity material the client supplies; flow selection determines *how and when* that material is validated by the server.
 
 ## 8.6 Transition to Authenticated Message Mode
 
@@ -885,6 +928,18 @@ Lamport clocks provide the right balance: deterministic global ordering with min
 
 Lamport ordering provides **transport‑level sequencing only**. Semantic ordering—such as authorship precedence or DAG traversal—is defined entirely at Layer 2. Applications MUST use articulation‑level DAG edges, not Lamport values, to determine semantic causality or meaning relationships.
 
+## **9.9 Merkle-Based Replica Validation (Future)**
+
+ALSP’s deterministic Lamport ordering model ensures that any two replicas with the same set of messages will converge to identical Channel Logs without requiring auxiliary data structures. However, certain deployments may benefit from more efficient mechanisms for detecting localized divergence during synchronization.
+
+**Future revisions of this specification may define an optional per-channel Merkle summary**, allowing replicas to exchange compact proofs of log prefixes or ranges. Such structures would serve only as *replica health and convergence aids*, not as trust mechanisms:
+
+- They would not replace authorship signatures or Layer-1 cryptographic guarantees.
+- They would not introduce public auditability or CT-style global consistency requirements.
+- They would remain strictly below the Channel trust boundary and would not affect visibility or encryption semantics.
+
+Any incorporation of Merkle summaries would therefore be **purely a Layer-0 optimization**, consistent with ALSP’s role as a transport and replication substrate.
+
 # **10. ALSP Protocol Messages**
 
 This section defines the complete **Layer-0 ALSP message model**, including the binary envelope format, JSON message header conventions, and how channel log entries are batched for synchronization. All ALSP messages are integrity-protected by JWS as defined in Section 6 and Section 7. Transport bindings (for example, WebSocket) carry these envelopes as opaque binary units (see Section 14).
@@ -928,6 +983,7 @@ These requirements ensure that all implementations produce comparable encodings 
 
 ### **alsp\_msg\_header (JSON-in-bytes)**
 
+- JSON is embedded as a CBOR byte string (bstr) to ensure deterministic encoding and avoid whitespace or ordering variability per RFC 8785.
 - The value of `alsp_msg_header` **MUST** be a valid **UTF‑8** encoded **JSON** document (RFC 8259). I‑JSON (RFC 7493) is RECOMMENDED.
 - To promote stable signatures and easy comparisons between implementations, producers **SHOULD** serialize this JSON in **canonical form** (e.g., JCS / RFC 8785).
 - Receivers **MUST** treat the header as an **opaque byte string** at the CBOR layer and **MUST NOT** re‑serialize it when verifying signatures.
@@ -992,18 +1048,24 @@ Authentication messages establish a mutually authenticated ALSP session prior to
 All authentication messages:
 
 - MUST use the ALSP Envelope format defined in Section 10.1.
-- MUST include a session\_nonce in the **message body** per Section 8.
+- MUST include a session\_nonce in the ALSP **message header** per Section 8.
 - MUST include a nonce field in the **JWS protected header** per Section 8.1.
-- MUST reference identity and key material in accordance with **ASCP Trust & Identity Architecture** .
+- MUST NOT include message header fields other than those explicitly defined in this section unless negotiated by future protocol extensions.
+- MUST reference identity and key material in accordance with **ASCP Trust & Identity Architecture.**
 
 Authentication messages do **not** grant channel access; they only establish the authenticated session.
 
+See Section 8.5.4 for normative constraints on valid and invalid field combinations in authentication messages. Implementations MUST reject any combination that violates those constraints.
+
 ### **10.2.1 Auth Request Message**
+
+The `auth_request` message initiates the ALSP session handshake. The client sends this message to establish its identity with the server and begin mutual authentication.
+
+Field requirements depend on the client's credential-supply mode (Direct Mode or Provisioned Mode), as defined in Section 8.5. Not all field combinations are valid; implementations MUST enforce the mode-specific constraints specified in Section 8.5 when constructing or validating this message.
 
 ```json
 {
   "alsp_msg_type": "auth_request",     // Explicit ALSP Auth Request
-  "auth_mode": "direct" | "provisioned",
   "timestamp": "<timestamp>",          // RFC 3339 UTC
   "session_nonce": "utf-8-string",     // Sender's session nonce
   "identity_cert": "<JWK+JWS>",        // Signed public key package
@@ -1020,11 +1082,6 @@ Authentication messages do **not** grant channel access; they only establish the
   - **MUST** be present.
   - **MUST** equal "auth\_request".
   - Identifies this header as an ALSP authentication request.
-- **auth\_mode**
-  - Type: string ("direct" or "provisioned")
-  - **MUST** be present.
-  - **MUST** indicate the credential-supply mode as defined in the ALSP authentication section (Direct vs Provisioned).
-  - Implementations **MUST** interpret this field consistently with the **ASCP Trust & Identity Architecture** for how identity and key material are supplied and validated.
 - **timestamp**
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
@@ -1033,24 +1090,24 @@ Authentication messages do **not** grant channel access; they only establish the
 - **session\_nonce**
   - Type: string (UTF-8, fixed length as specified in Section 8)
   - **MUST** be present.
-  - **MUST** be freshly generated for this session by the sender.
-  - **MUST** be used in the JWS protected header for auth\_request messages according to the nonce rules defined in Section 8.1.
-  - Receivers **MUST** treat this value as the sender’s session nonce for the remainder of the handshake.
+  - **MUST** be freshly generated for this session by the sender and MUST be the same in all messages of the session.
+  - **MUST** be used in the JWS protected headers according to the nonce rules defined in Section 8.1.
+  - Receivers **MUST** treat this value as the sender’s session nonce for the entire session and **MUST** validate that it does not change in future messages.
 - **identity\_cert**
-  - Type: string (JWS-encoded JWK package)
-  - In **Direct Mode**, this field **MUST** be present and **MUST** contain the sender’s identity certificate as defined in the **ASCP Trust & Identity Architecture**.
-  - In **Provisioned Mode**, this field **MAY** be omitted if the identity will be provisioned via client\_key\_env in a subsequent flow, as defined in the Trust & Identity Architecture.
-  - ALSP **MUST NOT** interpret the contents beyond ensuring it is well-formed per the Trust & Identity specification; semantic validation is delegated to that specification.
+  - Type: string (JWS-encoded Certificate Artipoint)
+  - A JWS-encoded JWK containing the client’s identity certificate. This field **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
+  - When included, this certificate **SHALL** be used by the server to authenticate the client and to validate all JWS signatures during the session (Trust & Identity §7.2).
+  - Informational Note: In **Provisioned Mode**, the identity will be provisioned via `client_key_env` in a subsequent message.
 - **recovery\_cert**
-  - Type: string (JWS-encoded JWK package)
-  - In **Provisioned Mode**, this field **MUST** be present and **MUST** contain the recovery key used to encrypt the client’s user-key-envelope, as defined by the Trust & Identity Architecture.
-  - In **Direct Mode**, this field **MAY** be omitted.
-  - ALSP treats this field as opaque and only requires consistency with subsequent auth\_challenge messages that reference it.
+  - Type: string (JWS-encoded Certificate Artipoint)
+  - This field is used exclusively in **Provisioned Mode** (Section 8.5.2).
+  - A recovery certificate **MUST** be included in the initial authentication request for **Provisioned Mode** and **MUST NOT** be included in **Direct Mode**.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be present.
-  - **MUST** identify the user or agent associated with this session (for example an email address or URN) using the identity formats defined in the Trust & Identity Architecture.
+  - **MUST** contain a UTF-8 encoded client side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be either the `payload` field content (email address or URN, typically) from the Identity Artipoint, OR the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to identity\_cert or the identity resulting from the provisioned identity flow.
+  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without certificate validation.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1058,6 +1115,10 @@ Authentication messages do **not** grant channel access; they only establish the
   - Implementations **MUST** use this identifier in connection- and session-management logic (for example, enforcing single active session per pair of replicas).
 
 ### **10.2.2 Auth Challenge Message**
+
+The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material from the client beyond what was provided in the initial `auth_request` (see Section 8.4).
+
+The server **MUST** include its identity certificate in all `auth_challenge` messages, and the client **MUST** validate this certificate before using it to verify any subsequent server signatures. In Provisioned Mode, the server also returns the encrypted client key envelope (`client_key_env`) that enables the client to complete authentication.
 
 ```json
 {
@@ -1090,19 +1151,18 @@ Authentication messages do **not** grant channel access; they only establish the
   - This value serves as the challenge nonce for identity and key-binding proof, as defined in the Trust & Identity Architecture.
 - **client\_key\_env**
   - Type: string (JWE compact serialization of the user-key-envelope)
-  - In **Provisioned Mode**, **MUST** be present and **MUST** be a JWE encrypted with the recovery\_cert supplied in the corresponding auth\_request, as defined in the Trust & Identity Architecture.
-  - In **Direct Mode**, **MAY** be omitted and **MUST NOT** be interpreted if present in violation of the mode.
-  - ALSP treats this field as an opaque JWE; structure and validation are governed exclusively by the Trust & Identity Architecture.
+  - In **Direct Mode**, this field **MUST** be omitted.
+  - In **Provisioned Mode**, **MUST** be present and the server **MUST** encrypt the user-key-envelope with the `recovery_cert` supplied in the initial authentication request with structure and validation are governed exclusively by Trust & Identity §11.2–§11.3.
 - **identity\_cert**
-  - Type: string (JWS-encoded JWK package)
-  - **MUST** be present.
-  - **MUST** contain the challenger’s own session identity certificate as defined in the Trust & Identity Architecture.
-  - **MUST** be consistent with the kid used in the JWS protected header for this message.
+  - Type: string (JWS-encoded Certificate Artipoint)
+  - **MUST** provide the challenging server's JWS-signed Certificate Artipoint that binds its identity to a signing key. This certificate **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (Trust & Identity §7.2).
+  - **MUST** be consistent with the kid used in the JWS protected header for this and all following messages.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be present.
-  - **MUST** identify the challenger’s user or agent identity as recorded in the ASCP bootstrap / trust material.
-  - **MUST** be consistent with the identity bound to identity\_cert per the Trust & Identity Architecture.
+  - **MUST** contain a UTF-8 encoded server side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be either the `payload` field content (email address or URN, typically) from the Identity Artipoint, OR the UUID of the Identity Artipoint itself.
+  - **MUST** match, or be resolvable to, the identity bound to identity\_cert or the identity resulting from the provisioned identity flow.
+  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without certificate validation.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1110,6 +1170,10 @@ Authentication messages do **not** grant channel access; they only establish the
   - Receivers **MUST** apply the same uniqueness and single-session rules as for auth\_request.
 
 ### **10.2.3 Hello Message**
+
+The `hello` message completes mutual authentication and establishes the authenticated session between two ALSP replicas. Both client and server exchange `hello` messages to finalize authentication validation, transitioning the session to the AUTHENTICATED state as defined in Section 8.6.
+
+The sender MUST include either the full identity certificate or a `kid` referencing a certificate already available to the receiver via bootstrap. A `kid` reference MUST NOT be used unless the receiver has previously obtained and validated the referenced certificate through out-of-band provisioning or prior credential exchange.
 
 ```json
 {
@@ -1122,7 +1186,7 @@ Authentication messages do **not** grant channel access; they only establish the
   "push_enabled": true,                // Request/confirm push mode
   "node_description": "utf-8-string",  // Friendly node description
   "max_alsp_length": 262144,           // Maximum receive length in bytes
-  "user_auth_cert": "cert-or-kid",     // Identity token package or certificate reference
+  "user_auth_cert": "cert-or-kid",     // Identity Claim Bundle or kid
   "user_identity": "utf-8-string",     // User / agent identity
   "status_message": "utf-8-string"     // Optional status or error information
 }
@@ -1147,8 +1211,8 @@ Authentication messages do **not** grant channel access; they only establish the
 - **boot\_keys\_jwe**
   - Type: string (JWE compact serialization)
   - **MAY** be present.
-  - When present, **MUST** contain the Bootstrap Channel key array as specified in the ALSP bootstrap key distribution section and the ASCP Trust & Identity Architecture.
-  - If omitted, the receiver **MUST NOT** assume encrypted bootstrap content is available until keys are obtained via another mechanism.
+  - When present, **MUST** contain the Bootstrap Channel Keys (BCKs), enabling validation and resolution of certificates and CAKs after authentication (Bootstrap §9–§10).
+  - If omitted, the receiver **MUST NOT** assume encrypted bootstrap content is available until arriving into an AUTHENTICATED state and they can be explictly requested.
 - **lamport\_max**
   - Type: integer (unsigned)
   - **MUST** be present.
@@ -1178,15 +1242,18 @@ Authentication messages do **not** grant channel access; they only establish the
   - Senders **MUST NOT** exceed the peer’s advertised limit.
 - **user\_auth\_cert**
   - Type: string
-  - **MUST** be present.
-  - In challenge flows, **MUST** contain the Identity Token Package or equivalent credential specified by the **ASCP Trust & Identity Architecture** to bind user\_identity to key material.
-  - In other flows, this **MAY** *instead* be a kid referencing the certificate used for ongoing message authentication, as defined in the ASCP Trust & Identity Architecture and key-identifier resolution rules covered in Section 13.
-  - Receivers **MUST** use this field (directly or via kid resolution) to validate the authenticated identity for the session.
+  - This field **MUST** be present.
+  - In **Challenge Flow**, this field **MUST** contain a freshly generated **Identity Claim Bundle (ICB)** bound to the peer’s session\_nonce. The ICB **MUST** satisfy all requirements of Trust & Identity §9 and **MUST** correspond to the identity key used to sign subsequent ALSP messages.
+  - In **Immediate Flow**, this field **MAY** instead contain a JOSE key identifier (kid) of the form `ascp:cert:<uuid>` referencing a certificate already available to, and previously validated by, the receiver through bootstrap or prior exchange. A sender **MUST NOT** provide a kid unless the receiver can resolve the referenced certificate without additional provisioning.
+  - Receivers **MUST** validate the identity conveyed by this field. When an ICB is supplied, the receiver **MUST** validate the bundle and treat the contained certificate as authoritative for the session. When a kid is supplied, the receiver **MUST** resolve it to a previously validated certificate and **MUST NOT** accept the value if resolution is not possible.
 - **user\_identity**
   - Type: string (UTF-8)
-  - **MAY** be present.
-  - When present, **MUST** identify the user or agent associated with this node and **MUST** be consistent with the identity conveyed or referenced by user\_auth\_cert.
-  - If omitted, receivers **MUST** derive the effective identity from user\_auth\_cert per the Trust & Identity Architecture.
+  - **MAY** be present and when present:
+    - **MUST** identify the user or agent associated with this node and **MUST** be consistent with the identity conveyed or referenced by user\_auth\_cert.
+    - **MUST** contain a UTF-8 encoded server side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be either the `payload` field content (email address or URN, typically) from the Identity Artipoint, OR the UUID of the Identity Artipoint itself.
+    - **MUST** match, or be resolvable to, the identity bound to identity\_cert or the identity resulting from the provisioned identity flow.
+    - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without certificate validation.
+  - If omitted, receivers **MUST** derive the effective identity from user\_auth\_cert in a manner consistent to the above.
 - **status\_message**
   - Type: string (UTF-8)
   - **MAY** be present.
@@ -1378,10 +1445,11 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 **kid:**
 
 - **Type:** string
-- **MUST** be present on all ALSP messages
-- When constructing the initial auth\_request in Provisioned Mode, the value must be an empty string other the kid **MUST** uniquely reference the signing key (identity key) as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
+- **MUST** be present on all ALSP messages except when constructing the initial auth\_request in Provisioned Mode. The missing `kid` signifies the absence of a resolvable identity key at this point in the authentication process.
+- When present, **MUST** uniquely reference the signing key (identity key) as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
+- Implementations **MUST** emit proper kid for all messages once the authentication completes.
 - The receiver **MUST** use the kid value to resolve the appropriate public key for signature verification.
-- The sender **MUST** ensure that the referenced key is the same key whose private component generated the JWS signature.
+- The sender **MUST** ensure that the referenced key is the same key whose private component generated the JWS signature of the message.
 
 **typ:**
 
@@ -1423,7 +1491,7 @@ Receivers **MUST** validate, in order:
 7. Signature correctness over the CBOR envelope bytes
 8. Timestamp validation per Section 10.4.5
 
-Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
+Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5, with one exception: when constructing the initial auth\_request in Provisioned Mode, the receiver **MUST** **defer** signature verification (step 7 above) until the referenced key is available. All other validation steps must pass immediately.
 
 ### **10.4.5 Timestamp Validation**
 
@@ -2127,7 +2195,7 @@ If divergence is detected, implementations **SHOULD** attempt recovery using one
 
 ## **17.4 Merkle Tree Extensions (Non-Normative)**
 
-In future versions of the specification a Merkle tree structure per channel log may be implemented to support efficient range comparison, similar to Git or Hypercore. This enables detection of localized divergence with minimal hash exchange.
+Future iterations of ALSP may define optional Merkle tree summaries per channel log to support more efficient divergence detection. Such structures would be used only for replica health and convergence validation and would not participate in the trust model defined at higher layers. This enables detection of localized divergence with minimal hash exchange. See Section 9.9.
 
 ## **17.5 Operational Best Practices (Informational)**
 
