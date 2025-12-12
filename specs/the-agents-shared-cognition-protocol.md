@@ -177,7 +177,7 @@ Artipoints are the foundational primitive of ASCP. Each Artipoint is an immutabl
 
 Artipoints are deliberately minimal. They do not encode application behavior, workflow state, or user interface expectations. Instead, they provide a precise, durable language for expressing relevance, relationships, intent, and interpretation—allowing meaning to be built up through articulation rather than inferred from mutable structures.
 
-## **10.1 Artipoints Are Structured Bookmarks**
+## **10.1 Artipoints Are Structured References**
 
 Artipoints originate from a familiar notion: a bookmark. But while a traditional bookmark merely records *where* something is, an Artipoint records *why it matters* within an evolving line of work.
 
@@ -250,7 +250,7 @@ This separation allows collaborators—human and AI—to maintain shared underst
 
 Further details of these mechanisms appear in **Section 12: Collaboration Model**.
 
-# **11. Contextual Structures**
+# **11. Contextual Constructs**
 
 Artipoints and Articulation Statements supply the atomic vocabulary of coordination. But meaningful collaboration requires more than isolated statements — it requires **organization**, a way to group, scope, and structure related work.
 
@@ -394,6 +394,10 @@ The purpose of the grammar is architectural rather than expressive. It ensures t
 - the coordination graph remains **composable**, **extensible**, and **interoperable** across tools;
 - articulation is constrained to **declarative statements**, avoiding computational or imperative complexity.
 
+A central architectural invariant of ASCP is that **contextual meaning is externalized into the coordination graph itself**. Meaning is not embedded in payloads, inferred from application state, or encoded in hidden schemas. Instead, it arises exclusively from the immutable Artipoints and the relationships articulated between them over time.
+
+This invariant allows context to remain durable, auditable, and interoperable across applications and agents, even as the content referenced by payloads or the views materializing the graph evolve independently.
+
 ## **Everything Is an Artipoint**
 
 A fundamental implication of this design—visible across Sections 10, 11, and 12—is that **all collaborative constructs in ASCP are made of the same primitive**. Artipoints can represent domain objects, contextual structures (such as Piles, Streams, and Spaces), membership relations, attention signals (Flags), or any other coordination concept a system or team articulates.
@@ -408,7 +412,9 @@ The **formal definition** of the grammar—including its ABNF syntax, operator t
 
 ASCP separates coordination semantics, governance semantics, access control, and trust foundations into distinct layers. This avoids the traditional conflation of roles, permissions, authorship rights, and organizational accountability. In ASCP, each of these concerns is articulated explicitly and preserved as part of the immutable coordination graph.
 
-Governance in ASCP is **declarative**: it expresses responsibilities, authority, and accountability rather than embedding procedural mechanisms. Security is **architectural**: it arises from cryptographic identity, immutable logs, scoped visibility, and local-first verification. The result is a model in which collaboration remains transparent, auditable, and evolvable across tools and agents.
+Governance in ASCP is **declarative and authoritative**: it defines **semantic authority and permission**—who may author, steward, delegate, or hold responsibility within a given context—without embedding procedural enforcement or cryptographic control. These governance articulations express what *ought* to be true within the collaboration and are evaluated deterministically by applications and agents.
+
+Security in ASCP is **architectural**: it arises from cryptographic identity, immutable logs, scoped visibility via Channels, and local-first replica verification. Cryptographic mechanisms enforce *who can see and receive* articulated context, while governance semantics define *who is authorized to act* upon it. These dimensions are intentionally decoupled to model real-world collaboration accurately and to prevent authority, access, and accountability from being conflated.
 
 Normative details for governance evaluation, identity binding, and certificate semantics are specified in the companion ASCP documents. This section summarizes the architectural principles that unify them.
 
@@ -456,11 +462,11 @@ ASCP is organized into four architectural layers that maintain strict boundaries
 
 Layer 3 is where articulated context becomes interpretable and actionable. It materializes the coordination graph into application-specific views, reconstructing Spaces, Streams, Piles, Roles, Flags, and other structures from the immutable history produced by Layers 0–2.
 
-Governance and access-control enforcement operate at this layer. While Layer 2 expresses governance rules and Layer 1 scopes visibility, Layer 3 evaluates articulated policies and determines how they apply within an application or agent environment. Enforcement, delegation, permissions, and workflow-specific behaviors are all Layer-3 responsibilities.
+**Governance semantics are evaluated and applied at this layer by applications and agents.** While Layer 2 expresses governance rules and Layer 1 scopes visibility, Layer 3 determines how articulated policies apply within a specific runtime environment. Enforcement, delegation, permissions, and workflow-specific behaviors are therefore realized through Layer-3 application logic, not through lower protocol layers.
 
 Layer 3 also provisions the substrate beneath it: it determines which Channels exist, who receives key material, which Streams are distributed into which trust domains, and how replicas join or depart. Layers 1 and 0 treat these as configuration inputs and do not interpret their meaning.
 
-ASCP places no constraints on presentation or workflow at Layer 3. The only architectural requirement is that changes to shared context must be made through Layer 2 articulations, not by mutating local materializations.
+ASCP places no constraints on presentation or workflow at Layer 3. The only architectural requirement is that changes to shared context must be made through Layer 2 articulations, not only by mutating local materializations.
 
 ## **15.2 Layer 2 — Articulation Layer**
 
