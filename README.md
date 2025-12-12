@@ -30,7 +30,7 @@ We’re building toward having first pass full drafts of:
 - 🔜 Reference implementations in Python and Rust **_(planning stage)_**
 - 🔜 Conformance test suite and example fixtures **_(after the reference implementations)_**
 
-We welcome feedback via GitHub Issues. Public contributions are currently fairly limited but will expanded soon as the protocol stabilizes and reference implementations emerge.
+We welcome feedback via GitHub Issues. Public contributions are currently very welcomed as the protocol stabilizes and reference implementations emerge.
 
 ## Specification Suite
 
