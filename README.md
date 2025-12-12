@@ -25,8 +25,8 @@ We’re building toward having first pass full drafts of:
 - ✅ Channels: Secure distribution layer
 - ✅ ASCP Log synchronization protocol (ALSP)
 - ✅ Governance & Access Control
-- 🔜 Identity & Trust Model **_(mostly there, but not complete)_**
-- 🔜 Bootstrap model - building a new org repository **_(roughly sketched out, very imcomplete)_**
+- ✅ Identity & Trust Model **_(Checked it off - mostly there now)_**
+- 🔜 Bootstrap model - building a new org repository **_(roughly sketched out, focus of work in process)_**
 - 🔜 Reference implementations in Python and Rust **_(planning stage)_**
 - 🔜 Conformance test suite and example fixtures **_(after the reference implementations)_**
 
