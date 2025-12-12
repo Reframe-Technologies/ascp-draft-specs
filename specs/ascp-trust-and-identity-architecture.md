@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.46 — Informational (Pre-RFC Working Draft)  
+Version: 0.47 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -295,6 +295,8 @@ In ASCP, an *Identity* represents a participant—human, agent, or system compon
 - They provide a stable, long-lived identifier for the participant.
 - They bind the participant to cryptographic certificates used for authorship, authentication, and channel key agreement.
 - They serve as the semantic target for governance rules and role assignment (defined in the Governance specification).
+
+Identity presence alone does not confer authorship permission, channel membership, or governance authority; such determinations are made exclusively by the Governance and Channel layers.
 
 An Identity Artipoint is not a credential and does not itself contain a public key. Instead, it is able to *reference* a currently active certificate via a certificate::kid attribute. This indirection enables long-term identity continuity even as keys rotate over time.
 

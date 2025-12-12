@@ -261,7 +261,7 @@ For all Channel envelopes:
 
 Sections 8.2–8.4 define normative header structure and error-handling rules.
 
-### 6.3.4 Summary of JOSE Usage in ASCP
+### 6.3.5 Summary of JOSE Usage in ASCP
 
 | Use Case                        | Protocol | Format                | Algorithm(s)        | Key Material Source                                                       |
 | ------------------------------- | -------- | --------------------- | ------------------- | ------------------------------------------------------------------------- |
@@ -278,7 +278,7 @@ Notes for the table:
 
 ## 6.4 kid Format and Interpretation
 
-ASCP defines a structured `kid` namespace for deterministic key selection across Layers 1–3.. Each `kid` references cryptographic material stored out-of-band in articulation statements, acting as a pointer to a certificate or keyframe within the channel's log. This allows JOSE operations to resolve the appropriate material for message validation, decryption, or key recovery while remaining compliant with JOSE standards.
+ASCP defines a structured `kid` namespace for deterministic key selection across Layers 1–3. Each `kid` references cryptographic material stored out-of-band in articulation statements, acting as a pointer to a certificate or keyframe within the channel's log. This allows JOSE operations to resolve the appropriate material for message validation, decryption, or key recovery while remaining compliant with JOSE standards.
 
 While `kid` is optional in JOSE specifications, ASCP **MUST** include `kid` explicitly in all message headers to ensure determinism during key rotation, avoiding ambiguity when multiple writers generate messages while updated key material is still propagating through the network.
 
@@ -1004,7 +1004,7 @@ Layer-1 observes these Artipoints only indirectly, through the configuration sup
 
 ## 10.1 Keyframe Artipoints
 
-A Keyframe is a Layer-2 **bookmark Artipoint** of type `keyframe`, linked to a Channel using the `supports` operator. Keyframes define cryptographic configuration, including encryption algorithms, signing algorithms, and (through attributes) per-recipient wrapped keys.
+A Keyframe is a Layer-2 Artipoint of type `keyframe`, linked to a Channel using the `supports` operator. Keyframes define cryptographic configuration, including encryption algorithms, signing algorithms, and (through attributes) per-recipient wrapped keys.
 
 ### **10.1.1 Canonical Form**
 
@@ -1067,7 +1067,7 @@ The envelopes are embedded directly in the Keyframe Artipoint, avoiding external
 
 ## **10.2 Channel Artipoints**
 
-A Channel is a Layer-2 **bookmark Artipoint** of type "channel" that declares the cryptographic and operational parameters for a Layer-1 Channel, including encryption algorithms, signing requirements, and channel access controls.
+A Channel is a Layer-2 Artipoint of type "channel" that declares the cryptographic and operational parameters for a Layer-1 Channel, including encryption algorithms, signing requirements, and channel access controls.
 
 ### **10.2.1 Canonical Form**
 
@@ -1119,10 +1119,10 @@ This table presents a brief summary of the different types of Articulation patte
 
 | Purpose                 | Pattern                                              | Notes                                                            |
 | ----------------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Declare a Channel       | bookmark("channel")                                  | Includes cipher and signing algorithm choices                    |
+| Declare a Channel       | Artipoint("channel")                                 | Includes cipher and signing algorithm choices                    |
 | Activate Keyframe       | annotation(keyframe::kid :=)                         | Applied to Chanel UUID. Specifies the active Keyframe.           |
 | Manage Membership       | annotation(member +)                                 | Applied to Channel UUID.                                         |
-| Declare Keyframe        | bookmark("keyframe") supports {channel}              | Supporting child of Channel                                      |
+| Declare Keyframe        | Artipoint("keyframe") supports {channel}             | Supporting child of Channel                                      |
 | Distribute Key Envelope | annotation(envelope::user := \<channel-key-evelope>) | Typed attribute with direct JSON payload as the attribute value. |
 
 # **11. Message Processing Model**
@@ -1531,7 +1531,7 @@ BNF Grammar Form:
 
 ```bnf
 [55555555-6666-7777-8888-999999999999, user1@reframe.systems, 2025-08-04T11:00:00.000Z,
-  ["document", "Project Plan v1", uri:"https://docs.reframe.com/project-plan-v1.pdf"]
+  ["bookmark", "Project Plan v1", uri:"https://docs.reframe.com/project-plan-v1.pdf"]
 ];
 
 ```
@@ -1613,9 +1613,9 @@ New key envelopes for this new keyframe are issued for remaining members. This o
 
 ## **A.10. End-to-End Flow Summary**
 
-1. **Channel Creation** → bookmark("channel")
+1. **Channel Creation** → Artipoint("channel")
 2. **Membership Additions** → annotation(member +)
-3. **Keyframe Creation** → bookmark("keyframe") supports {channel}
+3. **Keyframe Creation** → Artipoint("keyframe") supports {channel}
 4. **Key Distribution** → annotation(envelope::user := json:{...})
 5. **Articulation Sequence Creation** → Content to be signed and placed in the channel
 6. **Signing** → JWS with ECDSA P-256 using EC identity key

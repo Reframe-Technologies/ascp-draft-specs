@@ -3,7 +3,7 @@
 **Public Comment Draft -** *Request for community review and collaboration*
 
 Version: 0.65 — Informational (Pre-RFC Working Draft)  
-November 2025
+December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -66,7 +66,21 @@ The core unit follows this (non-normative) pattern:
 
 Where the optional expression enables four fundamental articulation patterns: instantiation (creating new cognitive atoms), annotation (enriching existing ones), connection (linking atoms), and construction (creating and linking simultaneously).
 
-## **4.2 Immutability in Practice**
+## **4.2 Externalized Context Principle (Informative)**
+
+The Artipoint Grammar enforces a strict separation between **articulated structure** and **embedded content**.
+
+All contextual meaning—such as grouping, scope, precedence, supersession, evolution, or relevance—MUST be expressed through **relationships between Artipoints in the coordination graph**, never by embedding structure or semantics inside payloads.
+
+Payloads are intentionally opaque to the grammar. They serve as **semantic anchors** to external or domain-specific content, while all composition, interpretation, and coordination semantics arise exclusively from:
+
+- the immutable sequence of Artipoints,
+- the directed relationships introduced by operators, and
+- the positions of those Artipoints within the resulting DAG.
+
+This design ensures that contextual meaning remains durable, auditable, and interoperable even as referenced content evolves independently. The grammar therefore captures the **persistent cognitive scaffolding** of collaboration, rather than transient or mutable state.
+
+## **4.3 Immutability in Practice**
 
 Because Artipoints capture the persistent cognitive substrate rather than dynamic content, each statement becomes a permanent, auditable decision point in the DAG. This design enables rich collaborative histories: an AI agent's relevance judgment, a human's organizational decision, or a team's dependency mapping all accumulate as an immutable record—even as the documents, data, and deliverables they reference continue to evolve externally.
 
@@ -84,7 +98,7 @@ Because Artipoints capture the persistent cognitive substrate rather than dynami
 
 This creates a permanent record: "this agent determined this paper was highly relevant to this project at this moment." The paper may be updated or moved, but the cognitive judgment—the structural relationship between paper and project—remains immutable and traceable.
 
-## 4.3 Structural Benefits
+## 4.4 Structural Benefits
 
 This design enables teams to work within a common cognitive structure while maintaining appropriate privacy and scope. Team members contribute to the same underlying DAG—the shared "tree" of how work is organized—while potentially having private branches and nodes that others cannot see. Everyone benefits from the structural coherence without sacrificing information security or cognitive autonomy.
 
@@ -140,7 +154,13 @@ This design ensures that authorship becomes an integral part of the immutable DA
 
 The author field **MUST** contain a UUID reference to a valid Identity Artipoint. The grammar requires that author contains a UUID referencing an Identity Artipoint. Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field, maintaining clean separation between identity and identification methods.
 
-## **5.4 Statement Recipients (Informational)**
+More generally, the Artipoint Grammar expresses **what is being articulated**, not **who is permitted to articulate**, **who must receive it**, or **how it is enforced**.
+
+The grammar captures **authorial intent and structural meaning** only. Questions of permission, authority, participation, and accountability are articulated separately as governance metadata and evaluated by higher protocol layers. Questions of delivery, visibility, and cryptographic access are handled exclusively by ASCP Channels.
+
+This separation allows the grammar to remain minimal, deterministic, and universally interpretable, while supporting rich coordination semantics through composition rather than control logic.
+
+## **5.5 Statement Recipients (Informational)**
 
 The Artipoint Grammar defines the structure and semantics of Artipoints and Articulation Sequences, but it **does not encode explicit recipients** or perform any distribution or access-control function.
 

@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.30 — Informational (Pre-RFC Working Draft)  
+Version: 0.31 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -75,7 +75,7 @@ A **Distribution Construct** defines the cryptographic delivery boundaries for a
 
 ## **4.5 Security Construct**
 
-A **Security Construct** is an Artipoint whose type establishes cryptographic material or security-relevant configuration. Security Constructs include KeyFrames, certificate containers, and related Artipoint types that define keys, signing capabilities, verification parameters, or channel-level security state. They specify *what cryptographic material is available*, while trust relationships, attestations, or bindings are expressed as attributes of these Constructs.
+A **Security Construct** is an Artipoint whose type establishes cryptographic material or security-relevant configuration. Security Constructs include Keyframes, certificate containers, and related Artipoint types that define keys, signing capabilities, verification parameters, or channel-level security state. They specify *what cryptographic material is available*, while trust relationships, attestations, or bindings are expressed as attributes of these Constructs.
 
 ## **4.6 Governance Attribute**
 
@@ -93,22 +93,132 @@ The **Effective Governance Set** is the computed result of evaluating all govern
 
 A **Virtual Group** is a symbolic participant reference (e.g., @members, @writers) that resolves dynamically to the current effective participant set of a specified role or attribute within a Construct.
 
+## **4.10 Vector of Execution**
+
+A **Vector of Execution** is a bounded, directed context within which articulated work progresses toward a specific outcome or purpose. Vectors of Execution are primarily expressed through Stream Artipoints, which define self-contained execution contexts with clear scope, participants, and accountability. The term emphasizes both directionality (oriented toward an outcome) and boundedness (containing only artifacts and context relevant to that outcome).
+
 # **5. Governance Model**
 
-Governance in ASCP defines who participates in collaborative structures, what authority they hold, and how that authority flows through the coordination graph (DAG). It provides the semantic foundation for authorization, distribution, role resolution, and context rendering.
+Governance in ASCP defines **authoritative participation, authorship permission, and administrative stewardship** within the shared coordination graph. It establishes *who is permitted to act*, *who owns governance authority*, and *how responsibility and accountability are expressed*, while deliberately separating these semantics from cryptographic enforcement and transport mechanics.
 
-Governance is orchestrated through Artipoint-based Constructs and their governance-related attributes. These Constructs include:
+Governance is expressed exclusively through **immutable Artipoints and governance attributes**, evaluated deterministically across the structural DAG. These articulations form a durable, auditable record of authority and coordination intent shared by humans and agents alike.
 
-- **Contextual Constructs** (Spaces, Streams, Piles)
-- **Addressing Constructs** (Identities, Groups)
-- **Distribution Constructs** (Channels)
-- **Security Constructs** (Certificates, Tokens)
+Governance does **not** directly enforce access or execute control logic. Instead, it defines **semantic authority** that ASCP-compliant applications, agents, and lower protocol layers MUST respect when making authorization, workflow, and distribution decisions.
 
-Governance attributes such as `member`, `writer`, `owner`, `role::*`, `deny::*`, and `expiration::*` are **Construct-agnostic** and may be attached to any Artipoint of a structural nature unless otherwise restricted. This enables a consistent governance model across all ASCP coordination structures.
+## **5.1 Governance Semantics (Conceptual Overview)**
 
-Governance defines **semantic authority** and **coordination meaning**. It does not enforce cryptographic access. Governance attributes are interpreted through DAG evaluation at Layer-2 and Layer-3, producing a semantic model of participation and rights. Cryptographic enforcement—including access to encrypted payloads and distribution scopes—is the responsibility of Layer-1 Channels, which receive their effective participant sets and key provisioning instructions from the governance state evaluated at Layer-3.
+Governance in ASCP is the **articulation of authority** ***via*** **articulation**.
 
-The result of governance evaluation at Layer-3 is called the **effective governance set**: the resolved set of participants, roles, and permissions after applying inheritance, overrides, denies, expirations, and group resolution. 
+It captures statements such as:
+
+- *Who may author new context into a Structure*
+- *Who administratively stewards that Structure*
+- *Who is responsible for execution and accountable for outcomes*
+
+These statements are first-class coordination artifacts, not configuration state or mutable policy tables.
+
+Governance semantics are:
+
+- **Declarative** — expressed as immutable statements of intent
+- **Contextual** — always scoped to a specific Construct
+- **Authoritative** — defining permission to act
+- **Semantic** — interpreted by agents and applications
+- **Deterministic** — evaluated identically across replicas
+
+Governance is therefore neither advisory nor merely descriptive. Attributes such as writer and owner define **permission and authority** that MUST be honored by compliant systems.
+
+## **5.2 Governance Constructs and Scope**
+
+Governance semantics are always evaluated **relative to a Construct**. There is no global or ambient governance state in ASCP.
+
+Governance applies across the following Construct classes:
+
+- **Contextual Constructs** — Spaces, Streams, and Piles
+  - Define *where* governance meaning applies
+  - Establish accountability and execution boundaries
+- **Addressing Constructs** — Identities and Groups
+  - Define *who* governance applies to
+  - Resolve to participant sets
+- **Distribution Constructs** — Channels
+  - Consume governance output to provision cryptographic state
+  - Do not interpret governance semantics directly
+- **Security Constructs** — Certificates, Keyframes
+  - Provide cryptographic material
+  - Do not carry governance meaning themselves
+
+Governance attributes MAY be attached to any Construct of a structural nature unless otherwise restricted by specification.
+
+## **5.3 Governance Attributes as Authoritative Permission**
+
+Certain governance attributes explicitly define **permission and authority**:
+
+- **writer** — defines who is permitted to articulate new Artipoints into a Structure
+- **owner** — defines who holds administrative stewardship over a Structure and its governance state
+
+These attributes:
+
+- Express **authoritative permission**, not suggestions
+- Participate in inheritance, override, denial, and expiration semantics
+- MUST be respected by ASCP-compliant applications and agents when:
+  - Emitting new articulations
+  - Accepting or acting upon received articulations
+  - Rendering views of participation and responsibility
+
+Governance permissions are **semantic**, not cryptographic. An articulation authored by a non-writer may exist immutably in a log, but applications and agents MAY treat it as invalid, ignore it, or surface it as a governance violation.
+
+## **5.4 Governance as Input, Not Enforcement**
+
+Governance defines **what is permitted and authoritative**, but does not perform enforcement itself.
+
+Responsibility is intentionally separated across layers:
+
+- **Governance (Layer-2 / Layer-3)**
+  - Defines permission, authority, participation, and roles
+  - Produces the **Effective Governance Set**
+- **Applications and Agents**
+  - MUST consult governance semantics before acting
+  - Enforce authoring and stewardship rules in workflow behavior
+- **Channels (Layer-1)**
+  - Enforce cryptographic access and distribution
+  - Rely on governance output for participant provisioning
+- **Transport (Layer-0)**
+  - Performs append-only replication without semantic interpretation
+
+This separation ensures that governance meaning remains human- and agent-interpretable while cryptographic execution remains deterministic and semantically agnostic.
+
+## **5.5 Effective Governance Set**
+
+The **Effective Governance Set** is the result of evaluating all applicable governance attributes for a Construct after applying:
+
+- inheritance,
+- explicit overrides,
+- group resolution,
+- virtual group expansion,
+- denials, and
+- expiration semantics.
+
+The Effective Governance Set represents:
+
+- Who is considered a participant
+- Who may author (writer)
+- Who administratively stewards (owner)
+- Which coordination roles apply (e.g., role::responsible, role::accountable)
+
+The Effective Governance Set is **semantic output**, not an execution plan. It serves as authoritative input to applications, agents, and Channel provisioning logic.
+
+## **5.6 Relationship to Contextual Constructs and Inheritance**
+
+Governance meaning flows along **Contextual Construct containment boundaries**, establishing default expectations that may be refined at more specific levels.
+
+In typical usage:
+
+- **Spaces** establish the *enclosing accountability context* for a body of work
+- **Streams** establish *execution contexts* and MAY define additional or delegated accountability and responsibility specific to that execution
+- **Piles** inherit governance and MAY carry responsibility or accountability for the stewardship of their contents
+
+No RACI-style role is restricted to a specific Construct type. Roles such as role::accountable and role::responsible MAY be declared on any Contextual Construct to express local authority, stewardship, or execution ownership, subject to inheritance and override rules.
+
+Governance inheritance and role evaluation are defined in detail in **Section 12**.
 
 # 6. Governance Attributes
 
@@ -190,58 +300,77 @@ Scope:
 - Flags are visible to all Channel members and act as a social contract—indicating who is maintaining awareness
 - Used to drive attention, notifications, inboxes, and working memory interfaces
 
-# 8. **Contextual Contruct Artipoints**
+# **8. Contextual Construct Artipoints**
 
-## 8.1 Bookmark Artipoint
+Contextual Constructs are Layer-2 Artipoints whose **type** declares a first-class semantic role within the ASCP coordination graph. They define the **contextual boundaries** within which articulated work is grouped, interpreted, governed, and related. Unlike Addressing or Distribution Constructs, Contextual Constructs specify **what the work is about**, not *who* participates or *how* it is distributed.
 
-A **Bookmark** is a Layer-2 Artipoint of type `bookmark` that represents the most fundamental Contextual Construct in ASCP. It provides a stable, addressable reference to an external resource—such as a document, file, or web page—identified by a URI carried in the payload. A Bookmark conveys no structural semantics by itself; it serves as an immutable pointer that MAY be grouped, related, or organized via later Articulation Statements.
+Each Construct contributes a distinct cognitive and structural function:
+
+- **Bookmark** — atomic cognitive references to external content
+- **Pile** — associative clustering of related items
+- **Stream** — a context-switchable **Vector of Execution**
+- **Space** — an **accountability container** governing Streams and subordinate Spaces
+
+All Contextual Constructs:
+
+1. **MUST** be instantiated using the ASCP Artipoint Grammar.
+2. **MUST NOT** contain nested Artipoint expressions in their payloads.
+3. **MAY** carry governance and addressing attributes.
+4. **Participate in inheritance** as defined in Section 12 unless otherwise restricted.
+5. Provide **semantic context** that higher-layer agents and applications use to materialize views of work.
+
+Payloads serve as **semantic anchors**—they provide external references, descriptive definitions, or authoritative representations of the Construct, but **never** encode structure or governance.
+
+## **8.1 Bookmark Artipoint**
+
+A **Bookmark** is a Layer-2 Artipoint of type bookmark representing the most atomic Contextual Construct. It records an immutable cognitive decision that a particular external resource is relevant to a given context at a specific moment.
+
+A Bookmark:
+
+- Is a **terminal node** in containment: it **MUST NOT** contain other Contextual Constructs.
+- Inherits all governance semantics from its parent Pile, Stream, or Space.
+- Serves as a durable semantic pointer, enabling annotation, flagging, and relational articulation.
 
 ### **8.1.1 Canonical Form**
 
 ```asciidoc
 [uuid, author, timestamp,
-  ["bookmark", "<bookmark title>",
-    uri:"https://github.com/Reframe-Technologies/ascp-draft-specs"
-  ]
+  ["bookmark", "<bookmark title>", uri:"https://example.com/resource"]
 ]
 ```
 
 ### **8.1.2 Field Requirements (Normative)**
 
-The Bookmark Artipoint **MUST** conform to the Artipoint Grammar defined in the ASCP Artipoint Grammar specification. The following requirements apply specifically to Bookmark instantiation expressions:
+*(unchanged but clarified)*
 
-- **type**
-  - The instantiation expression **MUST** include a type field.
-  - The value **MUST** be the literal string "bookmark".
-  - This value unambiguously identifies the Artipoint as a Bookmark Construct.
-- **label**
-  - The instantiation expression **MUST** include a label field.
-  - The label **MAY** be an empty string.
-  - The label **SHOULD** provide a human-readable title for the referenced resource.
-- **payload**
-  - The instantiation expression **MUST** include a payload field.
-  - The payload **MUST** be a quoted string or a typed block.
-  - If a typed block is used, the payload type **MUST** be uri:.
-  - The payload value **MUST** contain a URI identifying the referenced external resource.
-  - The payload **MUST NOT** embed Artipoint grammar elements or nested articulation expressions.
+- **type** — MUST be "bookmark".
+- **label** — SHOULD provide a human-readable title; MAY be empty.
+- **payload** — MUST be a URI or typed block with uri:; MUST identify the referenced resource; MUST NOT embed structured grammar.
 
 ### **8.1.3 Required Attributes**
 
-A Bookmark Artipoint defines no required attributes beyond its instantiation fields. No additional governance, addressing, or semantic attributes are mandated.
+None.
 
 ### **8.1.4 Optional Attributes**
 
-A Bookmark Artipoint **MAY** include any attribute permitted by the Artipoint Grammar, including but not limited to:
+Bookmarks MAY carry governance, flagging, or annotation-related attributes.
 
-- Governance attributes (e.g., roles, membership, ownership)
-- Addressing attributes
-- Flagging attributes
+### **8.1.5 Semantic Role (Informative)**
 
-Such attributes, when present, MUST conform to the normative semantics defined for attributes elsewhere in this specification suite.
+A Bookmark captures the *Reference Principle*: ASCP separates **cognitive structure** (the Bookmark Artipoint) from **dynamic content** (the external resource). Bookmarks create durable anchors for collaboration even as referenced content evolves.
 
-## 8.2 Pile Artipoint
+## **8.2 Pile Artipoint**
 
-A **Pile** is a Layer-2 Artipoint of type pile that represents a **flat, thematic grouping** of Artipoints within a collaborative context. Piles are associative “collections,” used to gather related items without imposing ordering or hierarchy. Piles **MAY** be articulated into Streams or Spaces but **MUST NOT** contain other Piles (Piles of Piles are disallowed). A Pile is itself an Artipoint and therefore addressable, immutable, and composable.
+A **Pile** is a Layer-2 Artipoint of type pile representing a **flat, thematic grouping** of Artipoints. It provides associative clustering without hierarchy, sequence, or recursion.
+
+A Pile:
+
+- **MAY** contain document-level Artipoints (e.g., Bookmarks).
+- **MAY** be articulated into Streams or Spaces.
+- **MUST NOT** contain other Piles.
+- Inherits governance from its parent Stream or Space.
+
+Piles represent the “workbench trays” of articulated work—useful for gathering information, early-stage exploration, and loose categorization.
 
 ### **8.2.1 Canonical Form**
 
@@ -253,38 +382,46 @@ A **Pile** is a Layer-2 Artipoint of type pile that represents a **flat, themati
 
 ### **8.2.2 Field Requirements (Normative)**
 
-A Pile Artipoint **MUST** conform to the Artipoint Grammar defined in the ASCP Artipoint Grammar specification. The following additional requirements apply to Pile instantiation:
-
-- **type**
-  - The instantiation expression **MUST** include a type field.
-  - The value **MUST** be the literal string "pile".
-  - This value identifies the Artipoint as a Pile Construct.
-- **label**
-  - The instantiation expression **MUST** include a label field.
-  - The label **MAY** be an empty string.
-  - The label **SHOULD** provide a human-readable descriptive title.
-- **payload**
-  - A payload field **MUST** be present.
-  - The payload **MAY** be an empty quoted string or typed block.
-  - If typed, the payload usage is... (TBD)
+- **type** — MUST be "pile".
+- **label** — SHOULD be descriptive; MAY be empty.
+- **payload** — MAY be empty; if present, MAY be string or typed block. Payload does not determine structure.
 
 ### **8.2.3 Required Attributes**
 
-A Pile defines **no required attributes** beyond those mandated by the core Artipoint format.
+None.
 
 ### **8.2.4 Optional Attributes**
 
-A Pile Artipoint **MAY** include any optional attribute permitted by the grammar, including:
+Piles MAY declare governance or flagging attributes.
 
-- Governance attributes (e.g., member, owner, role::\*)
-- Addressing attributes
-- Flagging attributes (for working-memory semantics)
+### **8.2.5 Semantic Role (Informative)**
 
-All optional attributes **MUST** follow the normative semantics defined elsewhere in this specification suite.
+A Pile represents a **flat associative grouping** within the ASCP coordination graph.
+
+Piles exist to support **non-hierarchical organization of related artifacts**—allowing humans and agents to cluster information, references, and intermediate work products without imposing execution flow, ordering, or deep structural commitments.
+
+Key characteristics of a Pile include:
+
+- **Associative Organization:** Items grouped within a Pile are related by theme, relevance, or affinity rather than sequence or dependency. A Pile expresses *“these things belong together”* without specifying *why* or *in what order*.
+- **Structural Flatness:** Piles MUST NOT contain other Piles. This constraint prevents the formation of deep, implicit hierarchies within active work contexts and encourages clarity between *organization* (Piles), *execution* (Streams), and *accountability* (Spaces).
+- **Low Commitment Context:** Piles are well-suited for early-stage exploration, reference gathering, categorization, or maintenance of collections whose structure may evolve over time.
+- **Composable and Addressable:** As first-class Artipoints, Piles can be referenced, annotated, evolved, or promoted through later articulations without modifying their contents.
+
+Piles do not constrain governance semantics. Any governance attributes—including authorship permissions or RACI-style roles—MAY be applied to Piles to express stewardship or responsibility for their contents, subject to the inheritance and override rules defined elsewhere in this specification. The role of a Pile is to define *associative grouping*, not *organizational hierarchy or execution flow*.
 
 ## **8.3 Stream Artipoint**
 
-A **Stream Artipoint** is a Layer-2 Artipoint of type stream that represents a **context-switchable thread of work**. A Stream defines the scope of a self-contained coordination effort—such as a project initiative, task sequence, or thematic workstream. A Stream **MAY** contain Piles and arbitrary Artipoints but **MUST NOT** contain other Streams. Streams inherit default governance from their enclosing Space unless explicitly overridden through governance attributes.
+A **Stream** is a Layer-2 Artipoint of type stream representing a **context-switchable thread of work**—the atomic unit of *execution* in the ASCP model.
+
+A Stream:
+
+- Defines a self-contained **Vector of Execution** directed toward a goal or task sequence.
+- **MAY** contain Piles and arbitrary Artipoints.
+- **MUST NOT** contain other Streams.
+- **MUST** inherit governance from its parent Space unless explicitly overridden.
+- Serves as the natural boundary for assigning roles such as role::responsible.
+
+Streams ensure that execution occurs within bounded cognitive spaces, enabling both humans and agents to operate with clear, relevant context.
 
 ### **8.3.1 Canonical Form**
 
@@ -296,19 +433,9 @@ A **Stream Artipoint** is a Layer-2 Artipoint of type stream that represents a *
 
 ### **8.3.2 Field Requirements (Normative)**
 
-A Stream Artipoint **MUST** conform to the Artipoint Grammar specification. The following requirements apply specifically to Stream instantiation:
-
-- **type**
-  - The instantiation expression **MUST** include a type field.
-  - The value **MUST** be "stream".
-- **label**
-  - The instantiation expression **MUST** include a label field.
-  - The label **MAY** be empty.
-  - The label **SHOULD** identify the Stream’s intended purpose or thematic focus.
-- **payload**
-  - A payload field **MUST** be present.
-  - The payload **MAY** be a quoted string or typed block.
-  - If typed, the payload **SHOULD** use the uri: prefix referencing the Stream’s external representation.
+- **type** — MUST be "stream".
+- **label** — SHOULD identify the intended purpose of the execution thread.
+- **payload** — SHOULD reference the Stream’s external representation (e.g., task brief, issue link) via uri:.
 
 ### **8.3.3 Required Attributes**
 
@@ -316,45 +443,47 @@ None.
 
 ### **8.3.4 Optional Attributes**
 
-A Stream Artipoint **MAY** declare any optional attribute, including:
+Streams MAY include governance attributes such as owner, writer, member, and RACI roles.
 
-- Governance attributes (e.g., owner, writer, role::\*)
-- Addressing attributes
-- Membership attributes
-- Flagging attributes, indicating working-memory relevance
+### **8.3.5 Semantic Role (Informative)**
 
-Optional attributes **MUST** follow the semantics defined in the Governance and Artipoint Grammar specifications.
+A Stream represents a **bounded execution context** within the ASCP coordination graph.
+
+Streams exist to provide a **context-switchable focus of work**—a scope within which humans and agents can reason, act, and coordinate without inheriting unnecessary cognitive or informational overhead from broader contexts.
+
+Key characteristics of a Stream include:
+
+- **Contextual Isolation:** A Stream defines a boundary for relevance. Artipoints articulated within a Stream are presumed to relate to a common objective, inquiry, or line of execution.
+- **Execution Focus:** Streams are optimized for *doing work*: planning, decision-making, iteration, and coordination toward a specific outcome. They are the primary unit of active collaboration.
+- **Non-Recursive Structure:** Streams MUST NOT contain other Streams. This constraint prevents fragmentation of execution contexts and enforces a clear distinction between *execution* (Streams) and *organizational containment* (Spaces).
+- **Agent and Human Entry Point:** For both humans and agents, entering a Stream signals an intentional shift of attention. The Stream defines the working set of context, history, and artifacts relevant to the task at hand.
+
+Streams do not constrain governance semantics. Any governance attributes—including authorship permissions and RACI-style roles—MAY be applied to Streams as defined elsewhere in this specification. The role of a Stream is to define *where work happens*, not *who holds authority* over that work.
 
 ## **8.4 Space Artipoint**
 
-A **Space Artipoint** is a Layer-2 Artipoint of type `space` representing an **accountability container** that is used to organize and govern multiple Streams and optional nested Spaces. Spaces serve as top-level coordination scopes corresponding to organizational structures, programs, teams, or strategic work areas. Every Space implicitly defines a coordination Stream (commonly called **Stream Zero**) used for the administration and organization of its subordinate Streams.
+A **Space** is a Layer-2 Artipoint of type space representing an **accountability container**. Spaces define the highest-level contextual boundaries—corresponding to teams, programs, departments, or strategic initiatives.
+
+A Space:
+
+- **MAY** contain Streams and subordinate Spaces.
+- Implicitly defines an administrative coordination Stream (“Stream Zero”).
+- Is the **root of governance inheritance** for all contained Streams and Piles.
+- Establishes the scope within which accountability, ownership, and policy are articulated.
 
 ### **8.4.1 Canonical Form**
 
 ```c
 [uuid, author, timestamp,
-  ["space", "<space title>",
-    payload
-  ]
+  ["space", "<space title>", payload ]
 ]
 ```
 
 ### **8.4.2 Field Requirements (Normative)**
 
-A Space Artipoint **MUST** conform to the Artipoint Grammar specification. The following requirements apply to Space instantiation:
-
-- **type**
-  - The instantiation expression **MUST** include a type field.
-  - The value **MUST** be "space".
-- **label**
-  - The instantiation expression **MUST** include a label field.
-  - The label **MAY** be empty.
-  - The label **SHOULD** meaningfully identify the Space to participants.
-- **payload**
-  - A payload field **MUST** be present.
-  - The payload **MAY** be a quoted string or a typed block.
-  - If typed, the payload **SHOULD** use the uri: prefix pointing to the Space’s authoritative external representation.
-  - The payload **MUST NOT** embed grammar-level expressions or other Artipoints.
+- **type** — MUST be "space".
+- **label** — SHOULD meaningfully identify the accountability context.
+- **payload** — SHOULD reference the Space’s authoritative external representation via uri:; MUST NOT embed grammar.
 
 ### **8.4.3 Required Attributes**
 
@@ -362,15 +491,54 @@ None.
 
 ### **8.4.4 Optional Attributes**
 
-A Space Artipoint **MAY** declare optional attributes including:
+Spaces MAY declare any governance or addressing attributes, including inheritance modifiers.
 
-- Governance attributes (e.g., owner, member, role::\*, delegation attributes)
-- Addressing attributes
-- Membership attributes
-- Inheritance modifiers (e.g., inherits := \<rule>)
-- Flagging attributes
+### **8.4.5 Semantic Role (Informative)**
 
-All attributes **MUST** adhere to the normative semantics defined in the Governance and Artipoint Grammar specifications.
+A Space represents a **contextual accountability boundary** within the ASCP coordination graph.
+
+Spaces exist to organize work at scales where **ownership, continuity, and long-lived responsibility** matter. They provide the enclosing context within which Streams, Piles, and subordinate Spaces are interpreted, governed, and related.
+
+Key characteristics of a Space include:
+
+#### **1. Accountability Containment**
+
+A Space defines an enclosing context for accountability and stewardship. It establishes the scope within which outcomes are owned, policies apply, and governance meaning is inherited by contained Constructs. This does not preclude additional or delegated accountability being defined on contained Streams or Piles.
+
+#### **2. Recursive Structure**
+
+Spaces MAY contain other Spaces. This allows multiple layers of accountability to be modeled explicitly, reflecting real-world organizational and project structures.
+
+For example, an outermost Space may represent organization-wide accountability (e.g., executive or corporate ownership), containing nested Spaces representing departments, programs, or initiatives, each with progressively more specific accountability contexts.
+
+#### **3. Implicit Coordination Stream (“Stream Zero”)**
+
+Every Space implicitly defines an internal coordination context, informally referred to as *Stream Zero*.
+
+Any Artipoints articulated directly into a Space—rather than into a named Stream—are semantically treated as belonging to this implicit Stream. Stream Zero serves as the coordination and management context for:
+
+- organizing contained Streams and Spaces,
+- maintaining reference materials, bookmarks, or Piles relevant to the Space as a whole,
+- capturing administrative or cross-cutting context not specific to a single execution Stream.
+
+**4. Structural vs. Execution Distinction**
+
+Spaces provide organizational containment and contextual continuity, while Streams provide focused execution contexts. The recursive nature of Spaces enables scale, while the non-recursive nature of Streams preserves clarity of execution.
+
+#### Summary
+
+Spaces do not constrain governance semantics. Any governance attributes—including authorship permissions and RACI-style roles—MAY be applied to Spaces to express ownership, stewardship, or participation expectations at that level, subject to inheritance and override rules defined elsewhere in this specification. The role of a Space is to define *contextual enclosure and continuity*, not to prescribe how authority must be allocated within it.
+
+## **8.5 Construct Evolution Semantics (Informative)**
+
+Contextual Constructs may evolve through later articulations. The following examples illustrate common evolution patterns, though many other paths are possible:
+
+- A **Pile** may be "upgraded" into a more formal execution context by creating a **Stream** and relating it using operators such as `promotes` or `replaces`.
+- A **Stream** may similarly be promoted into a **Space** as work scope expands to encompass broader accountability.
+- Such evolution preserves historical context (e.g., the original Pile or Stream) while establishing a new semantic center for execution.
+- Payloads evolve accordingly: e.g., a Pile payload may be empty, while a Stream payload often points to a project brief, and a Space payload may reference organizational charters or program documentation.
+
+These evolutionary paths allow lightweight clustering to mature into structured execution contexts without losing provenance. The specific evolution semantics depend on the operators used and the governance attributes applied during the transition.
 
 # 9. **Addressing** Contruct Artipoints
 
@@ -656,52 +824,121 @@ role::observer := <participant(s)>
 - consulted, informed, and observer roles are intended as semantic visibility indicators for higher-level systems and agents.
 - These roles do not imply access-control privileges; access control is determined exclusively by member, writer, owner, and Channel Keyframe provisioning.
 
-# 12. Inheritance Model
+# **12. Inheritance Model**
 
-## 12.1 Default Inheritance
+Governance inheritance in ASCP defines how **semantic authority, participation context, and coordination roles** propagate through the coordination graph (DAG). Inheritance provides continuity of meaning across nested contextual scopes while allowing precise, explicit override where required.
 
-Unless otherwise specified, governance attributes (writer, member, owner) follow a default inheritance model that traverses up the structural DAG—Streams inherit from their parent Space, Piles inherit from their parent Stream or Space. This inheritance may be explicitly overridden using `inherits :=`. While explicit articulation is always preferred, defaults provide robust fallback semantics in under-specified contexts.
+Inheritance is **declarative and semantic** in nature. It does not grant permissions, perform enforcement, or directly control cryptographic access. Instead, it establishes the contextual governance state from which applications and agents derive authorization, visibility, and workflow behavior.
 
-## **12.2 Encapsulation and Hierarchy Rules Table**
+## **12.1 Inheritance Semantics (Conceptual Overview)**
 
-| **Structure** | **May Contain**                                  | **May Be Contained By** | **Inherits from**                           |
-| ------------- | ------------------------------------------------ | ----------------------- | ------------------------------------------- |
-| **Space**     | Streams, other Spaces                            | Parent Spaces           | Parent Space (unless overridden)            |
-| **Stream**    | Piles, document Artipoints                       | Spaces                  | Parent Space (unless overridden)            |
-| **Pile**      | Document Artipoints                              | Streams or Spaces       | Parent Stream or Space (unless overridden)  |
-| **Group**     | Users, other Groups by reference or construction | Any structure           | N/A (flat, but composable via construction) |
+Inheritance in ASCP expresses the principle that **responsibility is exercised within accountability**, and that articulated work occurs within broader organizational and strategic context.
 
+Accordingly:
 
+- **Spaces** represent *accountability containers*
+- **Streams** represent *vectors of execution*
+- **Piles** represent *associative groupings of work artifacts*
 
-Structures follow this containment model:
+Governance attributes defined at higher-level Contextual Constructs establish default expectations that flow downward to more specific execution contexts. This mirrors real-world collaborative structures, where teams own outcomes (Spaces), individuals execute tasks (Streams), and artifacts accumulate within both.
 
-- Spaces contain Spaces and Streams
-- Streams contain Piles and document Artipoints
-- Piles contain document Artipoints
-- Groups are not in the structural hierarchy
+Inheritance is:
 
-## 12.3 Rules
+- **Contextual** — it applies only within containment relationships between Contextual Constructs
+- **Directional** — flowing from enclosing accountability contexts to enclosed execution contexts
+- **Declarative** — expressing meaning, not enforcement
+- **Deterministic** — producing identical results across replicas
 
-- Streams inherit from parent Space
-- Piles inherit from parent Stream or Space
-- Groups do NOT inherit
-- Explicits override inherited values
-- Denials override both local and inherited positives
-- Expired grants MUST be removed
+Inheritance does not apply across Addressing Constructs (e.g., Groups), Distribution Constructs (e.g., Channels), or non-containment relationships.
 
-## 12.4 Evaluation Algorithm (Normative)
+## **12.2 Default Inheritance**
 
-Clients **MUST** evaluate governance in this order:
+Unless explicitly overridden, governance attributes follow a default inheritance model aligned with the containment hierarchy of Contextual Constructs:
 
-1. Gather Local Attributes
-2. Apply Inheritance
-3. Apply Explicit `inherits :=`
-4. Resolve Groups (recursive, acyclic)
+- **Streams** inherit governance from their enclosing Space
+- **Piles** inherit governance from their enclosing Stream or Space
+
+This default reflects the assumption that execution contexts operate under the authority of their enclosing accountability contexts. It minimizes repetitive articulation while preserving explicit override as a first-class capability.
+
+Inheritance applies uniformly to all governance attributes unless otherwise specified, including:
+
+- `member`
+- `writer`
+- `owner`
+- `role::*`
+
+## **12.3 Encapsulation and Hierarchy Rules**
+
+The following table defines the normative containment and inheritance relationships among Constructs:
+
+| **Structure** | **May Contain**                         | **May Be Contained By** | **Inherits From**                          |
+| ------------- | --------------------------------------- | ----------------------- | ------------------------------------------ |
+| **Space**     | Bookmarks, Piles, Streams, other Spaces | Parent Spaces           | Parent Space (unless overridden)           |
+| **Stream**    | Bookmarks, Piles, document Artipoints   | Spaces                  | Parent Space (unless overridden)           |
+| **Pile**      | Bookmark Artipoints                     | Streams or Spaces       | Parent Stream or Space (unless overridden) |
+| **Group**     | Participants, Groups                    | Any Structure           | *N/A*                                      |
+
+Only **structural containment edges** participate in inheritance evaluation.
+
+## **12.4 Rules**
+
+The following rules are normative:
+
+1. **Streams inherit from their parent Space**
+2. **Piles inherit from their parent Stream or Space**
+3. **Spaces inherit only from enclosing Spaces**
+4. **Groups do NOT inherit governance attributes -** Groups are Addressing Constructs. They define *who* participates, not *where* work occurs or *under what accountability*. Allowing Groups to inherit would conflate participant definition with contextual authority and is therefore prohibited.
+5. **Explicit attributes override inherited values**
+6. **Denials override both local and inherited positives**
+7. **Expired grants MUST be removed**
+8. **Inheritance MUST NOT cross**:
+   - Channel boundaries
+   - Group boundaries
+   - Non-containment relationships (e.g., references, supports)
+9. **Payloads MUST NOT participate in inheritance evaluation**
+
+Payloads serve as semantic anchors to external representations. They do not affect governance computation.
+
+## **12.5 Explicit Inheritance Override**
+
+The inherits := attribute allows a Construct to explicitly redefine its inheritance source.
+
+```asciidoc
+inherits := <structure-ref>
+inherits := default
+```
+
+- When set to a structure reference, inheritance MUST be computed relative to that referenced Construct.
+- When set to default, inheritance MUST revert to the standard containment-based model.
+- If no valid inheritance source can be resolved, inheritance MUST terminate at the current Construct.
+
+Explicit inheritance overrides MUST be applied **before** group and virtual group resolution.
+
+## **12.6 Evaluation Algorithm (Normative)**
+
+Clients **MUST** compute governance for a Construct by executing the following steps in order:
+
+1. Gather local governance attributes
+2. Apply inherited attributes from parent Constructs
+3. Apply explicit inherits := overrides
+4. Resolve referenced Groups (recursively, acyclic)
 5. Resolve Virtual Groups
-6. Apply Denials
-7. Remove Expired Grants
-8. Resolve RACI Roles
-9. Produce Effective Governance Set
+6. Apply denials (`deny::*`)
+7. Remove expired grants (`expiration::*`)
+8. Resolve RACI-style role assignments
+9. Produce the **Effective Governance Set**
+
+The Effective Governance Set represents **semantic participation and authority**. It does not itself grant cryptographic access or authorize runtime actions.
+
+## **12.7 Accountability and Responsibility (Informative)**
+
+In typical usage, a common pattern is where:
+
+- **Spaces** declare accountability (e.g., `role::accountable`)
+- **Streams** declare responsibility (e.g., `role::responsible`)
+- **Piles** and document Artipoints inherit both
+
+This structure ensures that every execution context is enclosed within a clear accountability boundary, while allowing responsibility to be scoped precisely to the work being performed.
 
 # 13. Security Considerations
 
