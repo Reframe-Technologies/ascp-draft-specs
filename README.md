@@ -26,7 +26,7 @@ We’re building toward having first pass full drafts of:
 - ✅ ASCP Log synchronization protocol (ALSP)
 - ✅ Governance & Access Control
 - ✅ Identity & Trust Model **_(Checked it off - mostly there now)_**
-- 🔜 Bootstrap model - building a new org repository **_(roughly sketched out, focus of work in process)_**
+- ✅ Bootstrap model - building a new org repository **_(Checked it off - mostly there now)_**
 - 🔜 Reference implementations in Python and Rust **_(planning stage)_**
 - 🔜 Conformance test suite and example fixtures **_(after the reference implementations)_**
 
