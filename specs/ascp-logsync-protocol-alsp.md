@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.51 — Informational (Pre-RFC Working Draft)  
+Version: 0.52 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -253,7 +253,12 @@ This separation serves distinct security purposes across layers:
 
 **Layer 1 (ASCP Message Layer) Security**: Protects the meaning and content of articulation statements through JWS signatures, JWE encryption, keyframes, and certificate chains. While Layer 0 understands the JOSE compact serialization format for transport optimization, it remains semantically agnostic to the protected content within these structures.
 
-This architectural separation means Layer 0 ALSP operates as a **secure replication and synchronization mechanism** that can efficiently encode and transmit Layer 1's JOSE-formatted messages while Layer 1 handles all semantic security. The two security models are complementary, not redundant: Layer 0 ensures that Layer 1's cryptographically secured articulation statements reach all authorized replicas with identical content and ordering, while Layer 1 ensures that the meaning and content itself remains cryptographically protected regardless of transport encoding optimizations.
+This architectural separation means Layer 0 ALSP operates as a **secure replication and synchronization mechanism** that can efficiently encode and transmit Layer 1's JOSE-formatted messages while Layer 1 handles all semantic security.
+
+**Note on Transport Security:**  
+While ALSP is commonly deployed over TLS-secured transports, TLS authentication provides only baseline network-level security (e.g., confidentiality in transit and resistance to opportunistic MITM attacks). TLS **does not establish ASCP identity, instance trust, or authorization semantics**. All ASCP-relevant authentication, session binding, and trust anchoring occur within ALSP and higher layers, not at the transport layer.
+
+The two security models are complementary, not redundant: Layer 0 ensures that Layer 1's cryptographically secured articulation statements reach all authorized replicas with identical content and ordering, while Layer 1 ensures that the meaning and content itself remains cryptographically protected regardless of transport encoding optimizations.
 
 ### **Note on Transparency Systems**
 
@@ -455,11 +460,46 @@ ALSP uses a two-layer authentication model:
 
 Session authentication itself is carried out using ALSP messages that are cryptographically authenticated. After the handshake completes, message-level authentication transitions into its post-authentication mode, ensuring all subsequent messages are explicitly tied to the negotiated session.
 
-## **8.1 Authentication Layers in ALSP**
+## 8.1 Authentication Layers
 
-### **8.1.1 Session Authentication and Nonce Binding**
+ALSP defines two distinct but complementary layers of authentication: **message-level authentication** and **session-level authentication**. Message-level authentication ensures the authenticity and integrity of individual protocol messages, while session-level authentication establishes cryptographic continuity, replay resistance, and privileged operation eligibility across a bounded interaction between two replicas.
 
-Session authentication establishes cryptographic binding between two replicas. Each endpoint generates a 128-bit **session\_nonce** (defined in Section 4) that uniquely identifies the local half of the session.
+Session-level authentication builds upon message-level authentication and does not replace it. Both layers are required for correct and secure ALSP operation.
+
+### 8.1.1 Message-Level Authentication
+
+Message-level authentication applies to **all ALSP messages**, independent of session state. It provides per-message cryptographic authenticity, integrity protection, and freshness validation.
+
+Message-level authentication uses JWS signatures to provide per-message integrity and authenticity.
+
+The nonce usage rules are defined exclusively in Section 8.1 and apply identically to all message types, including authentication messages, sync messages, and operational updates.
+
+Message-level authentication validates that:
+
+1. the JWS signature was created by the sender’s private key;
+2. the protected header includes the correct nonce per Section 8.1;
+3. the message is fresh according to timestamp and replay-detection rules.
+
+Message-level authentication does not introduce additional nonce semantics and does not modify which nonce is placed in the protected header.
+
+Message-level authentication allows recipients to detect message tampering, spoofing, and stale replays. Prior to session binding, replay may be detectable but not cryptographically impossible; no privileged operations are permitted during this phase.
+
+### 8.1.2 Session-Level Authentication
+
+Session-level authentication establishes a mutually authenticated, replay-safe cryptographic session between two replicas. It enables privileged ALSP operations such as log synchronization, bootstrap artifact exchange, and channel interaction.
+
+Session-level authentication is **session-oriented**, not trust-authoritative. A successfully authenticated session guarantees cryptographic continuity with a peer for the lifetime of the session, but does not by itself establish ASCP instance membership, authorization, or governance legitimacy.
+
+#### 8.1.2.1 Session Authentication Semantics
+
+Session authentication establishes **cryptographic continuity and replay-safe message authenticity** between two replicas for the lifetime of a single ALSP session. Each endpoint generates a 128-bit **session\_nonce** (defined in Section 4) that uniquely identifies the local half of the session.
+
+**ALSP session authentication is explicitly** ***session-oriented*****, not trust-authoritative.**  
+A successfully authenticated ALSP session guarantees only that messages originate from the same cryptographic peer for the duration of the session. It does **not** establish authoritative ASCP instance membership, RootCA legitimacy, governance approval, or long-term trust standing. Those determinations are made exclusively by higher layers after bootstrap artifacts are acquired and validated.
+
+Session authentication defines the boundary after which privileged protocol operations may occur and before which all interactions are constrained to non-privileged, message-authenticated exchanges.
+
+#### 8.1.2.2 Nonce Generation and Session Binding
 
 ALSP uses a single `nonce` field in the JWS protected header with the following rules:
 
@@ -474,19 +514,25 @@ This cross-use of nonces ensures that:
 
 The `session_nonce` field in the ALSP message body MUST always contain the sender's own nonce.
 
-### **8.1.2 Message-Level Authentication**
+Successful nonce exchange and validation cryptographically bind both peers to a shared session context and establish continuity across subsequent ALSP messages.
 
-Message-level authentication uses JWS signatures to provide per-message integrity and authenticity.
+#### 8.1.2.3 Progressive Replay Protection Model
 
-The nonce usage rules are defined exclusively in Section 8.1 and apply identically to all message types, including authentication messages, sync messages, and operational updates.
+This ALSP replay protection model is intentionally **progressive** across the session establishment lifecycle:
 
-Message-level authentication validates that:
+- **Pre-binding phase (initial** `auth_request`**)**
+  - Messages are signed and timestamped.
+  - Replays are detectable but not cryptographically impossible.
+  - No privileged operations are permitted.
+- **Challenge phase (when applicable)**
+  - The server introduces a fresh challenge nonce.
+  - Identity material becomes bound to server-provided freshness.
+- **Session-bound phase (post-**`hello` **exchange)**
+  - Each peer possesses the other’s `session_nonce`.
+  - All messages are cryptographically bound to the authenticated session.
+  - Replay across connections becomes impossible within the ALSP threat model.
 
-1. the JWS signature was created by the sender’s private key;
-2. the protected header includes the correct nonce per Section 8.1;
-3. the message is fresh according to timestamp and replay-detection rules.
-
-Message-level authentication does not introduce additional nonce semantics and does not modify which nonce is placed in the protected header.
+Replay exposure is limited exclusively to the pre-authentication phase, during which ALSP prohibits log access, bootstrap retrieval, and all authorization-sensitive operations.
 
 ## **8.2. Goals and Requirements**
 
@@ -504,9 +550,15 @@ All authentication messages MUST include a `session_nonce` generated by the send
 
 Both parties MUST complete the authentication handshake and confirm each other’s identity before any Channel Log operations are permitted. Authentication MUST be mutual; unilateral authentication is not allowed.
 
-**Session Binding:**
+**Session Binding and Replay Resistance:**
 
-Upon successful authentication, both peers MUST have exchanged and validated each other’s `session_nonce`. All subsequent ALSP messages MUST be bound to this session by including the peer’s session\_nonce in the JWS protected header; messages with an unexpected `nonce` MUST be rejected, ensuring that messages cannot be replayed across sessions or connections.
+Upon successful authentication, both peers MUST have exchanged and validated each other’s `session_nonce`. After this point:
+
+- Every ALSP message is cryptographically bound to the authenticated session.
+- Any replayed message **MUST** be rejected due to nonce mismatch.
+- This property applies uniformly to all ALSP messages, including `sync_request`, `sync_response`, `sync_update`, and error messages.
+
+Within the ALSP threat model, replay after session binding is **cryptographically impossible**.
 
 **Transport Independence:**
 
@@ -543,13 +595,17 @@ In both flows:
 
 - Each peer generates a fresh `session_nonce` and includes it in all message headers.
 - Each peer MUST validate the peer’s identity, `session_nonce`, and `timestamp` freshness before proceeding.
-- No Channel Log queries or updates may occur until the handshake completes.
+- **No Channel Log operations of any kind MAY occur prior to successful session authentication**, including:
+  - log synchronization,
+  - bootstrap artifact retrieval,
+  - channel discovery, or
+  - authorization checks.
+
+This invariant ensures that ALSP never exposes log material or bootstrap state prior to establishing a mutually authenticated, replay-safe session.
 
 The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions into the AUTHENTICATED state (Section 8.4). After this transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.1.
 
-*Non-normative note:*
-
-The handshake design allows authentication to succeed even in asymmetric trust-discovery scenarios, such as when only one peer realizes a challenge is required or when caches differ across replicas.
+*Non-normative note:* The handshake design allows authentication to succeed even in asymmetric trust-discovery scenarios, such as when only one peer realizes a challenge is required or when caches differ across replicas.
 
 Narrative examples of both the Immediate Flow and Challenge Flow are provided in Appendix A (Informative).
 
@@ -643,13 +699,15 @@ If any of the following checks fail:
 
 …the recipient MUST send an error with `disconnect: true` and immediately terminate the connection.
 
-*Non-normative note:*
-
-This strict failure behavior ensures that misconfigured clients, replay attempts, or injection attacks cannot pollute session state or reach log synchronization.
+*Non-normative note:* This strict failure behavior ensures that misconfigured clients, replay attempts, or injection attacks cannot pollute session state or reach log synchronization.
 
 ## **8.5. Authentication Modes**
 
 During session authentication, a client establishes its identity using one of two credential-supply modes: **Direct Mode** or **Provisioned Mode**. These modes describe *how* the client supplies identity material to the server. The concrete fields used to carry this material are defined in Section 10.2; this section defines only the normative behavior and constraints associated with each mode.
+
+Authentication mode selection is a **handshake-time decision** determined **solely** by the contents of the **initial** `auth_request`. The selected mode governs how identity credentials are supplied during the handshake but does **not** create separate session types or require session restart.
+
+In Provisioned Mode, identity credentials may be upgraded during the Challenge Flow while **preserving session continuity**. The session is established once and transitions smoothly from provisional to fully bound identity authentication without renegotiation or reset.
 
 A server determines the client’s mode based solely on the presence or absence of certain authentication fields in the **initial authentication request**, as described in Section 8.5.3. Mode selection is not signaled explicitly by the client.
 
@@ -1694,7 +1752,12 @@ All other protected header fields (including `alg`, `enc`, and key agreement par
 
 ## **12.3 Session Binding and Authenticity**
 
-- A BKP is accepted **solely** on the basis that it was delivered over an **authenticated ALSP session**.
+A BKP is accepted solely on the basis that it was delivered over an **authenticated ALSP session**.
+
+ALSP authentication establishes **provisional cryptographic trust sufficient for secure transport**. Authoritative trust anchoring — including RootCA validation, governance enforcement, and legitimacy evaluation — occurs **only after bootstrap artifacts are acquired and validated by higher layers**.
+
+This separation is intentional and allows secure bootstrap discovery without circular trust dependencies.
+
 - ALSP **does not define**, require, or prohibit any additional trust validation of BKPs.
 - ALSP **MUST NOT** specify bootstrap trust interpretation rules or mandate validation against bootstrap trust roots.
 
@@ -1885,6 +1948,10 @@ All ALSP deployments using TLS **MUST** use TLS 1.3 or higher.
 Clients **MUST** validate the server certificate when establishing a TLS-protected transport, unless operating in an explicitly configured development or testing mode. Certificate validation **SHOULD** follow standard PKIX verification procedures.
 
 Server-side certificate rotation **MAY** occur without affecting ALSP session semantics; new connections will naturally establish new ALSP sessions.
+
+TLS authentication provides baseline network-level security and resistance to active man-in-the-middle attacks. It does **not** establish ASCP identity, instance membership, or channel trust.
+
+ALSP session authentication and ASCP Bootstrap trust anchoring remain the authoritative mechanisms for identity verification and trust establishment within the ASCP protocol stack. TLS is treated as **necessary but insufficient** for ASCP trust.
 
 ## **14.3 WebSocket Binding**
 

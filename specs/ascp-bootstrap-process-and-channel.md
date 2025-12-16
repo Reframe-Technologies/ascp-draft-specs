@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.30 — Informational (Pre-RFC Working Draft)  
+Version: 0.32 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -84,7 +84,16 @@ Third, **ordered acquisition of bootstrap and discovery history**, as defined in
 
 None of these components is sufficient in isolation. Authenticated replication without trust evaluation does not establish authority; trust evaluation without ordered history acquisition lacks a verified context; and bootstrap procedures without authenticated replication or log-anchored trust cannot be validated or audited. Safe participation in ASCP therefore requires the coordinated execution of all three components, with this document defining the ordering and readiness conditions under which normal ASCP operation may begin.
 
-## **3.4 Repository Identification (Non-Normative)**
+## 3.4 Two-Phase Trust Model During Join Bootstrap
+
+Join bootstrap operates under a two-phase trust model:
+
+1. **Cryptographic Session Establishment**, achieved via ALSP mutual authentication, which provides message integrity, peer authentication, and replay protection for bootstrap communication.
+2. **Authoritative Trust Establishment**, achieved only after acquisition and validation of the **@bootstrap** channel, including establishment of the Bootstrap Trust Anchor (RootCA) and validation of identity-ref constraints.
+
+Successful completion of the first phase enables secure communication but does not establish instance membership, authorization, or trust in replicated state. Authoritative trust exists only after completion of the second phase.
+
+## **3.5 Repository Identification (Non-Normative)**
 
 An ASCP repository represents a single organizational trust domain and is identified to replicas through **out-of-band context** provided at connection time. This specification does not mandate a global naming scheme for repositories.
 
@@ -581,7 +590,7 @@ as defined by ALSP.
 
 ## **7.5 Validation Semantics**
 
-Bootstrap validation follows a bounded two-phase model:
+Bootstrap validation follows the **two-phase trust model defined in Section 3.4**:
 
 1. **Assumed Validity Phase:** A replica MAY temporarily assume the validity of @bootstrap content in order to construct a minimal trust graph.
 2. **Verification Phase:** Once the RootCA is established, all bootstrap content MUST be validated using normal ASCP trust evaluation rules.
@@ -917,6 +926,15 @@ Join bootstrap MAY be initiated by human users or autonomous agents and applies 
 
 Prior to initiating join bootstrap, a replica MUST possess at least one **Initial Trust Input (ITI)** sufficient to anchor trust in the bootstrap process.
 
+An ITI-only joining replica is expected to self-generate sufficient cryptographic material prior to bootstrap to complete ALSP mutual authentication.
+
+Specifically, a joining replica MUST possess either:
+
+- self-generated identity credentials suitable for ALSP Direct Mode authentication, or
+- a self-generated recovery key sufficient for participation in Provisioned Mode.
+
+Bootstrap procedures MUST NOT depend on the prior acquisition of @bootstrap content to satisfy ALSP authentication requirements.
+
 Initial Trust Inputs are obtained **out of band** from ASCP and ALSP. This document does not mandate a single trust model but defines acceptable categories of inputs.
 
 An implementation MUST clearly identify which Initial Trust Input model(s) it supports.
@@ -963,11 +981,27 @@ Using the selected Initial Trust Input, the replica performs the following high-
 
 The detailed mechanics of session establishment, authentication, and log replication are defined by ALSP and are not redefined here.
 
-### 10.4.1 Bootstrap Peer Authentication via identity-ref
+### 10.4.1 Provisional Trust Semantics
 
-During join bootstrap, a replica MAY connect to an existing replica that does not possess the private key of the Bootstrap Trust Anchor (RootCA).
+Until validation of the @bootstrap channel and establishment of the Bootstrap Trust Anchor (RootCA) have completed successfully, all replicated coordination state acquired during join bootstrap MUST be treated as **provisional and untrusted**.
 
-In such cases, the joining replica MUST authenticate the peer as follows:
+Replicated data obtained prior to authoritative trust establishment MUST NOT be treated as valid coordination state, used for governance evaluation, or relied upon for authorization or discovery decisions.
+
+If authoritative validation fails at any point, the join bootstrap attempt MUST be aborted, and any provisionally acquired state MUST NOT be reused without revalidation.
+
+### 10.4.2 Bootstrap Peer Authentication via identity-ref
+
+During join bootstrap, a replica MAY connect to an existing replica that does not possess the private key of the Bootstrap Trust Anchor (RootCA). Bootstrap peer authentication occurs in two phases:
+
+**Phase 1: ALSP Session Authentication (Cryptographic Authenticity)**
+
+During ALSP session establishment, the peer presents an identity certificate and public key. This phase establishes cryptographic authenticity of the session but does NOT establish the peer's eligibility to serve bootstrap content or RootCA-anchored instance trust.
+
+**Phase 2: Identity Reference Validation (RootCA-Anchored Authorization)**
+
+After the @bootstrap channel has been acquired and validated, the joining replica MUST verify the peer's eligibility to serve bootstrap by validating the peer's identity against Identity Reference Artipoints in the @bootstrap channel.
+
+The joining replica MUST perform the following validation:
 
 1\. The joining replica establishes an authenticated ALSP session with the peer.
 
@@ -1191,9 +1225,11 @@ ALSP treats channel payloads as opaque. All semantic interpretation of bootstrap
 
 Bootstrap imposes **ordering and gating constraints** on ALSP usage during initialization but does not modify ALSP’s core behavior.
 
+**Non-Normative Note:** The bootstrap sequencing defined in this document does not modify ALSP behavior and does not permit unauthenticated or partially authenticated replication. All ALSP invariants remain unchanged.
+
 ## **11.2 Initial ALSP Session Establishment**
 
-Prior to any bootstrap channel replication, a replica MUST establish an authenticated ALSP session with at least one existing replica.
+Prior to requesting, replicating, or interpreting any bootstrap-related channels, including @bootstrap, a replica MUST establish an authenticated ALSP session with at least one existing replica.
 
 ALSP session establishment during bootstrap MUST provide:
 
@@ -1469,13 +1505,19 @@ Mitigations include:
 
 Replicas MUST reject bootstrap artifacts that cannot be validated in context.
 
-## **13.5 Discovery Integrity Risks**
+## 13.5 Transport Security Clarification
+
+Transport-layer security mechanisms (e.g., TLS) provide baseline network confidentiality, integrity, and resistance to active man-in-the-middle attacks.
+
+TLS authentication MUST NOT be interpreted as establishing ASCP instance trust, authorization, or bootstrap eligibility. All ASCP trust semantics derive exclusively from validated bootstrap artifacts and log-anchored trust evaluation.
+
+## **13.6 Discovery Integrity Risks**
 
 Incorrect or inconsistent channel discovery undermines shared cognition by causing replicas to disagree about what coordination structures exist.
 
 Discovery integrity is ensured through exclusive reliance on the @references channel, deterministic interpretation of Channel Reference Artipoints, and immutable, auditable discovery history. Replicas MUST NOT infer channel existence from any source other than validated @references content.
 
-## **13.6 Compromised or Malicious Replicas**
+## **13.7 Compromised or Malicious Replicas**
 
 A compromised replica may attempt to serve invalid bootstrap or discovery content.
 
@@ -1487,7 +1529,7 @@ Mitigations include:
 
 No single replica is trusted implicitly beyond its ability to present verifiable log content.
 
-## **13.7 Divergent Bootstrap Views**
+## **13.8 Divergent Bootstrap Views**
 
 ASCP does not attempt to automatically reconcile divergent or conflicting bootstrap histories. A replica that encounters bootstrap or discovery artifacts that cannot be validated against its established trust anchor MUST treat those artifacts as invalid and MUST NOT incorporate them into its local coordination state.
 
@@ -1495,7 +1537,7 @@ Replicas are expected to rely on **validated, log-anchored history** rather than
 
 This design avoids implicit authority resolution and ensures that bootstrap correctness remains auditable, deterministic, and consistent across replicas.
 
-## **13.8 Recovery and Revocation Considerations**
+## **13.9 Recovery and Revocation Considerations**
 
 Bootstrap does not support destructive revocation of historical trust decisions. If a trust anchor or bootstrap artifact is later determined to be compromised:
 
@@ -1504,7 +1546,7 @@ Bootstrap does not support destructive revocation of historical trust decisions.
 
 Recovery procedures are addressed in Section 14.
 
-## **13.9 Section Summary**
+## **13.10 Section Summary**
 
 Bootstrap security in ASCP is achieved through:
 
