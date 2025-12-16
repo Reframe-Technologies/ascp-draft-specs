@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.55 — Informational (Pre-RFC Working Draft)  
+Version: 0.56 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -34,6 +34,8 @@ The **Agents Shared Cognition Protocol (ASCP)** is the architectural foundation 
 This document defines the conceptual model and system architecture for the ASCP protocol suite. It introduces the core primitives and cross-layer principles that organize the companion specifications for the coordination grammar, secure distribution layer, log synchronization protocol, identity and trust model, and governance semantics.
 
 At the heart of ASCP is the **Artipoint**: an immutable, addressable, author-attributed unit of articulated context. Artipoints compose into **Articulation Statements**, which express discrete coordination acts and accumulate in an append-only, cryptographically verifiable log. Together, they form a distributed DAG of articulated context that both humans and agents can reference, extend, and reason over.
+
+A central architectural principle follows from this design: **ASCP preserves authorship independently of permission**. What a participant or agent articulates is recorded immutably and attributed cryptographically; whether that articulation is authorized, accepted, or acted upon is determined later through contextual governance. This separation allows shared understanding to remain durable and auditable even as roles, authority, and participation evolve.
 
 Applications do not expose this DAG directly. Instead, they materialize it into familiar constructs—timelines, threads, agendas, project spaces—while ASCP ensures that the underlying context remains coherent, durable, and appropriately scoped for each participant. This separation enables private working context to coexist with shared structure, resolving the long-standing tension between individual focus and collective awareness.
 
@@ -410,13 +412,17 @@ The **formal definition** of the grammar—including its ABNF syntax, operator t
 
 # 14. Governance and Security
 
-ASCP separates coordination semantics, governance semantics, access control, and trust foundations into distinct layers. This avoids the traditional conflation of roles, permissions, authorship rights, and organizational accountability. In ASCP, each of these concerns is articulated explicitly and preserved as part of the immutable coordination graph.
+ASCP separates **authentication**, **authorization**, **visibility**, and **governance** into distinct architectural concerns, each expressed explicitly and preserved within the immutable coordination graph. This separation avoids a common failure mode in traditional Internet systems, where authentication and authorization are implicitly collapsed—often into bearer credentials, session state, or application-managed access controls—obscuring authorship, weakening auditability, and introducing ambient authority.
 
-Governance in ASCP is **declarative and authoritative**: it defines **semantic authority and permission**—who may author, steward, delegate, or hold responsibility within a given context—without embedding procedural enforcement or cryptographic control. These governance articulations express what *ought* to be true within the collaboration and are evaluated deterministically by applications and agents.
+**Authentication in ASCP establishes immutable authorship**: every Articulation Statement is cryptographically signed, author-attributed, and permanently recorded in an append-only log. Authorship is therefore verifiable independent of subsequent permission, policy changes, or contextual reinterpretation.
 
-Security in ASCP is **architectural**: it arises from cryptographic identity, immutable logs, scoped visibility via Channels, and local-first replica verification. Cryptographic mechanisms enforce *who can see and receive* articulated context, while governance semantics define *who is authorized to act* upon it. These dimensions are intentionally decoupled to model real-world collaboration accurately and to prevent authority, access, and accountability from being conflated.
+**Authorization in ASCP is declarative and contextual**, expressed as articulated governance within the same coordination substrate. Governance statements define semantic authority—who may author, steward, delegate, or hold responsibility within a given context—and are evaluated deterministically by applications and agents when interpreting the coordination graph. Authorization determines whether an articulated action *ought* to have effect within a given context; it does not determine whether the articulation itself exists or who authored it.
 
-Normative details for governance evaluation, identity binding, and certificate semantics are specified in the companion ASCP documents. This section summarizes the architectural principles that unify them.
+**Visibility is enforced cryptographically via Channels**, which define who may receive, decrypt, and store articulated context. Visibility boundaries are independent of governance semantics and cannot be overridden by authorization rules, ensuring that access control, authorship, and authority remain distinct dimensions.
+
+This separation ensures that **authorship remains verifiable even when authorization is disputed or revoked**. An articulation may be judged unauthorized, ignored, or superseded by governance rules, but it is never erased or anonymized. ASCP therefore preserves a complete, replayable, and auditable history of who said what and when, while allowing authority to evolve transparently over time.
+
+Normative details for identity binding, signature verification, governance evaluation, and certificate semantics are specified in the companion ASCP documents. This section summarizes the architectural principles that unify them.
 
 ## **14.1 Collaborative Governance: Roles, Authority, and Accountability**
 

@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.20 — Informational (Pre-RFC Working Draft)  
+Version: 0.30 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -76,7 +76,7 @@ The role of this document is to define **ordering, dependencies, and readiness c
 
 Safe participation in the Agents Shared Cognition Protocol (ASCP) is achieved only through the coordinated operation of three distinct and complementary components: authenticated log replication, log-anchored trust evaluation, and ordered acquisition of bootstrap and discovery history.
 
-First, **authenticated log replication**, as defined by the ASCP Log Synchronization Protocol (ALSP), ensures that a replica can obtain an append-only, integrity-protected history of channel events from authorized peers. ALSP provides transport-level authentication, replay protection, and deterministic convergence of replicated logs, but it is intentionally agnostic to the semantics of identity, trust, or governance.
+First, **authenticated log replication**, as defined by the ASCP Log Synchronization Protocol (ALSP), ensures that a replica can obtain an append-only, integrity-protected history of channel events from authorized peers. ALSP provides transport-level authentication, replay protection, and deterministic convergence of replicated logs, but it is intentionally agnostic to the semantics of identity, trust, and governance.
 
 Second, **log-anchored trust evaluation**, as defined in the ASCP Trust and Identity Architecture, derives identity validity, certificate binding, delegation, and trust relationships exclusively from immutable, signed history contained within ASCP channels. Trust is not inferred from transport-level authentication or configuration state, but from verifiable statements recorded in the shared log.
 
@@ -136,9 +136,9 @@ The bootstrap process in which a new ASCP organizational instance is created fro
 
 The bootstrap process in which a new replica connects to an existing ASCP organizational instance and initializes itself by acquiring and validating bootstrap material.
 
-### **Bootstrap Trust Anchor (BootCA)**
+### **Bootstrap Trust Anchor (RootCA)**
 
-The cryptographic root of trust for an ASCP organizational instance. The BootCA is introduced during genesis bootstrap and serves as the ultimate trust anchor for validating identity and channel-related trust material.
+The cryptographic root of trust for an ASCP organizational instance. The RootCA is introduced during genesis bootstrap and serves as the ultimate trust anchor for validating identity and channel-related trust material.
 
 ### **Bootstrap Channel (@bootstrap)**
 
@@ -147,6 +147,14 @@ A mandatory ASCP channel that anchors the organizational trust root and contains
 ### **References Channel (@references)**
 
 A mandatory ASCP channel that serves as the authoritative registry for channel discovery. The references channel contains signed records that enumerate available channels and provide sufficient information for replicas to locate and replicate them.
+
+### **Bootstrap Key Package (BKP)**
+
+A **Bootstrap Key Package (BKP)** is a bootstrap-scoped cryptographic package delivered to a joining replica during join bootstrap that enables initial decryption of the @references channel for deterministic discovery.
+
+### Bootstrap-Serving Replica
+
+A **Bootstrap-Serving Replica** is a replica that possesses sufficient local state to (a) authenticate as an identity traceable to the RootCA and (b) deliver a valid BKP enabling decryption of the @references channel.
 
 ### **Channel**
 
@@ -174,7 +182,9 @@ A state in which a replica has successfully completed bootstrap, validated requi
 
 ### **Local State**
 
-Implementation-specific, mutable state maintained by a replica that is not replicated across peers. Local state does not contribute to ASCP’s shared trust or coordination semantics.
+Implementation-specific, mutable state maintained by a replica that is not replicated across peers. Local state includes, but is not limited to, channel encryption keys e.g., Channel Access Keys (CAKs), Channel Symmetric Keys (CSKs), keyframe material, and any key material delivered via Bootstrap Key Packages (BKPs).
+
+Local state does not contribute to ASCP’s shared trust or coordination semantics. Loss of required local state MAY require a replica to re-enter join bootstrap in order to regain operational capability.
 
 ## **4.3 Conventions**
 
@@ -265,13 +275,21 @@ Bootstrap artifacts are subject to the same log-anchored trust model as all othe
 
 Any temporary assumptions made during bootstrap exist only to enable construction of a minimal trust graph and are subsequently validated using standard ASCP verification rules.
 
-### **5.3.3 Deterministic Discovery**
+### **5.3.3 Log Integrity vs. Content Visibility**
+
+During bootstrap, ASCP distinguishes between **verification of log integrity** and **visibility of encrypted content**.
+
+A replica MAY authenticate, order, and verify the integrity and authorship of all ASCP bootstrap-related log entries without possession of any channel encryption keys. However, when the @references channel is encrypted, possession of appropriate bootstrap-scoped key material is REQUIRED in order to decrypt and validate its contents for deterministic channel discovery (see Section 10.7).
+
+This distinction applies only during bootstrap and discovery initialization and does not alter normal ASCP channel authorization, visibility, or key provisioning semantics once bootstrap has completed.
+
+### **5.3.4 Deterministic Discovery**
 
 Channel discovery is deterministic and auditable. Given the same bootstrap material, independent replicas MUST discover the same set of channels and resolve them consistently.
 
 This property is essential for shared cognition: participants must agree not only on the content of coordination artifacts, but on **what coordination structures exist at all**.
 
-### **5.3.4 Separation of Concerns**
+### **5.3.5 Separation of Concerns**
 
 Bootstrap coordinates multiple layers without collapsing them. Cryptography, replication, grammar, and trust semantics remain defined in their respective specifications.
 
@@ -281,7 +299,7 @@ This separation ensures that:
 - implementations remain interoperable, and
 - future evolution of individual layers does not invalidate bootstrap guarantees.
 
-### **5.3.5 Symmetry Between Humans and Agents**
+### **5.3.6 Symmetry Between Humans and Agents**
 
 Bootstrap procedures apply uniformly to human users and autonomous agents. There are no special-case initialization paths based on participant type.
 
@@ -320,31 +338,31 @@ All trust decisions within an organizational instance ultimately derive from art
 
 An ASCP organizational instance is created exactly once via **genesis bootstrap**. Subsequent replicas join the instance via **join bootstrap** but do not redefine its trust boundary.
 
-## **6.2 Bootstrap Trust Anchor (BootCA)**
+## **6.2 Bootstrap Trust Anchor (RootCA)**
 
-Each ASCP organizational instance MUST define exactly one **Bootstrap Trust Anchor (BootCA)**.
+Each ASCP organizational instance MUST define exactly one **Bootstrap Trust Anchor (RootCA)**.
 
-The BootCA is the cryptographic root of trust for the organizational instance and serves as the ultimate authority for validating trust material introduced during bootstrap.
+The RootCA is the cryptographic root of trust for the organizational instance and serves as the ultimate authority for validating trust material introduced during bootstrap.
 
-### **6.2.1 Role of the BootCA**
+### **6.2.1 Role of the RootCA**
 
-The BootCA:
+The RootCA:
 
 - anchors trust for identity and certificate material introduced during bootstrap,
 - enables deterministic validation of bootstrap artifacts, and
 - establishes a stable trust root against which all subsequent trust relationships are evaluated.
 
-All trust material recorded during bootstrap MUST be verifiable, directly or indirectly, against the BootCA.
+All trust material recorded during bootstrap MUST be verifiable, directly or indirectly, against the RootCA.
 
 ### **6.2.2 Scope and Lifetime**
 
-The BootCA is scoped to a single organizational instance and remains authoritative for the lifetime of that instance.
+The RootCA is scoped to a single organizational instance and remains authoritative for the lifetime of that instance.
 
-ASCP does not support destructive replacement of the BootCA. If trust anchoring must evolve, such evolution MUST occur through additive mechanisms that preserve historical verifiability.
+ASCP does not support destructive replacement of the RootCA. If trust anchoring must evolve, such evolution MUST occur through additive mechanisms that preserve historical verifiability.
 
 ### **6.2.3 Relationship to External Trust Systems**
 
-The BootCA MAY be optionally endorsed or attested by external trust systems (e.g., PKI, identity providers). Such endorsements strengthen provenance but do not replace the BootCA’s role as the internal trust root.
+The RootCA MAY be optionally endorsed or attested by external trust systems (e.g., PKI, identity providers). Such endorsements strengthen provenance but do not replace the RootCA’s role as the internal trust root.
 
 Evaluation of external endorsements is defined in the ASCP Trust and Identity Architecture and is outside the scope of this document.
 
@@ -362,7 +380,7 @@ These channels are required for deterministic initialization and discovery and a
 The @bootstrap channel:
 
 - MUST exist in every organizational instance,
-- MUST anchor the BootCA,
+- MUST anchor the RootCA,
 - MUST contain sufficient information to enable a replica to begin safe initialization, and
 - MUST be discoverable by any replica attempting to bootstrap.
 
@@ -392,7 +410,7 @@ This separation ensures that trust establishment remains minimal and auditable w
 A replica MUST NOT be considered **operationally ready** until all of the following conditions are satisfied:
 
 1. The @bootstrap channel has been acquired and validated.
-2. The BootCA has been successfully established as the trust root.
+2. The RootCA has been successfully established as the trust root.
 3. The @references channel has been acquired and validated.
 4. Channel discovery has completed deterministically.
 
@@ -402,7 +420,7 @@ Only after these conditions are met MAY a replica transition into normal ASCP op
 
 The following invariants define the minimum conditions for ASCP bootstrap correctness:
 
-- Each organizational instance has exactly one BootCA.
+- Each organizational instance has exactly one RootCA.
 - Each organizational instance has exactly one @bootstrap channel.
 - Each organizational instance has exactly one @references channel.
 - All replicas bootstrap trust before discovery.
@@ -430,20 +448,24 @@ This section defines the normative semantics, required contents, and exceptional
 
 The @bootstrap channel serves three primary purposes:
 
-1. **Trust Anchoring:** It introduces and anchors the Bootstrap Trust Anchor (BootCA), establishing the root of trust for the organizational instance.
+1. **Trust Anchoring:** It introduces and anchors the Bootstrap Trust Anchor (RootCA), establishing the root of trust for the organizational instance.
 2. **Initialization Enablement:** It provides the minimum information required for a replica to transition from an uninitialized state into a state where normal ASCP verification rules can be applied.
 3. **Discovery Bridging:** It enables a replica to safely locate and acquire the @references channel, after which normal channel discovery may proceed.
 
 The @bootstrap channel is intentionally minimal. It is not a general coordination channel and MUST NOT be used to convey ordinary application, governance, or workflow data.
 
+Visibility seeding for encrypted discovery artifacts, where required, is performed via bootstrap session mechanisms and not via content recorded in the @bootstrap channel.
+
 ## **7.2 Required Contents**
 
 The @bootstrap channel MUST contain sufficient information to enable deterministic trust establishment and transition to discovery.
 
+This information is limited to **trust anchoring and discovery identification** and MUST NOT include channel encryption keys, per-replica key envelopes, or other visibility-granting material.
+
 At a minimum, the @bootstrap channel MUST include:
 
 1. **Bootstrap Trust Anchor Declaration**
-   - A signed Artipoint that introduces the BootCA and binds it to the organizational instance.
+   - A signed Artipoint that introduces the RootCA and binds it to the organizational instance.
    - This Artipoint serves as the cryptographic root for validating subsequent bootstrap artifacts.
 2. **Mandatory Channel Declarations**
    - A signed reference identifying the @references channel as the authoritative discovery registry.
@@ -451,20 +473,103 @@ At a minimum, the @bootstrap channel MUST include:
 3. **Bootstrap Manifests or Metadata (Optional but RECOMMENDED)**
    - Structured metadata that assists replicas in interpreting bootstrap state (e.g., versioning, creation timestamps).
    - Such metadata MUST be immutable and subject to the same validation rules as other bootstrap content.
+4. **Bootstrap Identity References (Optional)**
+   - One or more Identity Reference Artipoints identifying identities explicitly permitted to serve join bootstrap, providing minimal, RootCA-traceable public key material sufficient for bootstrap-time peer authentication.
 
-All Artipoints in the @bootstrap channel MUST be verifiable, directly or indirectly, against the BootCA once validation completes.
+All Artipoints in the @bootstrap channel MUST be verifiable, directly or indirectly, against the RootCA once validation completes.
 
-## **7.3 Encryption and Visibility Requirements**
+## **7.3 Identity Reference Artipoint**
 
-The @bootstrap channel is subject to exceptional visibility requirements.
+An **Identity Reference Artipoint** (“identity-ref”) is a signed, immutable declaration recorded in the **@bootstrap** channel that enables a joining replica to authenticate a bootstrap-serving peer **prior to full identity resolution**.
 
-### **7.3.1 Readability Prior to Full Authorization**
+Identity Reference Artipoints exist to support **join bootstrap via replicas that do not possess the RootCA private key**, while preserving ASCP’s log-anchored trust model and keeping the @bootstrap channel minimal.
+
+An identity-ref provides a **bootstrap-time binding** between:
+
+- a declared ASCP identity,
+- a specific authentication certificate identifier, and
+- the public key material required to verify ALSP peer authentication,
+
+without requiring access to the full identity or certificate history at bootstrap time.
+
+### **7.3.1 Purpose and Scope**
+
+The identity-ref mechanism serves a narrowly scoped purpose:
+
+- to allow a joining replica to validate that a peer’s authenticated ALSP session identity is **traceable to the Bootstrap Trust Anchor (RootCA)** using only:
+  - Initial Trust Input (ITI),
+  - content in the @bootstrap channel, and
+  - ALSP session authentication.
+
+Identity Reference Artipoints:
+
+- **MUST NOT** function as a general identity directory,
+- **MUST NOT** enumerate organizational membership,
+- **MUST NOT** grant authorization, governance roles, or channel visibility, and
+- **MUST** be interpreted solely as a **bootstrap-serving allowlist**.
+
+Only identities explicitly recorded via identity-ref are eligible to act as **join bootstrap peers**.
+
+### **7.3.2 Canonical Form**
+
+An Identity Reference Artipoint MUST be articulated using the following primary payload form:
+
+```asciidoc
+[ uuid, author, timestamp,
+  ["identity-ref", <label>, <identity-uuid>]
+]
+```
+
+Where:
+
+- \<identity-uuid> is the UUID of the ASCP Identity Artipoint that the peer asserts during ALSP session establishment.
+- \<label> is informational and has no semantic effect.
+
+### **7.3.3 Required Attributes**
+
+An identity-ref Artipoint MUST include the following required attributes:
+
+- **cert\_kid:** A stable identifier for the authentication certificate associated with the identity, of the form `ascp:cert:<cert-uuid>`
+- **cert\_public\_jwk:** A JSON Web Key (JWK), as defined by RFC 7517, representing the **public key** corresponding to \<cert-uuid>. The JWK MUST:
+  - be sufficient to verify signatures or authentication proofs presented during ALSP session establishment, and
+  - exactly match the public key used by the peer to authenticate the ALSP session.
+
+### **7.3.4 Normative Semantics**
+
+The following semantics apply to all Identity Reference Artipoints:
+
+- identity-ref entries are **additive** and MUST NOT be removed or overwritten.
+- identity-ref entries declare **bootstrap-time identity resolution metadata only**.
+- identity-ref entries do not replace or supersede full Identity or Certificate Artipoints recorded elsewhere in the repository.
+- A joining replica MUST treat identity-ref entries as **temporary resolution shims** valid only during bootstrap.
+
+Once normal identity and certificate resolution becomes available, identity-ref entries MUST be treated as informational and MUST NOT be used in preference to canonical ASCP trust material.
+
+### **7.3.5 Validation Requirements**
+
+A replica validating an Identity Reference Artipoint MUST:
+
+1. Verify the Artipoint signature under normal ASCP rules.
+2. Confirm that the author identity is traceable, directly or indirectly, to the Bootstrap Trust Anchor (RootCA).
+3. Confirm that cert\_kid is well-formed.
+4. Confirm that cert\_public\_jwk is syntactically valid and usable for cryptographic verification.
+
+Failure to validate an identity-ref MUST prevent the referenced identity from being treated as eligible to serve join bootstrap.
+
+## **7.4 Encryption and Visibility Requirements**
+
+The @bootstrap channel is subject to exceptional visibility requirements and:
+
+- MUST NOT function as a channel key distribution mechanism, and
+- MUST NOT carry material that directly enables decryption of any channel, including @references.
+
+### **7.4.1 Readability Prior to Full Authorization**
 
 The @bootstrap channel MUST be readable by a replica prior to full identity-based authorization. This exception exists solely to allow initial trust establishment and MUST NOT be generalized to other channels.
 
-### **7.3.2 Encryption Constraints**
+### **7.4.2 Encryption Constraints**
 
-The @bootstrap channel MUST NOT require pre-established channel encryption keys in order to be read.
+The @bootstrap channel MUST NOT require pre-established channel encryption keys in order to be read. The @bootstrap channel MUST NOT be encrypted at the channel layer.
 
 This does not imply the absence of security protections. During first contact, integrity, authenticity, and replay resistance for @bootstrap acquisition are provided by:
 
@@ -474,16 +579,18 @@ This does not imply the absence of security protections. During first contact, i
 
 as defined by ALSP.
 
-## **7.4 Validation Semantics**
+## **7.5 Validation Semantics**
 
 Bootstrap validation follows a bounded two-phase model:
 
 1. **Assumed Validity Phase:** A replica MAY temporarily assume the validity of @bootstrap content in order to construct a minimal trust graph.
-2. **Verification Phase:** Once the BootCA is established, all bootstrap content MUST be validated using normal ASCP trust evaluation rules.
+2. **Verification Phase:** Once the RootCA is established, all bootstrap content MUST be validated using normal ASCP trust evaluation rules.
 
 If validation fails, the replica MUST treat the bootstrap attempt as unsuccessful and MUST NOT proceed to normal operation.
 
-## **7.5 Immutability and Evolution**
+During the Assumed Validity Phase, a replica MUST NOT derive authorization, discovery, or governance conclusions from any content other than the @bootstrap channel.
+
+## **7.6 Immutability and Evolution**
 
 The @bootstrap channel is immutable in the same sense as all ASCP channels: entries are append-only and never overwritten.
 
@@ -491,7 +598,7 @@ Updates to bootstrap-relevant information MUST preserve historical verifiability
 
 Destructive modification or replacement of bootstrap history is not permitted.
 
-## **7.6 Security Considerations (Bootstrap-Specific)**
+## **7.7 Security Considerations (Bootstrap-Specific)**
 
 Because the @bootstrap channel is readable prior to full authorization, it represents a high-value security boundary.
 
@@ -504,7 +611,7 @@ Implementations MUST ensure that:
 
 The @bootstrap channel MUST NOT be used as a substitute for secure coordination channels once trust is established.
 
-## **7.7 Section Summary**
+## **7.8 Section Summary**
 
 The @bootstrap channel provides the minimal, authoritative foundation required to initialize an ASCP organizational instance and onboard replicas safely.
 
@@ -535,6 +642,20 @@ Specifically, the @references channel:
 
 The @references channel does not itself grant authorization to access channels. It defines *what exists*, not *who may participate*. Authorization decisions are made by other ASCP layers once discovery has occurred.
 
+### **8.1.1 Role of @references in Layer-0 Provisioning**
+
+In addition to deterministic discovery, the **@references channel serves as the authoritative export of Layer-0 replication provisioning metadata** for an ASCP organizational instance.
+
+Specifically, validated Channel Reference Artipoints in @references provide replicas with the information required to:
+
+- identify channels as replication objects,
+- locate channel logs via ALSP, and
+- perform **Layer-0 channel access authorization**, including verification of Channel Access Proofs using Channel Access Key (CAK) public keys.
+
+A replica MAY rely on @references to provision Layer-0 replication capability for channels **even when the replica is not authorized to decrypt or interpret the channel’s payloads**. Possession of CAK public keys enables authorization checks at Layer-0 but does not grant visibility into encrypted channel content or confer membership, governance, or application-level semantics.
+
+This separation allows replicas to participate as relays, mirrors, or backup participants for channels while preserving strict confidentiality and governance enforcement at higher ASCP layers.
+
 ## **8.2 Relationship Between @bootstrap and @references**
 
 The @bootstrap and @references channels serve complementary but distinct roles.
@@ -545,7 +666,7 @@ The @bootstrap and @references channels serve complementary but distinct roles.
 A replica MUST NOT attempt to interpret or rely on @references content until:
 
 1. the @bootstrap channel has been acquired, and
-2. the Bootstrap Trust Anchor (BootCA) has been established and validated.
+2. the Bootstrap Trust Anchor (RootCA) has been established and validated.
 
 Once these conditions are met, the @references channel becomes the authoritative source for channel discovery.
 
@@ -574,45 +695,51 @@ Where:
 
 The \<channel-uuid> value is authoritative for channel identity. The label is informational and MAY change over time through additive declarations.
 
-### **8.3.2 Required Attributes**
+## **8.3.2 Required Attributes**
 
-A Channel Reference Artipoint MUST include the following attributes:
+A Channel Reference Artipoint MUST include the following required attributes:
 
-- **doc**
-- Identifies the document or storage unit in which the channel log resides.
-- **log**
-- Identifies the logical name of the channel log within the referenced document.
+- **cak\_kid -** Identifies the Channel Access Key (CAK) associated with the channel. The value MUST be a stable key identifier of the form:
 
-These attributes MUST be sufficient for a replica to locate and replicate the channel log using ALSP.
+```asciidoc
+ascp:cak:<channel-uuid>
+```
 
-### **8.3.3 Optional Attributes**
+- **cak\_public\_keys -** One or more Ed25519 public keys corresponding to the referenced CAK.
+  - At least one public key MUST be designated as **active**.
+  - Additional public keys MAY be included to support transitional overlap during CAK rotation.
+
+These attributes MUST be sufficient for a replica to locate the channel log and to perform **Layer-0 channel access authorization** using ALSP.
+
+## **8.3.3 Optional Attributes**
 
 A Channel Reference Artipoint MAY include additional attributes, including but not limited to:
 
-- **embedded** — indicates whether the channel log is embedded in the containing document
 - **declaredIn** — UUID of the Artipoint or channel in which this channel was declared
 - **implementation-specific routing hints**
 
-Optional attributes MUST NOT alter the semantic meaning of channel discovery and MUST NOT be required for interoperability.
+Optional attributes MUST NOT alter the semantic meaning of channel discovery or authorization and MUST NOT be required for interoperability.
 
-### **8.3.4 Normative Semantics**
+## **8.3.4 Normative Semantics**
 
 The following semantics apply to all Channel Reference Artipoints:
 
 - Each Channel Reference Artipoint declares exactly one channel.
 - Channel discovery state is **additive**; references are never removed or overwritten.
-- Multiple Channel Reference Artipoints referring to the same channel UUID MAY exist and MUST be interpreted according to ordering and supersession rules defined by higher ASCP layers.
-- Channel Reference Artipoints declare **existence and location only**; they do not confer membership, authorization, or governance semantics.
+- Multiple Channel Reference Artipoints referring to the same channel UUID MAY exist and MUST be interpreted according to ordering and supersession (replaces) rules defined by higher ASCP layers.
+- Channel Reference Artipoints declare **existence, location, and Layer-0 authorization metadata only**; they do not confer channel membership, payload visibility, or governance semantics.
+- Possession of CAK public keys enables verification of Channel Access Proofs but **does not imply authorization to access encrypted channel payloads**.
 
-### **8.3.5 Validation Requirements**
+## **8.3.5 Validation Requirements**
 
 A replica validating a Channel Reference Artipoint MUST:
 
 1. Verify the Artipoint signature under normal ASCP trust rules.
 2. Confirm that the author identity is traceable to the organizational trust anchor.
 3. Confirm that all required attributes are present and well-formed.
+4. Confirm that at least one CAK public key is designated as active.
 
-Failure to validate a Channel Reference Artipoint MUST prevent discovery of the referenced channel.
+Failure to validate a Channel Reference Artipoint MUST prevent discovery and replication authorization of the referenced channel.
 
 ## **8.4 Discovery Authority and Determinism**
 
@@ -643,6 +770,8 @@ Accordingly, the @references channel:
 - MAY restrict visibility based on authorization.
 
 A replica that cannot decrypt or validate the @references channel MUST treat discovery as incomplete and MUST NOT proceed to replicate additional channels beyond those explicitly permitted.
+
+Decryption capability for the @references channel depends on possession of appropriate local state (e.g., CAKs, CSKs, or key material delivered via BKP). Such key material is not reconstructible from ASCP logs.
 
 ## **8.7 Failure and Inconsistency Handling**
 
@@ -676,25 +805,25 @@ Genesis bootstrap occurs exactly once per organizational instance.
 
 Genesis bootstrap creates the initial, immutable foundation upon which all subsequent ASCP coordination depends. Its purpose is to:
 
-- establish the **Bootstrap Trust Anchor (BootCA)**,
+- establish the **Bootstrap Trust Anchor (RootCA)**,
 - create the mandatory bootstrap channels, and
 - record sufficient trust and discovery information to allow future replicas to initialize deterministically.
 
 At the conclusion of genesis bootstrap, the organizational instance MUST satisfy all bootstrap invariants defined in Section 6 and MUST be capable of supporting join bootstrap without further special handling.
 
-## **9.2 BootCA Creation**
+## **9.2 RootCA Creation**
 
-During genesis bootstrap, the organizational operator (human or system acting in that role) MUST generate the **Bootstrap Trust Anchor (BootCA)**.
+During genesis bootstrap, the organizational operator (human or system acting in that role) MUST generate the **Bootstrap Trust Anchor (RootCA)**.
 
-The BootCA:
+The RootCA:
 
 - MUST be generated prior to authoring any bootstrap Artipoints,
 - MUST be scoped exclusively to the organizational instance, and
 - MUST be introduced as the cryptographic root of trust for the repository.
 
-The BootCA MUST be articulated into the @bootstrap channel as a signed Artipoint in accordance with the ASCP Trust and Identity Architecture. No other trust anchor MAY precede it.
+The RootCA MUST be articulated into the @bootstrap channel as a signed Artipoint in accordance with the ASCP Trust and Identity Architecture. No other trust anchor MAY precede it.
 
-Optional endorsements or attestations (e.g., PKI, external identity providers) MAY be associated with the BootCA at genesis time, but such endorsements are not required for correctness.
+Optional endorsements or attestations (e.g., PKI, external identity providers) MAY be associated with the RootCA at genesis time, but such endorsements are not required for correctness.
 
 ## **9.3 Initial Channel Creation**
 
@@ -709,7 +838,7 @@ The @bootstrap channel MUST be created first.
 
 Its initial contents MUST include:
 
-- the Artipoint introducing the BootCA, and
+- the Artipoint introducing the RootCA, and
 - a signed declaration identifying the @references channel as the authoritative discovery registry.
 
 No other channels MAY be referenced prior to the creation of @references.
@@ -729,12 +858,12 @@ These self-descriptive references establish a closed, discoverable core and ensu
 
 Genesis bootstrap is considered complete when all of the following conditions are met:
 
-1. A BootCA has been generated and recorded in the @bootstrap channel.
+1. A RootCA has been generated and recorded in the @bootstrap channel.
 2. The @bootstrap channel exists and contains valid bootstrap Artipoints.
 3. The @references channel exists and contains valid Channel Reference Artipoints for:
    - @bootstrap, and
    - @references.
-4. All bootstrap Artipoints are verifiable against the BootCA.
+4. All bootstrap Artipoints are verifiable against the RootCA.
 
 Once these conditions are satisfied, the organizational instance is **initialized** and MAY accept new replicas via join bootstrap.
 
@@ -744,7 +873,7 @@ No replica other than the genesis author SHOULD attempt to perform genesis boots
 
 An organizational instance created via genesis bootstrap has the following properties:
 
-- All trust decisions are traceable to a single, immutable BootCA.
+- All trust decisions are traceable to a single, immutable RootCA.
 - All channel discovery proceeds exclusively via the @references channel.
 - All future bootstrap activity occurs through join bootstrap.
 - Historical verifiability of trust and discovery state is preserved indefinitely.
@@ -778,7 +907,7 @@ Join bootstrap MUST:
 
 - establish authenticated connectivity to at least one existing replica,
 - acquire and validate the @bootstrap channel,
-- establish the Bootstrap Trust Anchor (BootCA),
+- establish the Bootstrap Trust Anchor (RootCA),
 - acquire and validate the @references channel, and
 - complete deterministic channel discovery.
 
@@ -798,7 +927,7 @@ The following Initial Trust Input models are recognized:
 
 ### **10.3.1 Pinned Trust Anchor**
 
-The replica is provisioned with a trusted fingerprint or public key corresponding to the organizational BootCA.
+The replica is provisioned with a trusted fingerprint or public key corresponding to the organizational RootCA.
 
 This model provides strong security guarantees and is RECOMMENDED for enterprise and managed deployments.
 
@@ -812,7 +941,7 @@ Invitation artifacts MUST be verifiable against the organizational trust anchor 
 
 The replica derives trust information via an external trust system (e.g., WebPKI, DNS-based mechanisms) and uses this information to authenticate the organizational instance during bootstrap.
 
-External trust mechanisms MAY strengthen provenance but MUST NOT replace the internal BootCA as the authoritative trust root.
+External trust mechanisms MAY strengthen provenance but MUST NOT replace the internal RootCA as the authoritative trust root.
 
 ### **10.3.4 Trust-On-First-Use (TOFU)**
 
@@ -828,17 +957,37 @@ Using the selected Initial Trust Input, the replica performs the following high-
 
 1. Establish authenticated connectivity to an existing replica.
 2. Acquire the @bootstrap channel.
-3. Establish and validate the Bootstrap Trust Anchor (BootCA).
-4. Acquire the @references channel.
+3. Establish and validate the Bootstrap Trust Anchor (RootCA).
+4. Acquire the @references channel including replication and, where applicable, decryption and validation.
 5. Perform deterministic channel discovery.
 
 The detailed mechanics of session establishment, authentication, and log replication are defined by ALSP and are not redefined here.
 
+### 10.4.1 Bootstrap Peer Authentication via identity-ref
+
+During join bootstrap, a replica MAY connect to an existing replica that does not possess the private key of the Bootstrap Trust Anchor (RootCA).
+
+In such cases, the joining replica MUST authenticate the peer as follows:
+
+1\. The joining replica establishes an authenticated ALSP session with the peer.
+
+2\. The peer authenticates using an identity and public key during ALSP session establishment.
+
+3\. The joining replica MUST locate a corresponding **Identity Reference Artipoint** in the validated @bootstrap channel whose `<identity-uuid>` matches the peer’s asserted identity.
+
+4\. The joining replica MUST verify that the public key presented during ALSP authentication matches the `cert_public_jwk` recorded in the matching identity-ref.
+
+5\. The joining replica MUST verify that the identity-ref Artipoint itself is traceable to the Bootstrap Trust Anchor (RootCA).
+
+If any of the above checks fail, the joining replica MUST treat the peer as ineligible to serve join bootstrap and MUST NOT proceed with bootstrap using that peer.
+
+Successful validation establishes that the peer’s identity is **RootCA-traceable via log-anchored bootstrap history**, without requiring the peer to possess RootCA private key material.
+
 ## **10.5 Validation and Failure Handling**
 
-During join bootstrap, the replica MUST validate all acquired bootstrap content according to normal ASCP trust rules once the BootCA is established.
+During join bootstrap, the replica MUST validate all acquired bootstrap content according to normal ASCP trust rules once the RootCA is established.
 
-If validation of the @bootstrap channel, BootCA, or @references channel fails, the replica:
+If validation of the @bootstrap channel, RootCA, or @references channel fails, the replica:
 
 - MUST treat the join bootstrap attempt as unsuccessful, and
 - MUST NOT transition to normal ASCP operation.
@@ -850,13 +999,166 @@ Partial or speculative bootstrap state MUST NOT be reused without revalidation.
 Join bootstrap is considered complete when:
 
 1. The @bootstrap channel has been acquired and validated.
-2. The BootCA has been established as the trust root.
+2. The RootCA has been established as the trust root.
 3. The @references channel has been acquired and validated.
 4. Channel discovery has completed deterministically.
 
 Once these conditions are satisfied, the replica is **operationally ready** and MAY proceed to replicate additional channels subject to authorization.
 
-## **10.7 Section Summary**
+## **10.7 Visibility Seeding and @references Acquisition**
+
+This section clarifies the join bootstrap sequence in deployments where the **@references channel is encrypted** and therefore not immediately usable by a joining replica. It defines the **minimal, joiner-scoped asymmetry** permitted during bootstrap to enable secure discovery without leaking organizational structure or identity membership.
+
+### **10.7.1 Separation of Replication, Decryption, and Validation**
+
+During join bootstrap, acquisition of the @references channel MUST be understood as comprising three distinct steps:
+
+1. **Replication** — obtaining opaque @references log entries via ALSP, without interpretation.
+2. **Decryption** — obtaining sufficient key material to decrypt @references entries.
+3. **Validation** — verifying decrypted Channel Reference Artipoints under the established Bootstrap Trust Anchor (RootCA).
+
+A joining replica MAY replicate encrypted @references entries prior to decryption. However, the replica MUST treat channel discovery as incomplete until decryption and validation have both succeeded.
+
+Possession of encrypted @references data does not constitute channel disclosure.
+
+### **10.7.2 Bootstrap Visibility Seed**
+
+When @references is encrypted, a joining replica requires a **bootstrap visibility seed** to enable initial decryption. This seed MUST be scoped **exclusively** to @references and MUST NOT grant visibility to any other channels.
+
+ASCP provides this capability via the **boot\_keys\_jwe field in the ALSP hello message**, which MAY be used to deliver a joiner-specific bootstrap key package containing one or more channel key envelopes sufficient to enable decryption of @references entries required for deterministic discovery:
+
+- The boot\_keys\_jwe payload is JWE wrapped Bootstrap Key Package to the joining replica’s authenticated session keys.
+- It is delivered **out-of-band of ASCP logs**, during ALSP session establishment.
+- It enables decryption of @references entries sufficient to perform discovery.
+
+This mechanism allows visibility seeding without publishing per-identity key envelopes into @bootstrap and without enumerating organizational identities.
+
+### **10.7.3 Role of @bootstrap**
+
+The @bootstrap channel remains intentionally minimal and serves only to:
+
+- Establish the organizational trust anchor (RootCA).
+- Identify or locate the @references channel.
+
+@bootstrap MUST NOT function as an identity directory, channel list, or key distribution mechanism for non-bootstrap channels. Visibility to @references is unlocked via the bootstrap visibility seed, not by static publication of membership or key material in @bootstrap.
+
+This constraint does not prohibit the presence of Identity Reference Artipoints, which serve solely as a bootstrap-time allowlist for peer authentication and do not enumerate organizational membership or confer authorization.
+
+### **10.7.4 Transition to Normal Provisioning**
+
+Once the joining replica has successfully decrypted and validated @references:
+
+- Deterministic channel discovery completes.
+- The replica MAY transition to the DISCOVERED state as defined in Section 12.
+- Subsequent channel visibility and access MUST be granted exclusively through normal governance evaluation and Channel keyframe provisioning.
+
+The bootstrap visibility seed, delivered as a Bootstrap Key Package (BKP), is a one-time initialization mechanism and MUST NOT be reused to provision access to additional channels.
+
+### **10.7.5 Failure Handling**
+
+If a joining replica is unable to decrypt or validate @references:
+
+- The replica MUST remain in the BOOTSTRAPPED state.
+- The replica MUST NOT infer channel existence from any source other than validated @references content.
+- The bootstrap process MAY be retried according to local policy.
+
+Failure to complete this step MUST prevent transition to normal operational behavior.
+
+### **10.7.6 Bootstrap Key Package (BKP)**
+
+When the @references channel is encrypted, the `boot_keys_jwe` field in the ALSP hello message MUST carry a JWE wrapped **Bootstrap Key Package (BKP)** sufficient to enable decryption of @references entries required for deterministic discovery.
+
+The Bootstrap Key Package is a **joiner-scoped, out-of-band visibility artifact** and is not recorded in any ASCP channel log.
+
+#### **10.7.6.1 Purpose and Scope**
+
+The BKP exists solely to seed visibility of the @references channel during join bootstrap.
+
+A BKP:
+
+- MUST be scoped exclusively to the @references channel,
+- MUST NOT grant visibility to any other channel,
+- MUST NOT function as a general key distribution mechanism, and
+- MUST NOT persist beyond completion of bootstrap.
+
+The BKP does not confer authorization, governance roles, or membership semantics. It enables decryption only and does not bypass normal ASCP trust validation.
+
+#### **10.7.6.2 Encoding and Payload Structure**
+
+The BKP payload MUST be encoded as a **JSON object**, encrypted using JWE and delivered via `boot_keys_jwe`.
+
+The decrypted BKP payload MUST have the following structure:
+
+```json
+{
+  "type": "bootstrap-key-package",
+  "version": "1.0",
+  "scope": "ascp:channel:@references",
+
+  "keys": [
+    <channel-key-envelope>, <channel-key-envelope>
+  ],
+
+  "ordering": "oldest-first",
+  "active_index": 0
+}
+```
+
+Where:
+
+- type MUST be "bootstrap-key-package".
+- version MUST be "1.0".
+- scope MUST identify the @references channel.
+- keys MUST be a non-empty ordered array of plaintext JSON formatted **Channel Key Envelopes**, each conforming exactly to the **Channel Key Envelope** structure defined in *ASCP Channels, Section 9.6*.
+- ordering MUST be "oldest-first".
+- active\_index MUST be an integer index into the keys array indicating the most recent key that senders SHOULD use when encrypting new @references entries.
+
+Each element of keys corresponds to one historical keyframe epoch of the @references channel.
+
+#### **10.7.6.3 Relationship to Bootstrap Key Identifiers**
+
+Encrypted @references entries that rely on bootstrap visibility MUST reference a bootstrap key identifier of the form:
+
+```asciidoc
+ascp:bkp:<index>
+```
+
+Where \<index> selects the corresponding element in the BKP keys array.
+
+A replica decrypting an @references entry with kid = ascp:bkp:\<index> MUST:
+
+1. Select keys\[index] from the decrypted BKP.
+2. Extract the AES key from the selected Channel Key Envelope.
+3. Use that key to decrypt the JWE-protected @references entry.
+
+If \<index> is out of range, the replica MUST treat the entry as undecryptable and MUST NOT infer discovery state from it.
+
+### **10.7.6.4 Key History and Rotation**
+
+The BKP MAY contain multiple Channel Key Envelopes in order to support key rotation of the @references channel.
+
+Implementations:
+
+- SHOULD include only a bounded number of historical keys,
+- SHOULD include the current key and any immediately preceding keys required for correct decryption of retained @references history, and
+- MUST support refreshing the BKP by re-establishing an ALSP session if an older bootstrap key index is encountered.
+
+Historical decryptability of @references entries is preserved through the inclusion of prior keys in the BKP and does not require modification of @bootstrap content.
+
+### **10.7.6.5 Lifecycle Constraints**
+
+The BKP:
+
+- MUST be delivered only during join bootstrap,
+- MUST NOT be persisted as a long-lived credential,
+- MUST NOT be reused for provisioning access to non-bootstrap channels, and
+- MUST be discarded once the replica transitions to the DISCOVERED state.
+
+Channel key material obtained via BKP becomes part of the replica’s local state. Loss of such local state prevents decryption and interpretation of encrypted channels and requires the replica to re-enter join bootstrap in order to restore operational capability.
+
+After discovery completes, all subsequent channel visibility and key provisioning MUST occur exclusively through normal ASCP Channel keyframe mechanisms.
+
+## **10.8 Section Summary**
 
 Join bootstrap enables safe, deterministic onboarding of new replicas into an existing ASCP organizational instance.
 
@@ -917,13 +1219,13 @@ During this phase:
 - the replica MAY temporarily assume bootstrap content validity in order to construct a minimal trust graph, and
 - no other channels MAY be interpreted or relied upon.
 
-The replica MUST establish the Bootstrap Trust Anchor (BootCA) from @bootstrap content before proceeding.
+The replica MUST establish the Bootstrap Trust Anchor (RootCA) from @bootstrap content before proceeding.
 
 ### **11.3.2 Validation Gate**
 
 After acquisition of the @bootstrap channel:
 
-- the replica MUST validate bootstrap content using normal ASCP trust rules once the BootCA is established, and
+- the replica MUST validate bootstrap content using normal ASCP trust rules once the RootCA is established, and
 - failure to validate MUST abort the bootstrap process.
 
 No further channel replication is permitted until this validation gate is satisfied.
@@ -938,7 +1240,7 @@ During this phase:
 - Channel Reference Artipoints are interpreted to construct the discovery set, and
 - no additional channels MAY be replicated until discovery completes deterministically.
 
-The @references channel MUST be validated under normal ASCP trust semantics.
+The @references channel MUST be validated under normal ASCP trust semantics. In deployments where the @references channel is encrypted, successful acquisition for discovery purposes additionally requires decryption and validation as described in Section 10.7.
 
 ## **11.5 Transition to Normal Replication**
 
@@ -1001,13 +1303,14 @@ A replica enters this state prior to any bootstrap activity.
 
 ### **12.1.2 BOOTSTRAPPED**
 
-The replica has successfully acquired the @bootstrap channel and established the Bootstrap Trust Anchor (BootCA).
+The replica has successfully acquired the @bootstrap channel and established the Bootstrap Trust Anchor (RootCA).
 
 In this state:
 
 - the @bootstrap channel has been acquired,
-- the BootCA has been established as the trust root, and
+- the RootCA has been established as the trust root, and
 - bootstrap content has been validated or is in the process of validation.
+- any bootstrap-serving peer identities used during ALSP session establishment have been validated against Identity Reference Artipoints in the @bootstrap channel.
 
 In this state, the replica MAY acquire the @references channel but MUST NOT replicate additional channels.
 
@@ -1042,7 +1345,7 @@ State transitions are monotonic and MUST follow the ordering defined below.
 This transition occurs when:
 
 - an authenticated ALSP session is established, and
-- the @bootstrap channel is acquired and the BootCA is established.
+- the @bootstrap channel is acquired and the RootCA is established.
 
 Failure to validate bootstrap content MUST prevent this transition.
 
@@ -1052,6 +1355,8 @@ This transition occurs when:
 
 - the @references channel is acquired, and
 - all Channel Reference Artipoints are validated successfully.
+
+For encrypted deployments, acquisition of @references includes successful decryption using an appropriate bootstrap visibility seed and subsequent validation of Channel Reference Artipoints under the established Bootstrap Trust Anchor (RootCA), as defined in **Section 10.7**.
 
 If discovery fails or is incomplete, the replica MUST remain in the BOOTSTRAPPED state.
 
@@ -1091,7 +1396,7 @@ Re-bootstrap MUST preserve the invariant that bootstrap state is revalidated bef
 The following invariants MUST hold:
 
 - A replica MUST NOT enter OPERATIONAL without passing through BOOTSTRAPPED and DISCOVERED.
-- A replica MUST NOT interpret @references content before establishing the BootCA.
+- A replica MUST NOT interpret @references content before establishing the RootCA.
 - A replica MUST NOT replicate non-bootstrap channels prior to OPERATIONAL.
 
 Violation of these invariants indicates a non-compliant implementation.
@@ -1119,7 +1424,7 @@ Bootstrap security is concerned primarily with **preventing incorrect trust esta
 
 ### **13.2.1 Incorrect Trust Anchor Establishment**
 
-If a replica accepts an incorrect Bootstrap Trust Anchor (BootCA), all subsequent trust decisions become invalid.
+If a replica accepts an incorrect Bootstrap Trust Anchor (RootCA), all subsequent trust decisions become invalid.
 
 Mitigations include:
 
@@ -1218,7 +1523,7 @@ This section provides non-normative guidance on operational and deployment consi
 
 ASCP bootstrap is intentionally designed to avoid destructive changes to trust history. As a result:
 
-- The Bootstrap Trust Anchor (BootCA) is not replaced or revoked.
+- The Bootstrap Trust Anchor (RootCA) is not replaced or revoked.
 - Key rotation and trust evolution occur through **additive mechanisms**, preserving historical verifiability.
 
 Operationally, this means:
@@ -1308,19 +1613,97 @@ If future revisions introduce such requirements, this section will be updated ac
 
 ## **17.1 Normative References**
 
-- **RFC 2119**
-- *Key words for use in RFCs to Indicate Requirement Levels.*
-- **RFC 8174**
-- *Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words.*
-- **ASCP Trust and Identity Architecture**
-- Defines cryptographic identity constructs, trust anchors, certificate semantics, and validation rules used during bootstrap.
-- **ASCP LogSync Protocol (ALSP)**
-- Defines authenticated session establishment, log replication, ordering, and replay protection mechanisms used during bootstrap.
+- **RFC 2119:** *Key words for use in RFCs to Indicate Requirement Levels.*
+- **RFC 8174:** *Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words.*
+- **ASCP Trust and Identity Architecture:** Defines cryptographic identity constructs, trust anchors, certificate semantics, and validation rules used during bootstrap.
+- **ASCP LogSync Protocol (ALSP):** Defines authenticated session establishment, log replication, ordering, and replay protection mechanisms used during bootstrap.
 
 ## **17.2 Informative References**
 
-- **ASCP Channels Specification**
-- Defines channel membership, encryption, and distribution semantics applied after bootstrap.
-- **Agents Shared Cognition Protocol (ASCP) Core Specification**
-- Describes the overall ASCP architecture and layer model.
+- **ASCP Channels Specification:** Defines channel membership, encryption, and distribution semantics applied after bootstrap.
+- **Agents Shared Cognition Protocol (ASCP) Core Specification:** Describes the overall ASCP architecture and layer model.
+
+# **Appendix A - Bootstrap Design Rationale**
+
+## **A.1 Overview**
+
+The Agents Shared Cognition Protocol (ASCP) is designed to support durable, auditable collaboration between humans and autonomous agents over long time horizons. To achieve this, ASCP makes several deliberate architectural separations that differ from common practice in messaging systems, access-controlled data stores, and real-time collaboration platforms.
+
+This appendix explains the rationale for these design choices in a descriptive manner, focusing on how they support ASCP’s core invariants: log-anchored trust, deterministic interpretation, privacy-preserving distribution, and future-verifiable coordination history.
+
+## **A.2 Separation of Authentication, Authorization, and Visibility**
+
+ASCP treats **authentication**, **authorization**, and **visibility** as independent concerns, each addressed by a distinct protocol mechanism.
+
+- **Authentication** establishes authorship. It answers the question: *Who authored this statement?*
+- Authentication is cryptographic and objective. Every Artipoint is individually signed and attributable to a specific key, enabling durable provenance and replayable verification.
+- **Authorization** determines semantic effect. It answers the question: *Should this statement have effect in this context?*
+- Authorization is evaluated declaratively through governance semantics applied to immutable history. Authorization may vary by scope, time, or role, and does not affect the existence or authenticity of statements.
+- **Visibility** determines disclosure. It answers the question: *Who can receive and decrypt this statement?*
+- Visibility is enforced cryptographically through ASCP Channels and key distribution, independent of semantic authorization.
+
+By separating these axes, ASCP avoids conflating authorship, authority, and audience. This allows statements to exist immutably even if they are unauthorized, overridden, or visible only to a limited set of participants.
+
+## **A.3 Immutable History and Non-Authoritative Statements**
+
+ASCP preserves all authenticated articulations as part of an append-only log, regardless of whether they are ultimately authorized or operative.
+
+This design supports several properties:
+
+- **Auditability across time**: Verifiers can reconstruct not only what took effect, but what was proposed, contested, or superseded.
+- **Deterministic interpretation**: Governance rules determine semantic effect without requiring deletion or mutation of history.
+- **Symmetry between humans and agents**: All participants may articulate statements; authority is evaluated, not assumed.
+
+Unauthorized or non-operative articulations are treated as a governance concern, not a transport or security failure. Resource control and abuse prevention are handled at channel admission and replication layers rather than by suppressing history.
+
+## **A.4 Visibility as a Cryptographic Boundary**
+
+ASCP Channels define visibility boundaries through encryption and key distribution. Possession of encrypted log material does not imply semantic disclosure.
+
+Key properties of this model include:
+
+- Decryption capability, not log replication, defines visibility.
+- Governance semantics may inform who should receive keys, but do not themselves grant decryption capability.
+- Channels act as audience and privacy boundaries, not as semantic or topical classifiers.
+
+This approach allows replicas to participate in synchronization, mirroring, or archival roles without gaining access to plaintext content, and supports privacy-preserving collaboration across organizational and trust boundaries.
+
+## **A.5 Bootstrap Asymmetry and Initial Discovery**
+
+ASCP derives all trust and coordination semantics from immutable log history. This creates an inherent bootstrap dependency: trust evaluation and channel discovery require access to specific logs, while access to those logs may itself depend on trust and keys.
+
+ASCP resolves this with a narrow, explicit bootstrap asymmetry:
+
+- A minimal **@bootstrap** channel anchors the organizational trust root and provides pointers required to initiate discovery, **without carrying encrypted payloads or visibility-granting material**.
+- Joiner-specific key material required to decrypt encrypted bootstrap artifacts (e.g., **@references**) is delivered via authenticated session mechanisms during initial connection.
+- After bootstrap completes, all trust, discovery, and visibility decisions are derived exclusively from validated log history under normal ASCP rules.
+
+This asymmetry is limited in scope, auditable, and non-recurring. Once bootstrap completes, ASCP operates as a fully symmetric, self-describing system.
+
+This design avoids turning the bootstrap channel into an identity directory or key distribution surface, preserving privacy and minimizing exposed organizational structure.
+
+## **A.6 Validated Discovery**
+
+Channel discovery in ASCP is considered complete only after referenced discovery artifacts are both:
+
+1. **Decryptable**, using properly provisioned channel keys, and
+2. **Verifiable**, under normal trust evaluation rules anchored at the organizational trust root.
+
+Replication of encrypted discovery logs prior to decryption is permitted, but does not constitute semantic discovery. Channel existence and interpretation are derived solely from decrypted and validated discovery statements.
+
+## **A.7 Progressive Trust States**
+
+ASCP allows identities and trust relationships to evolve over time. Authentication, recognition under a trust anchor, and external endorsement are distinct and additive states.
+
+This enables:
+
+- Local-first operation prior to institutional endorsement
+- Later convergence on stronger trust guarantees
+- Historical verification of statements under the trust state that existed at the time of authorship
+
+Trust is evaluated at log-time, not join-time, preserving the ability to reason accurately about past coordination.
+
+## **A.8 Architectural Summary**
+
+The ASCP architecture prioritizes reproducibility, privacy, and durable shared meaning over immediate convenience. By maintaining strict separation between authentication, authorization, and visibility, and by treating bootstrap as an explicit phase transition rather than an implicit assumption, ASCP enables long-lived, auditable collaboration between humans and agents without reliance on centralized control or mutable state.
 

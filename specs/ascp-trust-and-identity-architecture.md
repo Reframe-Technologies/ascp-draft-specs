@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.47 — Informational (Pre-RFC Working Draft)  
+Version: 0.48 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -21,11 +21,15 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 # **2. Abstract**
 
-This document defines the Trust and Identity Architecture for the Agents Shared Cognition Protocol (ASCP), establishing how participants—human or agent—are identified, authenticated, and cryptographically bound to their contributions. This document normatively defines the identity, certificate, endorsement, and trust-anchor constructs used throughout ASCP. ASCP employs a log-anchored trust model in which identities, certificates, endorsements, and key-binding events are recorded as immutable, signed entries rather than evaluated through real-time certificate verification. The architecture specifies procedures for secure identity bootstrap using self-sovereign key generation, key rotation workflows that preserve identity continuity, optional mechanisms for anchoring ASCP trust into external PKI ecosystems, and recovery workflows that maintain user control of private keys. Together, these mechanisms provide durable provenance, verifiable authorship, and interoperable trust relationships that underpin all ASCP collaborative and cryptographic operations.
+This document defines the Trust and Identity Architecture for the Agents Shared Cognition Protocol (ASCP). It establishes how participants—human or agent—are identified and how cryptographic authorship of articulated statements is verified independently of governance, permission, or application context. ASCP employs a **log-anchored trust model** in which identities, certificates, endorsements, and key-binding events are recorded as immutable, signed entries rather than evaluated through real-time certificate validation.
+
+The architecture specifies mechanisms for self-sovereign identity bootstrap, durable authorship verification, key rotation with historical continuity, optional anchoring to external PKI and identity ecosystems, and privacy-preserving recovery workflows. Together, these mechanisms provide verifiable provenance and replayable trust relationships that underpin all ASCP cryptographic operations while preserving the architectural separation between authentication, authorization, and governance.
 
 # **3. Introduction**
 
-This document specifies the Trust and Identity Architecture for the Agents Shared Cognition Protocol (ASCP). It defines how participants establish durable cryptographic identities, authenticate authorship, and form verifiable trust relationships across ASCP Channels. All trust decisions in ASCP derive from immutable, signed log entries — a log-anchored model that ensures historical verifiability independent of external infrastructure.
+This document specifies the Trust and Identity Architecture for the Agents Shared Cognition Protocol (ASCP). It defines how participants establish durable cryptographic identities and how **authorship of articulated statements is authenticated independently of authorization or governance semantics**. All trust decisions in ASCP derive from immutable, signed log entries—a log-anchored model that ensures historical verifiability independent of real-time certificate validation or external availability.
+
+Consistent with the overall ASCP architecture, this specification treats identity and trust as **foundational provenance mechanisms**, not permission systems. Cryptographic identity establishes *who authored a statement* and *which key was valid at that time*; whether that statement is authorized, accepted, or acted upon is determined elsewhere through governance and interpretation. This separation preserves auditability and replayable trust even as roles, authority, and participation evolve.
 
 ## **3.1 Design Intent**
 

@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.31 — Informational (Pre-RFC Working Draft)  
+Version: 0.32 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -159,12 +159,13 @@ These attributes:
 
 - Express **authoritative permission**, not suggestions
 - Participate in inheritance, override, denial, and expiration semantics
-- MUST be respected by ASCP-compliant applications and agents when:
-  - Emitting new articulations
-  - Accepting or acting upon received articulations
-  - Rendering views of participation and responsibility
+- MUST be respected by ASCP-compliant applications and agents **when determining semantic effect**, including when emitting new articulations, accepting or acting upon received articulations, and rendering views of participation and responsibility
 
 Governance permissions are **semantic**, not cryptographic. An articulation authored by a non-writer may exist immutably in a log, but applications and agents MAY treat it as invalid, ignore it, or surface it as a governance violation.
+
+### **Non-authoritative articulations are expected and safe**
+
+ASCP permits authenticated participants to articulate statements even when those statements fall outside their current governance authority. Such articulations are immutably recorded with verifiable authorship and evaluated at interpretation time. Governance determines whether a given articulation is operative within a particular context; it does not determine whether the articulation exists. This model preserves auditability and historical truth—who said what and when—while ensuring that only authorized articulations influence derived state, views, or actions.
 
 ## **5.4 Governance as Input, Not Enforcement**
 

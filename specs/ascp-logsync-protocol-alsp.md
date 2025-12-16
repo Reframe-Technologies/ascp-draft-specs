@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.50 — Informational (Pre-RFC Working Draft)  
+Version: 0.51 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -97,135 +97,142 @@ A Layer 2 semantic unit representing structured shared cognition. Articulations 
 
 A four-layer protocol suite enabling persistent, structured collaboration among humans and agents. ALSP defines Layer 0 of this stack.
 
-### **4.4 Bootstrap Log**
+### **4.4 Bootstrap Key Package (BKP)**
 
-A log containing initial Channel references, identity material, certificates, and cryptographic keys. It serves as the trust root for Channel manifests, identity binding, and authorization.
+A JWE-encoded, bootstrap-scoped package delivered out-of-band via the `boot_keys_jwe` field in the ALSP hello message, used to convey bootstrap-scoped key material required by higher layers to enable decryptability of the encrypted @references channel for deterministic discovery during join bootstrap.
 
-### **4.5 Canonical Order**
+### **4.5 Bootstrap Log**
+
+A minimal, append-only log used to establish the initial trust context for an ASCP organizational instance. The bootstrap log anchors the organizational trust root (RootCA) and provides the information required to locate the authoritative channel discovery registry.
+
+The bootstrap log **does not contain cryptographic keys**, channel membership data, or authorization state, and **does not function as a channel discovery registry**.  
+All trust evaluation, discovery, and authorization semantics beyond initial anchoring are derived from validated history in subsequent channels under normal ASCP rules.
+
+### **4.6 Canonical Order**
 
 The total ordering over Channel Log entries defined as the tuple **(lamport\_time, message\_id)**, sorted first by Lamport clock value and then by the lexicographic ordering of the 16-byte message identifier.
 
-### **4.6 Challenge Flow**
+### **4.7 Challenge Flow**
 
 A server-side handshake path triggered when the receiving replica cannot fully validate the client's identity using cached or known materials and therefore sends an auth\_challenge requesting additional identity data. Challenge Flow describes server behavior independent of the client's credential mode.
 
-### **4.7 Channel**
+### **4.8 Channel**
 
 A uniquely identified, append-only stream of Layer 1 message envelopes. Channels define the unit of distribution and authorization within ASCP.
 
-### **4.8 Channel Access Key (CAK)**
+### **4.9 Channel Access Key (CAK)**
 
 An Ed25519 key pair used to authenticate access to a Channel at Layer 0. The public key is distributed in the Channel Manifest; the private key is held by authorized participants to produce Channel Access Proofs.
 
-### **4.9 Channel Log**
+### **4.10 Channel Log**
 
 A replica's ordered sequence of Layer 1 message envelopes for a specific Channel. The log is append-only and synchronized across replicas using ALSP.
 
-### **4.10 Channel Manifest**
+### **4.11 Channel Manifest**
 
 Channel metadata distributed via the bootstrap process, including Channel identifiers, access-control configuration, and the CAK public key.
 
-### **4.11 Digest Hash Exchange**
+### **4.12 Digest Hash Exchange**
 
 A Channel Log consistency check in which replicas compare a SHA-256 digest of message identifiers in canonical order to detect divergence.
 
-### **4.12 Direct Mode**
+### **4.13 Direct Mode**
 
 A client credential-supply mode in which the initiating replica includes all identity materials necessary for validation in its initial auth\_request. Direct Mode describes how the client packages credentials and does not imply anything about the server's validation flow.
 
-### **4.13 Dot-Preserving Binary (DPB)**
+### **4.14 Dot-Preserving Binary (DPB)**
 
 A reversible binary encoding that transforms JOSE compact serialization into a more efficient on-wire representation by decoding Base64url segments while preserving literal dot separators. Used by Layer 0 to transport Layer 1 payloads without semantic interpretation.
 
-### **4.14 Hello Message**
+### **4.15 Hello Message**
 
 The message exchanged after authentication to negotiate session parameters, exchange lamport\_max values, advertise capabilities, and confirm mutual authorization before synchronization.
 
-### **4.15 Identity Key**
+### **4.16 Identity Key**
 
 The long-term cryptographic key pair representing a participant (human or agent) within ASCP. Represented as a JWK and bound to an identity via signed claim bundles defined outside this specification.
 
-### **4.16 Immediate Flow**
+### **4.17 Immediate Flow**
 
 A server-side handshake path in which the receiving replica can validate the client's auth\_requestimmediately based on locally available trust material, allowing it to respond directly with hello without issuing an auth\_challenge.
 
-### **4.17 JWK (JSON Web Key)**
+### **4.18 JWK (JSON Web Key)**
 
 A JOSE structure used to encode public and symmetric keys, including Identity Keys, Bootstrap channel keys, and Channel Access Keys.
 
-### **4.18 JWS (JSON Web Signature)**
+### **4.19 JWS (JSON Web Signature)**
 
 The JOSE signature format used to authenticate all ALSP messages and to carry Channel Access Proofs.
 
-### **4.19 JWT (JSON Web Token)**
+### **4.20 JWT (JSON Web Token)**
 
 The JOSE token format used within ASCP for identity claims and trust establishment. JWT content is not interpreted by ALSP.
 
-### **4.20 JOSE (JavaScript Object Signing and Encryption)**
+### **4.21 JOSE (JavaScript Object Signing and Encryption)**
 
 A family of standards (JWS, JWE, JWK) used by ASCP for signatures, encryption, and key representation. ALSP is aware only of compact serialization encoding and does not interpret JOSE semantics.
 
-### **4.21 kid (Key Identifier)**
+### **4.22 kid (Key Identifier)**
 
 A structured identifier of the form ascp:\<type>:\<uuid> referencing key material obtained through the bootstrap process. Used in JWS and JWE protected headers.
 
-### **4.22 Lamport Clock**
+### **4.23 Lamport Clock**
 
 A monotonically increasing logical timestamp used by ALSP to provide deterministic ordering across distributed replicas.
 
-### **4.23 lamport\_max**
+### **4.24 lamport\_max**
 
 The highest Lamport clock value known to a replica at the time a message is sent. Propagated during sync to maintain logical time coherence across replicas.
 
-### **4.24 log\_digest**
+### **4.25 log\_digest**
 
 A SHA-256 digest of the sequence of message identifiers in canonical order, used for Channel Log consistency checks.
 
-### **4.25 message\_id**
+### **4.26 message\_id**
 
 A 16-byte universally unique identifier (UUID) assigned by ALSP to each Layer 1 message envelope for idempotence and ordering.
 
-### **4.26 node\_id**
+### **4.27 node\_id**
 
 A universally unique identifier for a replica participating in ALSP synchronization.
 
-### **4.27 payload**
+### **4.28 payload**
 
 The DPB-encoded JOSE compact serialization of a Layer 1 JWS/JWE message. ALSP treats payloads as opaque byte sequences.
 
-### **4.28 Provisioned Mode**
+### **4.29 Provisioned Mode**
 
 A client credential-supply mode in which the initiating replica includes only minimal identity references in its initial auth\_request, supplying full credentials only if requested via auth\_challenge. Provisioned Mode concerns client behavior, not server response.
 
-### **4.29 Pull Sync**
+### **4.30 Pull Sync**
 
 A synchronization mode in which replicas request Channel Log updates via sync\_request messages.
 
-### **4.30 Push Sync**
+### **4.31 Push Sync**
 
 A synchronization mode in which replicas automatically deliver new Channel Log entries via sync\_update messages after an initial synchronization.
 
-### **4.31 Replica**
+### **4.32 Replica**
 
 An authorized node storing and synchronizing one or more Channel Logs.
 
-### **4.32 Session**
+### **4.33 Session**
 
 A mutually authenticated communication context established between two ALSP replicas for the duration of message exchange. A session begins with the ALSP authentication handshake, binds all subsequent messages through session-specific nonces and signature rules, and persists until closed, terminated, or expired.
 
-### **4.33 session\_nonce**
+### **4.34 session\_nonce**
 
 A per-session, randomly generated 128-bit nonce created independently by each endpoint. During authentication, each replica includes its own `session_nonce` in the JWS protected header's `nonce` field. After authentication completes, each replica includes the peer's `session_nonce` in the `nonce` field instead. This cross-use of session nonces binds messages to a specific authenticated session and prevents replay attacks across connections.
 
-### **4.34 sync\_request**
+### **4.35 sync\_request**
 
 An ALSP message used by a replica to request Channel Log entries or verify log state.
 
-### **4.35 sync\_response**
+### **4.36 sync\_response**
 
 An ALSP message containing Channel Log entries provided in response to a sync\_request.
 
-### **4.36 sync\_update**
+### **4.37 sync\_update**
 
 An ALSP message used in push mode to deliver newly appended Channel Log entries without an explicit request.
 
@@ -1180,7 +1187,7 @@ The sender MUST include either the full identity certificate or a `kid` referenc
   "alsp_msg_type": "hello",            // ALSP hello message
   "timestamp": "<timestamp>",          // RFC 3339 UTC
   "session_nonce": "utf-8-string",     // Sender's session nonce
-  "boot_keys_jwe": "<JWE of BCK>",     // JWE-encoded bootstrap channel keys
+  "boot_keys_jwe": "<JWE of BKP>",     // JWE-encoded Bootstrap Key Package
   "lamport_max": 16569909,             // Local Lamport global max value
   "node_id": "uuid",                   // Sender's replica node UUID
   "push_enabled": true,                // Request/confirm push mode
@@ -1188,7 +1195,7 @@ The sender MUST include either the full identity certificate or a `kid` referenc
   "max_alsp_length": 262144,           // Maximum receive length in bytes
   "user_auth_cert": "cert-or-kid",     // Identity Claim Bundle or kid
   "user_identity": "utf-8-string",     // User / agent identity
-  "status_message": "utf-8-string"     // Optional status or error information
+  "status_message": "utf-8-string"     // Optional status or error info
 }
 ```
 
@@ -1211,8 +1218,9 @@ The sender MUST include either the full identity certificate or a `kid` referenc
 - **boot\_keys\_jwe**
   - Type: string (JWE compact serialization)
   - **MAY** be present.
-  - When present, **MUST** contain the Bootstrap Channel Keys (BCKs), enabling validation and resolution of certificates and CAKs after authentication (Bootstrap §9–§10).
-  - If omitted, the receiver **MUST NOT** assume encrypted bootstrap content is available until arriving into an AUTHENTICATED state and they can be explictly requested.
+  - When present, **MUST** contain a Bootstrap Key Package (BKP).
+  - The BKP payload structure, semantics, and lifecycle constraints are defined by the **ASCP Bootstrap Process** specification (Bootstrap Section 10.7.6).
+  - ALSP treats the decrypted BKP payload as **semantically opaque** and uses it only as an out-of-band bootstrap visibility seed required by higher layers to decrypt encrypted @references entries for deterministic discovery.
 - **lamport\_max**
   - Type: integer (unsigned)
   - **MUST** be present.
@@ -1523,6 +1531,10 @@ If a channel is configured with a CAK, the server MUST verify a CAP before provi
 
 Non-normative note: This authorization mechanism permits Layer 0 to validate access without inspecting Layer-1 encrypted payloads, preserving end-to-end confidentiality while enforcing strict channel-level access control.
 
+ALSP permits a replica to synchronize a channel log **without possessing the keys required to decrypt or interpret the channel’s payloads**. Possession of a valid CAK private key allows a replica to present a Channel Access Proof (CAP) and retrieve channel log entries, regardless of whether the replica can decrypt the encrypted payloads carried within those entries.
+
+Replicas that do not possess the corresponding payload decryption keys MUST treat replicated entries as opaque data. Authorization to replicate a channel MUST NOT be interpreted as authorization to access or interpret channel content.
+
 ## **11.1 Channel Access Keys (CAKs)**
 
 A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned at channel creation time. Each channel has at most one active CAK at any moment. The CAK enables clients to prove authorization to access the channel’s log.
@@ -1642,122 +1654,85 @@ Upon receiving a sync\_request for a channel with an active CAK, the server **MU
 - The use of a detached JWS avoids exposing CAK signatures to unnecessary contexts and maintains integrity across transports.
 - CAP nonce reuse or timestamp replay indicates potential attack activity and should be logged for diagnostic purposes.
 
-# **12. Bootstrap Channel Key Handling**
+# **12. Bootstrap Key Package Transport**
 
-This section defines how ALSP replicas obtain and manage the cryptographic keys required to decrypt bootstrap material. The bootstrap process distributes a set of **Bootstrap Channel Keys (BCKs)**, which are used to unwrap (decrypt) protected channel manifests, trust roots, and other initialization artifacts necessary to authenticate and authorize participation in ASCP Channels.
+This section defines how ALSP transports the `boot_keys_jwe` field during session establishment and the constraints placed on ALSP implementations when handling it.
 
-Bootstrap keys are provided outside the ALSP channel log synchronization protocol itself and are consumed only during bootstrap or manifest refresh operations. Bootstrap keys do not grant channel access; they are distinct from Channel Access Keys (CAKs) defined in Section 11.
+A **Bootstrap Key Package (BKP)** is delivered during the ALSP `hello` exchange and is **not transmitted via ALSP channel logs**. The payload structure, semantics, trust interpretation, and lifecycle of the BKP are defined **exclusively** by the *ASCP Bootstrap Process* specification. ALSP treats the BKP as an **opaque, session-scoped JWE payload**.
 
-Non-normative note: Bootstrap keys form the root of trust for discovering channel metadata and identities. Because bootstrap artifacts may contain sensitive keying material (e.g., channel encryption keys), their confidentiality must be preserved, and key lifecycle must be well-defined.
+Bootstrap Key Packages **do not grant channel access**, **do not authorize replication**, and are **distinct from Channel Access Keys (CAKs)** defined in Section 11.
 
-## **12.1 Bootstrap Key Format**
+---
 
-Each Bootstrap Channel Key (BCK) is distributed as a JWE-encrypted envelope containing one or more bootstrap artifacts. A BCK envelope conforms to the standard JWE Compact Serialization:
+## **12.1 Transport Semantics**
 
-```asciidoc
-<protected-header>.<encrypted-key>.<iv>.<ciphertext>.<tag>
-```
+- A BKP, when present, **MUST** be carried only in the `boot_keys_jwe` field of the ALSP `hello` message.
+- BKPs **MUST NOT** be transmitted via ALSP Channel Logs, sync messages, or any other ALSP message type.
+- ALSP implementations **MUST NOT** persist BKPs beyond the lifetime of the session in which they are received.
+- ALSP implementations **MUST NOT** interpret, inspect, or derive semantic meaning from BKP payload contents.
 
-### **12.1.1 Protected Header Requirements**
+From the perspective of ALSP, the BKP is a **binary artifact delivered out-of-band** whose purpose is to enable higher layers to proceed with bootstrap discovery.
 
-The JWE protected header **MUST** include:
+## **12.2 JWE Envelope Requirements**
 
-```json
-{
-  "alg": "ECDH-ES+A256KW",
-  "enc": "A256GCM",
-  "kid": "<alsp:bck:index>"
-}
-```
+The `boot_keys_jwe` value **MUST** be encoded using **JWE Compact Serialization**.
 
-Normative requirements:
+ALSP imposes **no requirements** on the internal payload format beyond successful JWE decryption by the recipient.
 
-- `alg` **MUST** be "ECDH-ES+A256KW".
-- `enc` **MUST** be "A256GCM".
-- `kid` **MUST** uniquely identify the bootstrap key used to encrypt the payload using the `<alsp:bck:index>` encoding.
+### **12.2.1 Protected Header Constraints**
 
-### **12.1.2 Payload Requirements**
+ALSP places the following minimal constraints on the JWE protected header:
 
-The JWE ciphertext **MUST** contain a JSON object representing a bootstrap artifact or array of artifacts. The structure of these artifacts is defined in the ASCP Bootstrap specification and is outside the scope of ALSP.
+- The header **MUST** be syntactically valid JOSE JSON.
+- The `kid` field:
+  - **SHOULD** reference the recipient’s identity certificate using the form  
+    `ascp:cert:<uuid>` *when such a reference is known and resolvable by the sender*.
+  - **MUST** be the empty string (`""`) if no such certificate reference exists at the time of wrapping.
+- ALSP **MUST NOT** assign or interpret any semantic meaning to the `kid` value beyond enabling JWE processing.
 
-A replica **MUST** be able to decrypt the payload using the private key associated with the relevant bootstrap key.
+All other protected header fields (including `alg`, `enc`, and key agreement parameters) are governed by the *ASCP Bootstrap Process* specification and applicable JOSE standards, not by ALSP.
 
-## **12.2 Bootstrap Key Distribution**
+## **12.3 Session Binding and Authenticity**
 
-Bootstrap keys are distributed out-of-band during initial provisioning and during any subsequent bootstrap metadata updates.
+- A BKP is accepted **solely** on the basis that it was delivered over an **authenticated ALSP session**.
+- ALSP **does not define**, require, or prohibit any additional trust validation of BKPs.
+- ALSP **MUST NOT** specify bootstrap trust interpretation rules or mandate validation against bootstrap trust roots.
 
-Replica behavior:
+Any trust evaluation related to BKP contents is performed entirely by higher layers under the ASCP Bootstrap Process.
 
-- A replica **MUST** receive at least one valid bootstrap key during session initialization via the hello message and be encrypted using the agreed content public encryption key.
-- The contained bootstrap keys **MUST** be integrity-protected and authenticated using the bootstrap trust root.
-- Bootstrap keys **MUST** be stored securely and **MUST NOT** be exposed via ALSP or other untrusted channels.
-- A replica **MAY** receive multiple bootstrap keys, for example during key rotation or multi-tier organizational provisioning.
+## **12.4 Lifetime and Scope (ALSP View)**
 
-### **12.2.1 Required Capabilities**
+From the ALSP perspective only:
 
-A replica:
+- A BKP is **session-scoped**.
+- A BKP is **ephemeral**.
+- A BKP **MUST NOT** be reused across sessions.
+- A BKP **MUST NOT** be cached, replayed, or referenced after session termination.
 
-- **MUST** be able to resolve a bootstrap key by its kid.
-- **MUST** reject bootstrap envelopes whose kid does not match any locally installed bootstrap key.
-- **MAY** support multiple private keys for decrypting bootstrap material.
-- **MAY** request new bootstrap keys or updated manifests as part of the higher-layer bootstrap refresh procedure.
+ALSP does not track bootstrap epochs, rotation state, or historical validity of BKPs.
 
-Non-normative note:
+## **12.5 Error Handling**
 
-Some deployments may maintain both a long-term master bootstrap key and periodically rotated operational bootstrap keys.
+When handling `boot_keys_jwe`, ALSP implementations:
 
-## **12.3 Bootstrap Key Rotation**
+- **MUST** return `protocol_violation` for malformed JWE structures.
+- **MUST** return `invalid_auth` when JWE decryption fails due to cryptographic errors.
+- **MUST NOT** use authorization-related error codes (e.g., `unauthorized`) to signal BKP handling failures.
 
-Bootstrap keys may be rotated by an organization or channel owner. Rotation ensures forward secrecy, revocation capability, and alignment with organizational policy.
+Error responses **SHOULD NOT** disclose whether failures were caused by key absence, decryption failure, or payload corruption.
 
-### **12.3.1 Replica Handling of Rotation**
+## **12.6 Out-of-Scope Semantics**
 
-A replica:
+The following are explicitly **out of scope** for ALSP and are defined by the ASCP Bootstrap Process specification:
 
-- **MUST** treat newly distributed bootstrap keys as active after successful validation.
-- **MUST** continue to accept previously valid bootstrap keys until the bootstrap manifest declares them expired.
-- **MUST** reject bootstrap artifacts encrypted with bootstrap keys not present in the current or transitional key set.
-- **SHOULD** remove expired bootstrap keys from local storage once they are no longer required for decrypting historical material.
+- BKP payload structure
+- Channel Key Envelope semantics
+- Discovery rules
+- Key indexing and selection
+- Key rotation and epoch overlap
+- Decryptability guarantees for any channel
 
-### **12.3.2 Manifest Updates**
-
-The bootstrap manifest:
-
-- **MUST** specify the currently active bootstrap key(s).
-- **MUST** indicate when previous bootstrap keys become invalid.
-- **MAY** include a scheduled or immediate rotation event.
-- **MUST** be signed by the bootstrap authority.
-
-Replica behavior:
-
-- Upon receiving a new manifest, a replica **MUST** validate the signature and update its bootstrap key set accordingly.
-- If a manifest indicates that a previously valid bootstrap key is revoked, replicas **MUST** immediately cease accepting bootstrap envelopes encrypted under the revoked key.
-
-## **12.4 Error Handling**
-
-When handling bootstrap keys or decrypting bootstrap artifacts, a replica:
-
-- **MUST** return the ALSP error code "invalid\_auth" when decryption fails due to an unrecognized or revoked bootstrap key.
-- **MUST** return "protocol\_violation" if the JWE structure is malformed.
-- **SHOULD** return "unauthorized" if the bootstrap key is recognized but does not authorize access to the requested artifact.
-- **MAY** include diagnostic information in the reason field, provided it does not disclose sensitive key material.
-
-Non-normative note: For security reasons, error messages should not disclose whether the failure was due to unknown kid, decryption failure, or payload tampering.
-
-## **12.5 Security Considerations**
-
-Bootstrap Channel Keys protect sensitive initialization material and therefore have strict confidentiality requirements:
-
-- Bootstrap private keys **MUST** be stored in a secure key store or equivalent.
-- Replicas **MUST** minimize exposure by wiping decrypted bootstrap artifacts from memory when no longer needed.
-- Implementations **SHOULD** log bootstrap key failures or key rotations for auditability.
-- Implementations **SHOULD** rate-limit repeated decryption failures to mitigate oracle attacks.
-
-Non-normative note: Compromise of a bootstrap key does not directly grant channel write or read permissions, but may permit an attacker to obtain metadata (e.g., channel encryption keys or identity information) depending on the bootstrap structure.
-
-## **12.6 Decryptability Guarantees (Informational)**
-
-By referencing the channel\_key\_envelope format for the AES key package and applying it to an array of Bootstrap keys, this approach maintains uniformity across the protocol while allowing the Bootstrap channel to support multi-epoch keying without special-case handling.
+ALSP’s role is limited to **opaque, authenticated transport** of the Bootstrap Key Package during session establishment.
 
 # **13. Key Identifier (kid) Resolution**
 
@@ -1847,9 +1822,43 @@ While Layer 1 manages all key lifecycle operations (rotation, expiration, revoca
 
 **Active session handling during CAK rotation:** Active sessions may continue with their session-cached keys until natural termination, at which point fresh sessions will resolve updated keys. If a peer wishes to force revalidation of a rotated CAK, it can send a 're-auth-required' error message. After sending this error, push syncs should cease and further sync\_requests must be refused for the remainder of this session. Note that in pull mode, each sync\_request is individually authorized against current credentials, while push mode relies on session-cached authorization from the initial subscription.
 
-## 13.5 Interaction with Bootstrap Channel
+## **13.5 Relationship to Bootstrap Artifacts (Informative)**
 
-**Trust Model**: Layer 0 operates under a **log-anchored trust model** similar to Layer 1 - key material from the bootstrap process and channel manifests is trusted as it existed at the time those artifacts were created and signed. Layer 0 does not perform live PKI validation or revocation checking; instead, it trusts the cryptographic relationships established when the bootstrap document and channel manifests were originally articulated into the log. This ensures that historical sync operations remain verifiable using the credentials that were valid when those log entries were created, regardless of subsequent key lifecycle events handled at higher layers.
+Layer 0 relies on key material that is introduced via the ASCP Bootstrap Process and referenced by stable `kid` values. From the perspective of ALSP, these materials function as **immutable inputs** for signature verification and authorization checks during the lifetime of an authenticated session.
+
+ALSP:
+
+- Does **not** define or evaluate trust semantics
+- Does **not** perform revocation checking or policy interpretation
+- Does **not** reason about historical or future validity of keys
+
+Instead, ALSP assumes that any key material it is asked to resolve via a supported `kid` was already validated, authorized, and published according to higher-layer rules at the time it was made available through bootstrap artifacts (e.g., certificate directories or channel manifests).
+
+This design allows Layer 0 to:
+
+- Perform deterministic verification of signatures and access proofs
+- Preserve historical verifiability of replicated logs
+- Remain agnostic to identity lifecycle, governance, and trust policy evolution
+
+All trust interpretation, lifecycle management, revocation semantics, and governance rules are defined exclusively by the *ASCP Trust & Identity Architecture* and related higher-layer specifications.
+
+### **13.5.1 Bootstrap Key Index Identifiers (Informative)**
+
+As part of higher-layer bootstrap operations, encrypted payloads MAY reference key identifiers of the form:
+
+```asciidoc
+ascp:bkp:<index>
+```
+
+These identifiers are defined by the *ASCP Bootstrap Process* specification and are used exclusively for bootstrap-scoped key selection above Layer-0.
+
+ALSP implementations:
+
+- **MUST NOT** attempt to resolve, validate, or interpret `ascp:bkp:*` identifiers
+- **MUST NOT** treat such identifiers as UUID-addressable keys
+- **MUST NOT** apply authorization, trust evaluation, or key lookup semantics to them
+
+From the ALSP perspective, `ascp:bkp:*` identifiers may appear only as opaque values within encrypted payloads processed by higher layers. Their structure, indexing rules, lifecycle, and semantics are entirely outside the scope of this specification.
 
 # **14. Transport Bindings**
 
