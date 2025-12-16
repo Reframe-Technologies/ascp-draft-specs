@@ -1,173 +1,116 @@
 # Agents Shared Cognition Protocol (ASCP)
 
-**A Git-like Structure for Context instead of Code**
+**A protocol for persistent, structured context in human-AI collaboration**
 
-This repository contains the evolving specifications for the **Agents Shared Cognition Protocol (ASCP)** — a foundational protocol for shared cognition between humans and intelligent agents. ASCP introduces a type of "[**Cortex Layer**](https://blog.reframetech.com/building-the-missing-cortex-layer)": to form a persistent, secure, and structured substrate for collaborative context.
+## Problem Statement
 
-> Just as HTTP standardized the web, ASCP standardizes shared context—making intent, memory, and coordination first-class digital artifacts.
+Current AI agent systems lack persistent, structured memory across interactions. Each conversation starts fresh, tools operate in isolation, and collaborative context disappears when sessions end. Existing agent protocols (MCP, A2A) focus on tool invocation and message passing but provide no substrate for durable, addressable shared context that both humans and agents can reference over time.
 
-## Background 📚 
+This creates fundamental limitations:
 
-**One could metaphorically think of ASCP as a Git-like structure for shared context instead for code and content.** The following blog posts should be very helpful background on the basis behind, and inspiration for, ASCP:
+- Agents cannot build on prior work or maintain continuity across sessions
+- Humans must repeatedly re-establish context and intent
+- Multi-agent coordination lacks shared ground truth
+- Audit trails and accountability are ephemeral
+- Knowledge cannot be versioned, referenced, or composed
 
-1. [**The Pathway to AGI isn’t Intelligence, it’s Shared Cognition**](https://blog.reframetech.com/the-pathway-to-agi-isnt-intelligence-its-shared-cognition) - *Discover why shared cognition, and the Cortex Layer, is the real pathway to AGI.* This post and manifesto of sorts by Reframe Founder & CEO argues that the pathway to AGI is not greater intelligence but "Shared Cognition"—persistent, structured context that enables continuous collaboration between humans and AI agents. He proposed the Cortex Layer as open infrastructure to solve AI's "amnesia problem," where current systems lack memory across interactions, preventing them from becoming true collaborative partners rather than isolated task executors. This post, in effect, defines the technical box that ASCP lives in.
-2. [**Building the Missing Cortex Layer**](https://blog.reframetech.com/building-the-missing-cortex-layer) - *Closing the Gap Between Chat and Full Human-AI Collaboration.* This post examined existing agent infrastructure protocols (MCP, A2A, ACP, ANP) and identified their shared limitation: none provide persistent, human-centered context for collaborative reasoning across sessions and tools. It explains the Cortex Layer concept and previews the Agent Shared Cognition Protocol (ASCP) as complementary infrastructure designed to enable durable shared memory between humans and AI agents.
-3. [**Introduction to the Agents Shared Cognition Protocol (ASCP)**](https://blog.reframetech.com/introduction-to-the-agents-shared-cognition-protocol-ascp) *- A Git-like Protocol for Context instead of Code*. This post Introduced the Agents Shared Cognition Protocol (ASCP) architecture, including its core primitives (Artipoints, Channels, Spaces), immutable coordination model, and four-layer technical stack for enabling durable, addressable context in human-AI collaboration.
+ASCP addresses this by treating coordination context as a first-class, immutable data layer—analogous to how Git treats code history, but designed for collaborative intent, decisions, and shared understanding.
 
-## Repository Status 🚧 🚧
+## Approach
 
-This is an early-stage, **collaborator-controlled** repository. It is not yet an open standard but is being shared for review, issue tracking, and early implementation planning.
+ASCP introduces **Artipoints**: immutable, cryptographically signed statements of collaborative intent that form an append-only log. These are organized into **Channels** (secure distribution contexts), **Streams** (conversation-like threads), and **Spaces** (project workspaces). The protocol provides:
 
-We’re building toward having first pass full drafts of:
+- Immutable, content-addressed coordination primitives
+- Cryptographic identity and access control
+- Local-first synchronization with conflict-free merging
+- Human and agent co-authorship with attribution
+- Structured references between context elements
 
-- ✅ ASCP Top-level Umbrella Specification
-- ✅ Artuclation grammar
-- ✅ Channels: Secure distribution layer
-- ✅ ASCP Log synchronization protocol (ALSP)
-- ✅ Governance & Access Control
-- ✅ Identity & Trust Model **_(Checked it off - mostly there now)_**
-- ✅ Bootstrap model - building a new org repository **_(Checked it off - mostly there now)_**
-- 🔜 Reference implementations in Python and Rust **_(planning stage)_**
-- 🔜 Conformance test suite and example fixtures **_(after the reference implementations)_**
+The design draws on operational transformation theory, CRDTs for distributed systems, and CSCW research on shared workspaces, while borrowing architectural patterns from Git, IPFS, and Matrix.
 
-We welcome feedback via GitHub Issues. Public contributions are currently very welcomed as the protocol stabilizes and reference implementations emerge.
+## Repository Contents
 
-## Specification Suite
+This repository contains early-stage specifications and is actively seeking technical review and implementation feedback.
 
-The protocol is modular, layered, and formally defined through a suite of interoperable documents located in the [`/specs`](./specs/) directory:
+**Current Specifications (v0.1.0-draft):**
 
-| **Layer**                  | **Document**                                                                                             | **Purpose**                                                                                                |
-| -------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Overview**               | [`specs/the-agents-shared-cognition-protocol.md`](./specs/the-agents-shared-cognition-protocol.md)       | Top-level architecture, core concepts (Artipoints, Streams, Spaces), and layered protocol model            |
-| **Layer 2 – Articulation** | [`specs/ascp-artipoint-grammar.md`](./specs/ascp-artipoint-grammar.md)                                   | Formal grammar for immutable coordination statements (Artipoints)                                          |
-| **Layer 1 - Channels**     | [`specs/ascp-channels-secure-distribution-layer.md`](./specs/ascp-channels-secure-distribution-layer.md) | Named pathways for distribution and optional encryption of Artipoints with authorized participants.        |
-| **Layer 0 - ALSP**         | [`specs/ascp-logsync-protocol-alsp.md`](./specs/ascp-logsync-protocol-alsp.md)                           | ASCP LogSync Protocol ensuring local-first, conflict-free syncing of channel logs across all participants. |
+| Layer                  | Specification                                                                                  | Status |
+| ---------------------- | ---------------------------------------------------------------------------------------------- | ------ |
+| Overview               | [The Agents Shared Cognition Protocol](./specs/the-agents-shared-cognition-protocol.md)        | Draft  |
+| Layer 2 – Articulation | [ASCP Artipoint Grammar](./specs/ascp-artipoint-grammar.md)                                    | Draft  |
+| Layer 1 – Channels     | [ASCP Channels: Secure Distribution Layer](./specs/ascp-channels-secure-distribution-layer.md) | Draft  |
+| Layer 0 – Transport    | [ASCP LogSync Protocol (ALSP)](./specs/ascp-logsync-protocol-alsp.md)                          | Draft  |
 
-A full spec index with descriptions is available in [`specs/README.md`](./specs/README.md).
+Additional specifications covering identity, governance, and bootstrapping are in active development. See [`specs/README.md`](./specs/README.md) for the complete index.
 
-## What is ASCP? 🧠
+**Reference implementations** in Python and Rust are planned following specification stabilization.
 
-ASCP is a protocol that turns coordination context into a durable, addressable data layer that both humans and AI agents can read from and write to. It enables:
+## Architecture Overview
 
-- ✅ Structured, immutable context (via Artipoints)
-- ✅ Shared memory across tools, time, and participants
-- ✅ Human and agent co-authorship
-- ✅ End-to-end encrypted distribution
-- ✅ Decentralized, audit-friendly collaboration
+ASCP uses a four-layer model:
 
-ASCP is the infrastructure behind the Reframe concept of a **Cortex Layer**—the missing coordination substrate that allows AI agents to become trustworthy human-like collaborators instead of stateless tools.
+1. **Transport (ALSP)**: Local-first log synchronization ensuring eventual consistency across participants
+2. **Distribution (Channels)**: Named, cryptographically scoped contexts with access control and optional encryption
+3. **Articulation (Artipoints)**: Immutable coordination statements with formal grammar, signatures, and content addressing
+4. **Coordination (Streams/Spaces)**: Higher-level structures for organizing collaborative work
 
-## Key Concepts
+Each Artipoint is a signed, timestamped statement (e.g., "task created," "decision recorded," "context linked") that references prior Artipoints, forming a directed acyclic graph of coordination history. Channels define who can read/write, Streams provide conversation-like ordering, and Spaces group related work.
 
-- **Artipoints** – Immutable, addressable coordination statements (the cognitive atoms of ASCP)
-- **Articulation Statements** – Bundled, signed expressions of collaborative intent
-- **Streams / Spaces / Piles** – Human-aligned coordination structures (work threads, workspaces, units of work)
-- **Channels** – Cryptographically scoped knowledge-sharing domains
-- **Flags & Roles** – Attention tracking, authorship, access, and accountability
+The protocol is transport-agnostic and designed for both centralized and peer-to-peer deployment.
 
-## Intended Standards Path
+## Relationship to Existing Work
 
-ASCP is designed from inception to be an **open, vendor-neutral, internet-scale protocol**, following the same evolutionary path as:
+| Protocol/System                  | Focus                                  | Key Difference from ASCP                                                             |
+| -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
+| **MCP** (Model Context Protocol) | Tool invocation, resource access       | No persistent context layer; session-scoped                                          |
+| **ActivityPub**                  | Social networking, federated timelines | Content-focused, not coordination-focused; lacks structured intent primitives        |
+| **Matrix**                       | Real-time messaging, E2EE chat         | Message-oriented; no immutable coordination semantics or structured references       |
+| **XMPP**                         | Instant messaging, presence            | Synchronous messaging; no durable context model                                      |
+| **CRDTs** (e.g., Automerge)      | Conflict-free data replication         | General-purpose data structures; ASCP adds coordination semantics and access control |
+| **Git**                          | Version control for code               | ASCP adapts Git's immutability model for collaborative context instead of files      |
 
-- HTTP
-- TLS
-- WebRTC
-- JOSE / JWT
-- QUIC
+ASCP is complementary to agent communication protocols (MCP, A2A) and could serve as their shared memory substrate. It differs from social protocols (ActivityPub) by focusing on structured coordination rather than content distribution, and from CRDTs by providing domain-specific semantics for human-AI collaboration.
 
-The roadmap:
+## Theoretical Foundations
 
-1. **Early Drafts (this repo)**
-2. **Internet-Draft (I-D) submissions**
-3. **Working Group Formation (BoF → WG)**
-4. **Standard-Track RFCs**
+ASCP builds on research in:
 
-> Reframe will not trademark the protocol name; anyone may implement or deploy ASCP without restriction. Reframe’s trademarks and commercial offerings apply exclusively to higher-level experiences (e.g., the Cortex Layer™, Reframe Cloud™, Reframe OWE™), not to the protocol itself.
+- **Computer-Supported Cooperative Work (CSCW)**: Shared workspaces, common ground theory, coordination mechanisms
+- **Distributed Systems**: Operational transformation, CRDTs, eventual consistency models
+- **Discourse and Argumentation Theory**: Structured dialogue, speech acts, collaborative reasoning
+- **Cryptographic Identity**: Self-sovereign identity, capability-based security
 
-## What This Repo Is For
+Key influences include Lamport's logical clocks, the IPFS content-addressing model, and Matrix's federated room model.
 
-This repository serves as:
+## Background Reading
 
-- A **canonical reference** for ASCP specifications
-- A **version-controlled changelog** as the protocol evolves
-- A **place to file issues and track design decisions**
-- The **future home for reference implementations** in Python and Rust
-- Documenting the boundary between the **open, public-good protocol** (ASCP) and Reframe’s **proprietary experience layer** (Cortex Layer™, Reframe Cloud™, Reframe OWE™).
+The following blog posts provide additional context and motivation for the Agents Shared Cognition Protocol, exploring the foundational ideas and challenges that inspired its development:
 
-## Planned Structure
+1. [The Pathway to AGI isn't Intelligence, it's Context](https://blog.reframetech.com/the-pathway-to-agi-isnt-intelligence-its-shared-cognition) - An exploration of why persistent, structured context is critical for advancing human-AI collaboration beyond current narrow AI capabilities.
+2. [Building the Missing Cortex Layer](https://blog.reframetech.com/building-the-missing-cortex-layer) - A deep dive into the architectural gaps in current AI systems and the need for a shared memory substrate that enables more nuanced, contextual interactions.
+3. [Introduction to the Agents Shared Cognition Protocol](https://blog.reframetech.com/introduction-to-the-agents-shared-cognition-protocol-ascp) - A comprehensive overview of ASCP's design principles, technical approach, and vision for transforming human-AI collaborative systems.
 
-This repo will eventually include:
+## Standardization Intent
 
-```
-/
-├── specs/                    # Core specifications and whitepapers
-│   ├── the-agents-shared-cognition-protocol.md
-│   ├── ascp-artipoint-grammar.md
-│   └── …
-├── reference/                # Language-specific implementations
-│   ├── python/
-│   └── rust/
-├── tests/                    # Conformance tests and fixtures
-├── docs/                     # Visual aids, presentations, explainers
-├── LICENSE.md
-├── CONTRIBUTING.md
-└── CHANGELOG.md
-```
+We intend to pursue standardization through the IETF once the protocol demonstrates viability through independent implementations and real-world deployment. This repository serves as the working space for specification development prior to formal Internet-Draft submission.
+
+## Contributing and Feedback
+
+We are actively seeking input from:
+
+- Researchers in distributed systems, CSCW, and human-AI interaction
+- Protocol implementers and standards developers
+- Developers building agent frameworks or collaboration tools
+
+Please open GitHub issues for technical questions, specification feedback, or implementation concerns. We particularly welcome discussion on:
+
+- Conflict resolution strategies for concurrent edits
+- Cryptographic identity and trust models
+- Interoperability with existing agent protocols
+- Performance characteristics and scalability limits
+
+**Contact**: <ascp@reframetech.com>
 
 ## License and Governance
 
-Copyright © 2025 Reframe Technologies, Inc.
-
-The ASCP specifications in this repository are provided under terms consistent with the IETF Trust Legal Provisions (TLP). Code components are BSD-2 licensed, and reference implementations are Apache-2.0 licensed. This ensures ASCP remains a public-good protocol that anyone may implement or host.
-
-Upon eventual submission of Internet-Drafts, the related specification text will fall under the governance of the IETF Trust. Reframe will continue to steward the broader **Cortex Layer™** experience, Reframe-branded products, and certification programs which remain separate from the protocol itself.
-
-The authors intend to submit this work to the IETF for standardization.
-
-## ASCP as a Public Good & Reframe’s Stewardship Philosophy
-
-ASCP is intentionally designed as an **open, vendor-neutral, public-good protocol**, similar in spirit to foundational internet standards such as **TCP/IP**, **HTTP/HTML**, **DNS**, and **SMTP**. The goal is broad adoption across the industry—tools, vendors, cloud platforms, and AI ecosystems—without central ownership or proprietary control over the protocol itself.
-
-### What This Means in Practice
-
-- **ASCP is not trademarked**, and anyone may implement, host, extend, or integrate the protocol.
-- All **specification text** in this repository is licensed under terms consistent with the *IETF Trust Legal Provisions (TLP)*, allowing open redistribution and derivative works (with attribution and non-falsification requirements).
-- Upon submission of ASCP Internet-Drafts, the related specification text will fall under the *IETF Trust*, ensuring long-term neutrality.
-- **Code components** (grammar, examples, schemas) are BSD-2 licensed, consistent with IETF norms and enabling free incorporation into independent implementations.
-- **Reference implementations** are Apache-2.0 licensed, encouraging broad, permissive use with explicit patent grants if/as needed.
-
-### What Does Not Transfer to the IETF
-
-While the ASCP **protocol** is a public good, a few things remain the long-term responsibility and intellectual property of Reframe:
-
-- **Cortex Layer™ -** Reframe’s branded conceptual model and human-aligned experience built on top of ASCP.
-- **Reframe’s product ecosystem -** including the Reframe OWE, AI Desktop, Reframe Cloud, developer tooling, UX patterns, and other first-party applications built using the protocol.
-- **Reframe tradenames and trademarks -** such as “Reframe,” “Cortex Layer,” “Reframe Cloud,” and any future marks representing our products or certification programs.
-- **Reframe-hosted services -** including secure ASCP protocol based cloud hosting, governance dashboards, auditing tools, enterprise compliance layers, and premium operational infrastructure.
-
-These elements constitute Reframe’s commercial stack **above** the public protocol.
-
-### **Reframe Monetization Philosophy (for reference)**
-
-Reframe does **not** extract value by restricting the protocol. Instead:
-
-- We contribute ASCP freely to the open ecosystem.
-- We encourage independent hosting and cloud deployments by any vendor, including via direct use of and and all code in this repository.
-- We focus on delivering world-class **products, experiences, and infrastructure** that sit *above* the protocol.
-- A healthy, diverse ASCP ecosystem benefits everyone—including Reframe.
-- Reframe may offer voluntary **certification programs** (e.g., “Cortex Layer Compatible™”) that validate interoperability and trustworthiness without limiting participation.
-
-This approach mirrors successful open-protocol strategies seen in the evolution of the Internet, Linux, Git, Kubernetes, and Postgres.
-
-**Open standards at the bottom, shared value at the top.**
-
-## **Community & Contact**
-
-Interested in contributing, collaborating, or implementing ASCP? Open an issue or reach out directly via:
-
-**Email:** <ascp@reframetech.com>
-
-**Website:** <https://reframetech.com>
-
-We especially welcome contributions from those working on: agent protocols, local-first sync, cryptographic identity, operational semantics, distributed systems, and human-centered collaboration tooling.
-
+Specifications are provided under terms consistent with IETF Trust Legal Provisions (TLP). Code components are BSD-2 licensed; reference implementations will be Apache-2.0. Upon Internet-Draft submission, specification text will fall under IETF Trust governance. Reframe Technologies stewards this work and operates commercial services built on ASCP, but the protocol itself remains open and vendor-neutral.
