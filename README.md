@@ -18,7 +18,7 @@ ASCP addresses this by treating coordination context as a first-class, immutable
 
 ## Approach
 
-ASCP introduces **Artipoints**: immutable, cryptographically signed statements of collaborative intent that form an append-only log. These are organized into **Channels** (secure distribution contexts), **Streams** (conversation-like threads), and **Spaces** (project workspaces). The protocol provides:
+ASCP introduces **Artipoints**: immutable, cryptographically signed statements of collaborative intent that form an append-only log. These are organized into **Channels** (secure distribution contexts), **Streams** (workstream-based contexts), and **Spaces** (project workspaces). The protocol provides:
 
 - Immutable, content-addressed coordination primitives
 - Cryptographic identity and access control
