@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.52 — Informational (Pre-RFC Working Draft)  
+Version: 0.55 — Informational (Pre-RFC Working Draft)  
 November 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -21,7 +21,7 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 # **2. Abstract**
 
-The ASCP Channels layer defines the secure distribution substrate for articulated context within the Agents Shared Cognition Protocol. Channels provide a cryptographically verifiable, append-only transport for Artipoint payloads, enabling multi-writer replication across devices and agents in a local-first environment. Channels use JOSE-based mechanisms—JWS for authorship integrity and optional JWE for payload confidentiality—to produce tamper-evident, recipient-restricted message streams.
+The ASCP Channels layer defines the secure distribution substrate for articulated context within the Agents Shared Cognition Protocol. Channels provide a cryptographically verifiable, append-only transport for Articulation Sequences, enabling multi-writer replication across devices and agents in a local-first environment. Channels use JOSE-based mechanisms—JWS for authorship integrity and optional JWE for payload confidentiality—to produce tamper-evident, recipient-restricted message streams.
 
 Channels operate strictly at Layer-1 of the ASCP architecture. They preserve envelopes in an immutable log and perform no semantic interpretation of the payload. All semantic governance—including membership, authorship permissions, and role semantics—is defined at higher layers and is not evaluated by this specification. Instead, Layer-1 receives externally provisioned key material and recipient sets derived from governance evaluation.
 
@@ -37,7 +37,7 @@ Secure, durable, and verifiable distribution of articulated context is a foundat
 
 ## **3.2 Position of Channels in the ASCP Layer Model**
 
-A Channel is an append-only log of cryptographically protected envelopes. Every envelope contains a signed Artipoint payload expressed in the ASCP Grammar and MAY additionally be encrypted for restricted audiences. Channels authenticate and protect contributions using JOSE-based mechanisms—JWS for authorship integrity and optional JWE for confidentiality—while ensuring tamper-evident, convergent replication across replicas.
+A Channel is an append-only log of cryptographically protected envelopes. Every envelope contains a signed Artipoint Sequence expressed in the ASCP Grammar and MAY additionally be encrypted for restricted audiences. Channels authenticate and protect contributions using JOSE-based mechanisms—JWS for authorship integrity and optional JWE for confidentiality—while ensuring tamper-evident, convergent replication across replicas.
 
 Channels operate strictly at Layer-1 and interpret no semantic meaning from payloads. Semantic governance—including membership, authorship permissions, roles, and inheritance—is defined at Layer-2 and resolved by Layer-3 view evaluators. Channels simply store and transport envelopes; they neither enforce governance policy nor infer semantic meaning. This separation preserves stability and determinism in the transport layer even as semantic structures evolve.
 
@@ -68,17 +68,17 @@ Keyframes, while expressed as Artipoints at Layer-2, are only interpreted here f
 
 ## **4.1 Channel**
 
-A **Channel** is a Layer-1 secure distribution context represented as an append-only log of cryptographically protected envelopes. Channels preserve ordering and integrity but interpret no semantic meaning from payload content.
+A **Channel** is a Layer-1 secure distribution context represented as an append-only log of cryptographically protected envelopes. Channels preserve ordering *as delivered by Layer-0* and integrity but interpret no semantic meaning from payload content.
 
-## **4.2 Envelope**
+## **4.2 Channel Envelope**
 
-An **Envelope** is the JOSE-encoded container transported by a Channel. Each envelope is signed using JWS (authorship integrity) and MAY be encrypted using JWE (payload confidentiality). Envelopes form the immutable log entries replicated across Channel replicas.
+A **Channel Envelope** or simply **Envelope** is the JOSE-encoded container transported by a Channel. Each envelope is signed using JWS (authorship integrity) and MAY be encrypted using JWE (payload confidentiality). Envelopes form the immutable log entries replicated across Channel replicas.
 
 This term refers exclusively to the JOSE-encoded message containers replicated in a Channel log. It does not include channel-key-envelopes, which are Layer-2 articulated structures embedded in Keyframe Artipoints and provisioned into Layer-1 as cryptographic material. Channel-key-envelopes never appear directly as Channel log entries.
 
-## **4.3 Artipoint Payload**
+## **4.3 Articulation Sequence**
 
-The **Artipoint Payload** is the opaque, cleartext content carried inside an envelope. It is expressed using the ASCP Artipoint Grammar, but Channels do not parse or interpret it.
+An **Artipoint Sequence** is the opaque, cleartext payload carried inside an Envelope. It is expressed using the ASCP Artipoint Grammar, but Channels do not parse or interpret it.
 
 > *See: ASCP Grammar Specification.*
 
@@ -94,7 +94,7 @@ A **Keyframe** is a Layer-2 Artipoint that declares the intended cryptographic c
 
 ## **4.6 Key Identifier (kid)**
 
-A **Key Identifier (kid)** is an opaque, stable identifier used in JOSE headers to reference the key version for verifying signatures and decrypting payloads.
+A **Key Identifier (kid)** is a *Layer-1 opaque*, stable identifier used in JOSE headers to reference the key version for verifying signatures and decrypting payloads.
 
 ## **4.7 Channel AES Key**
 
@@ -108,9 +108,9 @@ The **Channel Access Key (CAK)** controls replication rights at the transport la
 
 ## **4.9 Author**
 
-The **Author** is the Layer-2 semantic identity responsible for the Artipoint payload.
+The **Author** is the Layer-2 semantic identity responsible for the Articulation Sequence payload.
 
-Authors are determined by governance and identity verification rules. The Author’s certificate, bound via purpose::assert, is used to produce the JWS signature that asserts authorship over the payload.
+Authors are determined by governance and identity verification rules. The Author’s Certificate Artipoint, bound via purpose::assert, is used to produce the JWS signature that asserts authorship over the payload.
 
 Layer-1 verifies author signatures but does not determine authorship semantics.
 
@@ -118,7 +118,7 @@ Layer-1 verifies author signatures but does not determine authorship semantics.
 
 The **Sender** is the Layer-1 operational role that constructs an envelope. The Sender:
 
-- renders the Artipoint payload into a JWS-signed envelope using the **Author’s key**
+- renders the Articulations Sequence payload into a JWS-signed envelope using the **Author’s key**
 - optionally encrypts the signed payload using the Channel AES key
 - commits the envelope into the Channel log via ALSP
 
@@ -151,9 +151,11 @@ Detailed algorithm requirements are defined in Section 6.
 
 # **5. Architectural Overview**
 
+This section defines the architectural role and layer boundaries of ASCP Channels, providing context for the cryptographic and processing rules defined in later sections.
+
 ## **5.1 Channels as Layer-1 Secure Transport**
 
-Channels provide the secure distribution layer of ASCP. Each Channel is an append-only log of cryptographically protected envelopes, replicated across devices and agents. Envelopes carry Artipoint payloads expressed in the ASCP Grammar and are always signed; encryption may be applied when confidentiality is required. Channels guarantee that contributions remain authentic, tamper-evident, and durably replicated, even across intermittently connected or topology-diverse environments.
+Channels provide the secure distribution layer of ASCP. Each Channel is an append-only log of cryptographically protected envelopes, replicated across devices and agents. Envelopes carry one or more Artipoint Sequences expressed in the ASCP Grammar and are always signed; encryption may be applied when confidentiality is required. Channels guarantee that contributions remain authentic, tamper-evident, and durably replicated, even across intermittently connected or topology-diverse environments.
 
 Although Channels are central to the integrity of ASCP collaboration, they remain structurally simple: they transport opaque payloads and do not interpret their semantic meaning.
 
@@ -179,7 +181,7 @@ Channels maintain a strict separation from higher-layer governance and MUST NOT 
 
 ## **5.6 Immutability, Ordering, and Multi-Writer Behavior**
 
-Channels provide a uniform set of transport guarantees. The log is immutable: once appended, envelopes cannot be altered or removed. Replicas converge on a consistent order of envelopes through ALSP synchronization. Channels support multi-writer collaboration—any entity authorized by higher-layer governance may produce envelopes, and the Channel will accept them so long as they satisfy the required cryptographic checks. Replicas may temporarily diverge but will reconverge deterministically as ALSP exchanges histories.
+Channels provide a uniform set of transport guarantees. The log is immutable: once appended, envelopes cannot be altered or removed. Replicas converge on a consistent order of envelopes through ALSP synchronization. Channels support multi-writer collaboration—any entity permitted by higher-layer governance evaluation may produce envelopes, and the Channel will accept them so long as they satisfy the required cryptographic checks. Replicas may temporarily diverge but will reconverge deterministically as ALSP exchanges histories.
 
 Together, these properties establish Channels as a reliable, cryptographically sound substrate for distributed collaboration within ASCP.
 
@@ -195,12 +197,12 @@ The subsections that follow define the JWS requirements, optional JWE encryption
 
 Every envelope written to a Channel MUST be signed using **JWS Compact Serialization** as defined in **RFC 7515 §3.1**.
 
-The JWS signature provides authorship integrity for the Artipoint payload and protects the JOSE header.
+The JWS signature provides authorship integrity for the Articulation Sequence payload and protects the JOSE header.
 
 Layer-1 MUST:
 
 - verify the JWS signature using the public key identified by the JOSE kid header
-- ensure that the signature algorithm and public corresponds to an Author Certificate  with `purpose::assert`
+- ensure that the signature algorithm and public key correspond to a compatible **Certificate Artipoint** bound to the Author with `purpose::assert`
 - reject any envelope with a missing or unknown `kid`
 - treat the JWS payload as opaque byte content
 
@@ -227,74 +229,91 @@ Header usage is specified further in Section 8 (Envelope Format).
 
 ## **6.3 Supported Algorithms and Header Requirements**
 
+This section defines the cryptographic algorithms and JOSE header requirements supported by ASCP Channels. These requirements constrain the set of permitted algorithms to ensure interoperability, security reviewability, and resistance to downgrade or substitution attacks.
+
+Channels do not support runtime algorithm negotiation. All cryptographic parameters are fixed by this specification and provisioned to Layer-1 via evaluated Keyframes.
+
 ### **6.3.1 JWS Signature Algorithms (Required)**
 
-- `ES256` (ECDSA P-256 + SHA-256)
-- `EdDSA` (Ed25519)
-
-**Optional**: ES384 (ECDSA P-384)
-
-The signature algorithm MUST match a purpose::assert certificate binding in the Author’s Identity.
-
-### **6.3.2 JWE Content Encryption Algorithms**
+Every Channel envelope MUST be signed using one of the following JWS signature algorithms, as defined in the JOSE standards suite:
 
 **Required:**
 
-- `A256GCM` (AES-GCM 256-bit)
-
-### **6.3.3 Key Agreement / Wrapping Algorithms**
-
-Used only for distributing Channel AES Keys to recipients:
-
-**Required:**
-
-- `ECDH-ES` (Direct key agreement; RFC 7518 §4.6)
+- `ES256` (ECDSA using P-256 and SHA-256), as defined in **RFC 7518**
+- `EdDSA` (Ed25519), as defined in **RFC 8037**
 
 **Optional:**
 
-- ECDH-ES+A256KW
+- `ES384` (ECDSA using P-384 and SHA-384), as defined in **RFC 7518**
 
-The algorithm MUST be compatible with the recipient’s purpose::keyAgreement certificate.
+The signature algorithm identified by the JOSE `alg` header MUST be consistent with a certificate bound to `purpose::assert` in the Author’s Identity. Envelopes signed with algorithms not listed above MUST be rejected.
+
+### **6.3.2 JWE Content Encryption Algorithms**
+
+When payload confidentiality is required, Channels MUST encrypt signed payloads using the following JWE content encryption algorithm:
+
+**Required:**
+
+- `A256GCM` (AES-256 in Galois/Counter Mode), as defined in **RFC 7518**
+
+No other content encryption algorithms are permitted. This restriction ensures modern authenticated encryption semantics and avoids legacy constructions.
+
+### **6.3.3 Key Agreement / Wrapping Algorithms**
+
+Key agreement and key wrapping algorithms are used solely for distributing Channel AES Keys to authorized recipients. They MUST NOT be used directly to encrypt Channel payloads.
+
+**Required:**
+
+- `ECDH-ES` (Elliptic Curve Diffie-Hellman Ephemeral Static), as defined in **RFC 7518 §4.6**
+
+**Optional:**
+
+- `ECDH-ES+A256KW` (ECDH-ES with AES-256 Key Wrap), as defined in **RFC 7518**
+
+When `ECDH-ES` is used, the derived keying material MUST be treated as a Content Encryption Key (CEK) or key-wrapping key in accordance with RFC 7518 processing rules.
+
+The selected algorithm MUST be compatible with the recipient’s certificate bound to `purpose::keyAgreement`. Envelopes specifying incompatible or unsupported key agreement algorithms MUST be rejected.
 
 ### **6.3.4 JOSE Header Requirements**
 
-For all Channel envelopes:
+All Channel envelopes MUST conform to the following JOSE header requirements, as defined in **RFC 7515**, **RFC 7516**, and **RFC 7517**:
 
-- typ SHOULD be "ascp+jws" or "ascp+jwe".
-- kid MUST reference the correct key version.
-- alg MUST identify the signature or key-agreement method.
-- enc MUST appear on JWE envelopes.
+- `typ` SHOULD be set to `"ascp+jws"` or `"ascp+jwe"` or `"ascp+jws+jwe"` to indicate the ASCP envelope type.
+- `kid` MUST be present and MUST reference the correct key version provisioned to Layer-1.
+- `alg` MUST identify the signature or key-agreement algorithm used.
+- `enc` MUST be present on all JWE envelopes and MUST identify the content encryption algorithm.
 
-Sections 8.2–8.4 define normative header structure and error-handling rules.
+The `kid` value is an opaque identifier. Its uniqueness and interpretation are scoped to the Channel and its evaluated Keyframes; it is not required to be globally unique.
 
-### 6.3.5 Summary of JOSE Usage in ASCP
+Header validation errors MUST result in envelope rejection. Sections **8.2–8.4** define the normative header structure and error-handling rules.
 
-| Use Case                         | Protocol | Format                | Algorithm(s)        | Key Material Source                                                       |
-| -------------------------------- | -------- | --------------------- | ------------------- | ------------------------------------------------------------------------- |
-| Sign Artipoints                  | JWS      | Compact Serialization | ES256 (ECDSA P-256) | EC public identity key pair (public key referenced by kid for validation) |
-| Encrypt Artipoint Messages       | JWE      | Compact Serialization | AES-256-GCM         | Channel AES key (out-of-band referenced via kid)                          |
-| Wrap Channel Key Envelopes (CKE) | JWE      | Compact Serialization | ECDH-ES + A256KW    | EC public identity key (referenced by kid)                                |
-| Identity for Signing / Wrapping  | JWK      | JSON                  | ES256 / Ed25519     | Embedded or linked via kid                                                |
+### **6.3.5 Summary of JOSE Usage in ASCP**
+
+| Use Case                         | Protocol | Format                | Algorithm(s)            | Key Material Source                                                      |
+| -------------------------------- | -------- | --------------------- | ----------------------- | ------------------------------------------------------------------------ |
+| Sign Artipoints                  | JWS      | Compact Serialization | ES256, EdDSA            | Author identity key pair (public key referenced by `kid` for validation) |
+| Encrypt Artipoint Messages       | JWE      | Compact Serialization | A256GCM                 | Channel AES key (referenced via `kid`)                                   |
+| Wrap Channel Key Envelopes (CKE) | JWE      | Compact Serialization | ECDH-ES, ECDH-ES+A256KW | Recipient identity key (referenced by `kid`)                             |
+| Identity for Signing / Wrapping  | JWK      | JSON                  | —                       | As defined in **RFC 7517**                                               |
 
 ## 6.4 kid Format and Interpretation
 
-ASCP defines a structured `kid` namespace for deterministic key selection across Layers 1–3. Each `kid` references cryptographic material stored out-of-band in articulation statements, acting as a pointer to a certificate or keyframe within the channel's log. This allows JOSE operations to resolve the appropriate material for message validation, decryption, or key recovery while remaining compliant with JOSE standards.
+ASCP defines a structured `kid` namespace for deterministic key selection across Layers 1–3. Each `kid` references cryptographic material stored out-of-band in articulation statements, acting as a pointer to a Certificate Artipoint or Keyframe Artipoint within the Channel’s evaluated history. This allows JOSE operations to resolve the appropriate material for message validation, decryption, or key recovery while remaining compliant with JOSE standards.
 
 While `kid` is optional in JOSE specifications, ASCP **MUST** include `kid` explicitly in all message headers to ensure determinism during key rotation, avoiding ambiguity when multiple writers generate messages while updated key material is still propagating through the network.
 
-**Note**: Layer-1 only uses the kid to select the key material supplied by provisioning from higher level layers.
+Layer-1 uses `kid` only to select cryptographic material supplied by provisioning from higher-level layers. Layer-1 does not interpret governance, trust, or authorization semantics.
 
 ### 6.4.1 Kid Format Specification
 
-The `kid` values must be a string formatted according to one of the following two formats:
+The use of `kid` conforms to the definition in **RFC 7515 §4.1.4**.
 
-```plaintext
-ascp:<type>:<uuid>
+The \`kid\` value is an opaque identifier to Layer-1. Its syntax and resolution rules are fixed by this specification and are not subject to runtime negotiation.
+
+The `kid` value MUST be a string formatted according to one of the following forms:
+
 ```
-
-or:
-
-```asciidoc
+ascp:<type>:<uuid>
 ascp:<type>:<index>
 ```
 
@@ -302,38 +321,37 @@ Where:
 
 - `ascp` identifies this as an ASCP-specific key identifier
 - `<type>` indicates the kind of cryptographic material being referenced
-- `<uuid>` is the UUID of the articulation statement containing the key material
-- `<index>` is a non-negative whole integer number indexing into a table or keys.
+- `<uuid>` is the UUID of the Artipoint binding the cryptographic material
+- `<index>` is a zero-based integer index into a bootstrap key package
 
-### 6.4.2 Supported Types Combinations
+### 6.4.2 Supported kid Types
 
-`ascp:cert:<uuid>` - References an JWK encoded EC based Identity Key
+`ascp:cert:<uuid>` **— Certificate Artipoint Reference**
 
-- Used in JWS protected headers for signature verification
-- Used in JWE protected headers when wrapping channel keys for recipients
-- Points to an articulation statement containing the signer's or recipient's JWK encoded EC public identity key.
+- References a Certificate Artipoint UUID binding a compatible public identity key.
+- Used for JWS signature verification and JWE key agreement.
+- The referenced Certificate Artipoint MUST declare a compatible `purpose::` for the cryptographic operation.
 
-`ascp:keyframe:<uuid>` - References a channel keyframe
+`ascp:keyframe:<uuid>` **— Channel Keyframe Reference**
 
-- Used in JWE protected headers for message encryption/decryption
-- Points to a Keyframe articulation statement containing channel keys for authorized recipients
-- The referenced keyframe must be the newest / active keyframe at the time of message encoding. That is, one must never use a key that has been rotated out already.
+- References an active Keyframe Artipoint UUID.
+- Used for JWE message encryption and decryption.
+- The referenced Keyframe MUST be active at the time of message creation.
 
-`ascp:bkp:<index>` - References a Bootstrap Key Package (BKP) key index.
+`ascp:bkp:<index>` **— Bootstrap Key Package Reference**
 
-- Used in JWE protected headers by encrypted **@references** channel entries during bootstrap discovery.
-- The index is a zero-based offset into the `keys[]` array contained in the decrypted Bootstrap Key Package (BKP) payload delivered via the ALSP `hello` exchange.
-- Higher index values supersede lower ones; senders MUST reference the highest applicable index at the time of message encoding.
-- These identifiers reference **bootstrap-scoped, joiner-delivered key material** that is intentionally not articulated into durable Channel logs or Keyframes.
-- The `ascp:bkp:<index>` KID format and its semantics are defined exclusively by the *ASCP Bootstrap Process and Channel Discovery* specification.
-- Layer-1 MUST treat `ascp:bkp:<index>` values as **opaque selectors** and MUST NOT interpret trust, governance, lifecycle, or authorization semantics from them.
-- See the ASCP Log-Sync Protocol (ALSP) specification for the transport semantics of BKP delivery.
+- References a bootstrap-scoped key delivered during channel discovery.
+- The index selects an entry in the BKP `keys[]` array.
+- These keys are not articulated into durable Channel logs.
+- Semantics are defined by the ASCP Bootstrap Process specification.
 
-> **Note:** The JOSE protected headers, even in JWE are ***not*** **encrypted**, but *are* **integrity-protected** as part of the AEAD encryption process. This means the `kid` is visible to the recipient prior to decryption, enabling proper key selection, but cannot be tampered with without causing decryption failure. This design ensures that key identifiers are safely discoverable while still cryptographically bound to the encrypted payload.
+### 6.4.3 JOSE Header Visibility Note
 
-### 6.4.3 Usage Examples
+JOSE protected headers are integrity-protected but not encrypted. The `kid` value is visible prior to decryption and enables deterministic key selection without exposing payload contents.
 
-#### **JWS Signing (Artipoint validation):**
+### 6.4.4 Usage Examples
+
+**JWS Signing**
 
 ```json
 {
@@ -343,69 +361,73 @@ Where:
 }
 ```
 
-#### **JWE Message Encryption:**
+**JWE Message Encryption**
 
 ```json
 {
   "alg": "dir",
   "enc": "A256GCM",
-  "typ": "ascp+jws+jwe",
-  "kid": "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002"
+  "kid": "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002",
+  "typ": "ascp+jws+jwe"
 }
 ```
 
-#### **JWE Key Wrapping (in channel-key-envelope):**
+**JWE Key Wrapping**
 
 ```json
 {
   "alg": "ECDH-ES+A256KW",
   "enc": "A256GCM",
-  "typ": "jwk",
-  "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440003"
+  "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440003",
+  "typ": "jwk"
 }
 ```
 
-### 6.4.5 Lookup Process - Demonstrative
+### 6.4.5 Lookup Process (Demonstrative)
 
-1. **Parse the kid** to extract the type and UUID
-2. **Locate the associated Certificate** with the specified UUID provisioned into Layer-1 via Layers 2 and 3.
-3. **Confirm the Certificate** purpose matches the needed purpose.
-4. **Extract the cryptographic material** based on the type:
-   - For `cert:` - retrieve the JWK encoded EC public identity key from the articulation statement
-   - For `keyframe:` - locate the appropriate channel-key-envelope for the current recipient
-5. **Use the material** for the intended cryptographic operation (signing, verification, encryption, or decryption)
+1. Parse the `kid` to extract type and identifier.
+2. Locate provisioned cryptographic material for the referenced Artipoint or BKP index.
+3. Confirm compatibility with the intended cryptographic purpose.
+4. Extract the required key material.
+5. Apply the material to the cryptographic operation.
 
-This approach ensures that all cryptographic operations can be independently verified and audited by examining the articulation logs, while keeping individual messages compact and efficient.
+Failure at any step results in envelope rejection.
 
 ## **6.5 Channel AES Key Requirements**
 
-For each Keyframe, Layer-3 provisions a single symmetric **Channel AES Key** to Layer-1. This key:
+For each active Keyframe, Layer-3 provisions a single symmetric **Channel AES Key** to Layer-1. This key defines the confidentiality boundary for all payloads encrypted under that Keyframe.
 
-- MUST be generated using a cryptographically secure random generator
-- MUST be 256 bits when used with required AES-GCM
-- MUST be stable for the duration of the Keyframe’s active period
-- MUST be distributed to all recipients via wrapped key envelopes
-- MUST NOT be reused across unrelated Keyframes except under explicit, well-scoped configuration
+The Channel AES Key:
 
-Rotation and supersession rules are defined in Section 9.
+- MUST be generated using a cryptographically secure pseudorandom number generator (CSPRNG) suitable for generating symmetric keys.
+- MUST be 256 bits in length when used with the required AES-GCM content encryption algorithm.
+- MUST be stable for the full duration of the Keyframe’s active period.
+- MUST be used exclusively for payload confidentiality via JWE encryption.
+- MUST NOT be derived from payload content, message headers, or any other protocol-visible material.
+- MUST be distributed to authorized recipients using per-recipient wrapped key envelopes.
+- MUST NOT be reused across distinct Keyframes. Administrative continuity decisions MAY result in identical key material being re-provisioned under a new Keyframe identifier, but such reuse is outside the cryptographic guarantees of this layer.
+
+Layer-1 receives the Channel AES Key solely through provisioning from higher layers. It does not generate, derive, rotate, or reinterpret the key, and it does not evaluate the semantic reasons for its issuance.
+
+Rotation, supersession, and administrative lifecycle rules for Channel AES Keys are defined in Section 9.
 
 ## **6.6 Integrity, Authenticity, and Replay Protection**
 
-Channels combine JOSE cryptographic protections with immutable log semantics to ensure durable, verifiable history.
+Channels combine JOSE cryptographic mechanisms with immutable log semantics to provide durable, verifiable history for articulated context.
 
-- **Integrity** is guaranteed by JWS signatures; any modification to headers or payload invalidates the envelope.
-- **Authenticity** derives from the Author’s verified signing key.
-- **Confidentiality**—when enabled—is enforced by JWE using the Channel AES Key.
-- **Replay Safety** is achieved through ALSP’s append-only replication and Layer-1’s rejection of duplicates and stale kids.
-- **Keyframe Transitions** ensure old symmetric keys cannot decrypt envelopes produced after rotation.
+- **Integrity** is guaranteed by JWS signatures. Any modification to the protected headers or payload invalidates the envelope.
+- **Authenticity** derives from the Author’s verified identity key bound by a compatible Certificate Artipoint.
+- **Confidentiality**, when enabled, is enforced by JWE using the Channel AES Key associated with the active Keyframe.
+- **Replay Safety** is achieved at the log level through append-only replication at Layer-0 (ALSP), combined with Layer-1 enforcement of envelope immutability and deterministic key selection. Replayed or duplicated envelopes do not alter cryptographic or semantic state and are detectably redundant.
+- **Keyframe Transitions** establish cryptographic epochs. Payloads encrypted under a given Keyframe can only be decrypted using the Channel AES Key provisioned for that Keyframe. Rotation does not retroactively re-encrypt historical envelopes, which remain decryptable by recipients authorized at the time of their creation.
 
-Channels intentionally do not provide per-recipient confidentiality or forward secrecy; such properties belong to higher-layer governance policy or future protocol extensions (Appendix B).
+Channels intentionally do not provide per-recipient payload confidentiality or forward secrecy. These properties, if required, belong to higher-layer governance policy or future protocol extensions and are explicitly out of scope for Layer-1.
 
 # **7. Channel Structure**
 
-This section defines the structural properties of an ASCP Channel at Layer-1. Channels do not own or maintain append-only logs; that responsibility belongs entirely to Layer-0 (ALSP). Instead, Layer-1 constructs cryptographically protected envelopes and hands them **down** to Layer-0 for storage and replication. Conversely, Layer-1 receives envelopes **from** Layer-0, verifies and decrypts them, and passes the resulting cleartext payloads upward to the Layer-2 Grammar engine.
+This section defines the non-cryptographic structural properties of ASCP Channels at Layer-1 and clarifies how responsibilities are divided across the protocol stack. Channels themselves do not own or maintain append-only logs as that responsibility belongs entirely to Layer-0 (ALSP).
 
-Layer-1 therefore functions as the cryptographic boundary between semantic content (Layer-2) and log replication (Layer-0).
+Layer-1's role is to construct cryptographically protected envelopes and hand them down to Layer-0 for storage and replication. In the reverse direction, Layer-1 receives envelopes from Layer-0, verifies and decrypts them, and passes the resulting cleartext payloads upward to the Layer-2 Grammar engine. This positioning makes Layer-1 the cryptographic boundary between semantic content at Layer-2 and log replication at Layer-0.
 
 ## **7.1 Channel Identity (Artipoint Reference)**
 
@@ -452,7 +474,7 @@ An ASCP **Replica** is the combination of:
 - a Layer-0 ALSP instance that maintains the append-only log, and
 - a Layer-1 Channels instance that validates and decrypts envelopes for higher layers.
 
-To remove ambiguity, responsibilities are clarified explicitly.
+To remove ambiguity, responsibilities are clarified explicitly below; operational processing rules that realize these responsibilities are defined in Section 11.
 
 ### **7.4.1 Layer-0 Replica Responsibilities**
 
@@ -482,7 +504,7 @@ Layer-1 MUST NOT write to logs directly; it always communicates through Layer-0�
 
 ### **7.5.1 Multi-Writer Collaboration**
 
-Layer-1 accepts envelopes from any Sender presenting a valid JWS signature referring to an identity certificate via ascp:cert:\<uuid>. Whether a Sender is *authorized* to write is determined by Layer-3 governance evaluation and enforced through provisioning of legitimate signing keys—not by Layer-1 logic.
+Layer-1 accepts envelopes from any Sender presenting a valid JWS signature referring to a Certificate Artipoint referenced via `ascp:cert:<uuid>`. Whether a Sender is *authorized* to write is determined by Layer-3 governance evaluation and enforced through provisioning of legitimate signing keys—not by Layer-1 logic.
 
 Layer-0 then appends these envelopes verbatim.
 
@@ -501,7 +523,7 @@ Layer-1 only validates what ALSP has appended.
 
 # **8. Envelope Format**
 
-This section defines the normative structure of all envelopes used in ASCP Channels. Channels use compact JOSE encodings to minimize storage overhead, support efficient ALSP replication, and maintain compatibility with widely deployed cryptographic tooling. Every envelope is first represented as a **JWS Compact Serialization** string; encryption, when enabled, wraps that JWS output in a **JWE Compact Serialization** envelope.
+This section defines the normative structure of all envelopes used in ASCP Channels, specifying the concrete JOSE envelope structures and encoding rules that realize the cryptographic requirements from Section 6. Channels use compact JOSE encodings to minimize storage overhead, support efficient ALSP replication, and maintain compatibility with widely deployed cryptographic tooling; every envelope is first represented as a **JWS Compact Serialization** string, and encryption, when enabled, wraps that JWS output in a **JWE Compact Serialization** envelope.
 
 Layer-1 is responsible for constructing and validating these envelopes but does not interpret or modify their cleartext payloads of the Layer-2 ASCP Grammar.
 
@@ -511,11 +533,11 @@ Channel envelopes follow a strict **two-stage** encoding process:
 
 1. **JWS Signature (required)**
    - Produces a JWS Compact Serialization string (header.payload.signature).
-   - Establishes authorship integrity and binds the JOSE header to the Artipoint payload.
+   - Realizes the JWS authorship-signature requirements defined in Section 6.1.
 2. **JWE Encryption (optional)**
    - Wraps the JWS string inside a JWE Compact Serialization structure.
-   - Provides confidentiality and audience restriction using the Channel AES Key.
-   - MAY also be used to enable payload compression (see §8.5), even when encryption is not required.
+   - Applies payload confidentiality using the Channel AES Key corresponding to the active Keyframe.
+   - MAY also apply payload compression as defined in §8.5.
 
 This layering ensures that encryption, when used, does not obscure authorship and integrity: the payload is always signed by the Author's key *before* encryption is applied.
 
@@ -528,16 +550,16 @@ Compact Serialization provides a concise and deterministic format suited to appe
 
 ## 8.2 JWS Envelope Structure
 
-All Artipoint payloads MUST be signed as JWS envelopes prior to optional encryption.
+All Articulation Sequence payloads MUST be signed as JWS envelopes prior to optional encryption.
 
 ### **8.2.1 Inputs (Sender-Side)**
 
 - Cleartext Articulation Sequence (UTF-8 string)
 - Author’s private signing key (purpose::assert)
-- Protected header which MUST be containing the following fields:
-  - alg: signature algorithm (e.g., ES256)
-  - kid: ascp:cert:\<uuid> referencing the Author’s identity certificate
-  - typ: "ascp+jws"
+- Protected header which MUST contain the following fields:
+  - `alg`: signature algorithm permitted by Section 6.3
+  - `kid`: ascp:cert:\<uuid> referencing a compatible **Certificate Artipoint** bound to the Author
+  - `typ`: "ascp+jws"
 
 ### **8.2.2 Compact JWS Structure**
 
@@ -553,7 +575,7 @@ This compact format consists of three base64url-encoded components separated by 
 
 ### **8.2.3 Example: JWS Protected Header**
 
-```
+```json
 {
   "alg": "ES256",
   "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440001",
@@ -572,18 +594,18 @@ Layer-1 MUST treat the JWS payload as opaque content and MUST NOT attempt to int
 
 ## **8.3 JWE Envelope Structure**
 
-JWE encryption is optional and depends on the Channel's `payload_cipher` configuration. When a Channel's `payload_cipher` is not "none", the JWS string MUST be encrypted using JWE. JWE MAY also be applied when `payload_cipher` is "none" solely to enable compression (see §8.5), in which case the JWE "alg" field is set to "dir" but no actual encryption key is used.
+JWE encryption is optional and depends on the Channel's `payload_cipher` configuration. When a Channel's `payload_cipher` is not "none", the JWS string MUST be encrypted using JWE. If compression is applied (see §8.5), it MUST be performed as part of the JWE processing defined by RFC 7516 and therefore occurs only when JWE encryption is in use.
 
 ### **8.3.1 Inputs (Sender-Side)**
 
 - JWS Compact Serialization string
 - Channel AES Key (provisioned from Keyframe evaluation)
 - Protected header including:
-  - alg: "dir" (direct symmetric encryption)
-  - enc: "A256GCM" (required)
-  - typ: "ascp+jws+jwe"
-  - kid: "ascp:keyframe:\<uuid>" referencing the active Keyframe
-  - zip: "DEF" optional deflate compression.
+  - `alg`: "dir" (direct symmetric encryption)
+  - `enc`: values permitted by Section 6.3 (required for JWE envelopes)
+  - `typ`: "ascp+jws+jwe"
+  - `kid`: "ascp:keyframe:\<uuid>" referencing the active Keyframe
+  - `zip`: "DEF" optional deflate compression.
 
 ### **8.3.2 JWE Compact Structure**
 
@@ -594,12 +616,12 @@ JWE encryption is optional and depends on the Channel's `payload_cipher` configu
 This compact format consists of five base64url-encoded components separated by periods:
 
 - **header**: JWE protected header JSON
-- **encrypted-key**: Encryption Key (omitted due to direct encryption mode)
+- **encrypted-key**: Encryption Key (empty in direct encryption mode)
 - **init-vector**: initialization vector for AES-GCM
 - **ciphertext**: Encrypted JWS payload
 - **auth-Tag**: AES-GCM authentication tag
 
-ASCP uses **direct encryption**, so \<encrypted-key> is always empty, generating two consecutive periods, which is correct per RFC 7516 §7.1.
+ASCP channel Envelopes MUST use **direct encryption**, so \<encrypted-key> is always empty, generating two consecutive periods per **RFC 7516 §7.1**.
 
 ### **8.3.3 Example: JWE Protected Header**
 
@@ -620,7 +642,7 @@ To satisfy AES-GCM security guarantees:
 - IVs MUST be cryptographically random
 - IV reuse under the same AES key MUST NOT occur under any circumstances
 
-Failure to follow these requirements may compromise confidentiality and authentication.
+These requirements follow the security recommendations in **NIST SP 800-38D** for AES-GCM; failure to comply may compromise both confidentiality and authentication.
 
 ## **8.4 Header Fields (typ, kid, alg, enc, iv, apv, etc.)**
 
@@ -628,9 +650,7 @@ The following JOSE header fields are used in ASCP Channel envelopes:
 
 ### **8.4.1 Common Fields**
 
-- `typ`: Identifies the envelope type and is required for tooling and media-type identification. Valid values are:
-  - `"ascp+jws"` for JWS-only envelopes
-  - `"ascp+jws+jwe"` for JWE-wrapped envelopes
+- `typ`: Identifies the envelope type and is required for tooling and media-type identification. Valid values are as defined in Section 6.3.4.
 - `kid`: Key identifier used for cryptographic key lookup. This field MUST reference either:
   - The Author's certificate (`ascp:cert:<uuid>`) for JWS signature verification, or
   - The active Keyframe (`ascp:keyframe:<uuid>` or `ascp:bkp:<index>`) for JWE decryption.
@@ -638,19 +658,21 @@ The following JOSE header fields are used in ASCP Channel envelopes:
 
 ### **8.4.2 JWS-Specific Fields**
 
-- **alg**: Signature algorithm used to sign the envelope. MUST be one of the following allowed algorithms:
-  - `ES256` (ECDSA using P-256 and SHA-256)
-  - `EdDSA` (Ed25519)
-  - `ES384` (ECDSA using P-384 and SHA-384)
+- **alg**: Signature algorithm used to sign the envelope. The value MUST be permitted by Section 6.3.
 
 ### **8.4.3 JWE-Specific Fields**
 
+For the JWE Header:
+
 - **alg**: Key management algorithm. MUST be `"dir"` (direct use of a shared symmetric key) for Channel message encryption.
 - **enc**: Content encryption algorithm. MUST be `"A256GCM"` (AES-256 in Galois/Counter Mode).
-- **iv**: Initialization vector for AES-GCM encryption. MUST be at least 96 bits (12 bytes) of cryptographically secure random data. See §8.3.4 for detailed IV requirements.
-- **tag**: AES-GCM authentication tag generated during encryption and verified during decryption.
 
 Additional JOSE header fields (e.g., `zip`, `apv`, `apu`) MAY appear in envelopes. Layer-1 implementations MUST preserve all unrecognized header fields even if they do not process them.
+
+In JWE Compact Serialization:
+
+- **iv**: the initialization vector MUST be at least 96 bits (12 bytes) of cryptographically secure random data. See §8.3.4 for detailed IV requirements.
+- **tag**: the AES-GCM authentication tag carried as part of the Compact Serialization and is verified during decryption.
 
 ## **8.5 Payload Requirements**
 
@@ -668,7 +690,7 @@ Layer-1 MUST NOT alter whitespace or structure.
 
 The plaintext input to JWE encryption is the complete JWS Compact Serialization string. Implementations **SHOULD** apply DEFLATE compression (JWE header field "zip": "DEF") when the total JWS Compact string length exceeds **200 bytes**.
 
-Compression, when applied, occurs as part of the JWE encryption step as defined in \[RFC 7516 §4.1.3]. The compression is applied to the JWS string before encryption; the "zip" parameter MAY be present even when the JWE "alg" is "dir" and no key encryption occurs.
+Compression, when applied, occurs as part of the JWE encryption step as defined in RFC 7516 §4.1.3. The compression is applied to the JWS string before encryption; the "zip" parameter MAY be present when the JWE "alg" is "dir" (direct encryption), as no separate key-wrapping step occurs in that mode.
 
 Although JWE supports DEFLATE compression (zip) prior to encryption, it does not define an unencrypted ‘compression-only’ mode. In ASCP, use of zip implicitly requires encryption; Channels with payload\_cipher = none MUST NOT emit JWE envelopes.
 
@@ -692,11 +714,11 @@ Layer-1 MUST detect and surface the following classes of errors:
 
 ### **8.6.1 JWS Errors**
 
-JWS validation failures occur when the envelope structure is invalid, when the `kid` field is missing or malformed, or when the signing `kid` references an unknown certificate. Signature verification may fail due to cryptographic mismatch or tampering, and envelopes using unsupported signature algorithms (outside the allowed set of ES256, EdDSA, ES384) MUST be rejected.
+JWS validation failures occur when the envelope structure is invalid, when the `kid` field is missing or malformed, or when the signing `kid` references an unknown certificate. Signature verification may fail due to cryptographic mismatch or tampering, and envelopes using signature algorithms not permitted by Section 6.3 MUST be rejected.
 
 ### **8.6.2 JWE Errors**
 
-JWE decryption failures arise from invalid JWE structure, use of an incorrect AES key for the specified Keyframe, or invalid or reused initialization vectors that violate AES-GCM security requirements. Envelopes specifying incorrect or unsupported `alg` or `enc` values MUST be rejected, as must envelopes referencing unknown Keyframe `kid` values that cannot be resolved to provisioned key material.
+JWE decryption failures arise from invalid JWE structure, use of an incorrect AES key for the specified Keyframe, or invalid or reused initialization vectors that violate AES-GCM security requirements. Envelopes specifying `alg` or `enc` values not permitted by Section 6.3 MUST be rejected, as must envelopes referencing unknown Keyframe `kid` values that cannot be resolved to provisioned key material.
 
 ### **8.6.3 General Envelope Errors**
 
@@ -711,9 +733,11 @@ Envelope parsing errors include malformed base64url segments that cannot be deco
 
 # **9. Keyframes**
 
-Keyframes are Layer-2 Artipoints that declare the intended cryptographic configuration for a Channel. They are signed, durable, and auditable entries in the Channel’s log, but Layer-1 does not parse their contents. Instead, Layer-3 evaluates Keyframes, determines their meaning, and provisions Layer-1 with the corresponding cryptographic state.
+This section defines the lifecycle and versioning of cryptographic state as consumed by Layer-1, independent of governance semantics.
 
-Layer-1 therefore treats Keyframes as **externally supplied configuration statements**, not as artifacts to be parsed or semantically interpreted. This section defines only the **cryptographic consequences** of Keyframes—how they influence Layer-1 behavior, how rotation works, and how key versioning is resolved during envelope encoding and decoding.
+Keyframes are Layer-2 Artipoints that declare the intended cryptographic configuration for a Channel. They are signed, durable, and auditable entries in the Channel's log. Layer-1 does not parse Keyframes directly; instead, Layer-3 evaluates them and provisions Layer-1 with the resulting cryptographic state. Layer-1 therefore treats Keyframes as externally supplied configuration statements.
+
+This section defines only the cryptographic consequences of Keyframes: how they influence Layer-1 behavior, how rotation works, and how key versioning is resolved during envelope encoding and decoding.
 
 ## 9.1 Purpose of Keyframes in Layer-1
 
@@ -723,32 +747,38 @@ Keyframes provide the cryptographic material required for a Channel to function.
 - the **Channel Access Key (CAK)** (Ed25519 keypair for Layer-0 replication authentication), and
 - the **recipient-specific wrapped key envelopes**, enabling each authorized participant to decrypt both keys.
 
+The following **invariants** apply to all Keyframe processing defined in this specification:
+
+- Each Keyframe defines a **discrete cryptographic epoch** for the Channel.
+- Keyframes apply **forward-only**; they do not retroactively modify or invalidate historical envelopes.
+- Layer-1 **does not parse or interpret Keyframes**; it consumes only cryptographic material provisioned by Layer-3.
+- Historical envelopes MUST remain decryptable using the keys active at the time of their creation, unless higher-layer governance explicitly removes access to the relevant key material.
+
 Keyframes enable:
 
 - **initial bootstrapping** of a Channel’s cryptographic configuration,
-- **key rotation** to achieve forward secrecy or accommodate membership changes, and
+- **key rotation** to accommodate membership changes or compromise, and
 - **per-recipient binding**, ensuring that only authorized participants receive decryptable key material.
 
-Keyframes do **not** define governance semantics (e.g., “who is a member”). They carry only the *cryptographic consequences* of such governance decisions after Layer-3 evaluation. Membership semantics belong entirely to the Governance specification.
+Keyframes do **not** define governance semantics (e.g., “who is a member”). They carry only the *cryptographic consequences* of governance decisions after Layer-3 evaluation. Membership semantics belong entirely to the Governance specification.
 
 Channel-key-envelopes contained within a Keyframe are articulated coordination events, expressed using the Layer-2 grammar and evaluated under Layer-3 trust and governance semantics. Layer-1 consumes only the resulting cryptographic material provisioned from these evaluations and does not generate or interpret channel-key-envelopes itself.
 
 ## 9.2 Keyframe Contents Required by Layer-1
 
-Although Keyframes exist in Layer-2 and have rich semantic structure, Layer-1 relies on a small, well-defined subset of the information they express:
+Consistent with the invariants defined in Section 9.1, Layer-1 relies on a small, well-defined subset of information derived from evaluated Keyframes.
 
 ### **9.2.1 Channel AES Key (Symmetric Encryption Key)**
 
 Provisioned to Layer-1 as a 256-bit AES key in JWK form:
 
-```
+```json
 {
   "kty": "oct",
   "k": "<base64url AES-256 key>",
   "alg": "A256GCM",
   "use": "enc"
 }
-
 ```
 
 Used exclusively for encrypting and decrypting JWE envelopes carrying JWS signed Articulation Sequences.
@@ -757,7 +787,7 @@ Used exclusively for encrypting and decrypting JWE envelopes carrying JWS signed
 
 Ed25519 keypair used by Layer-0 to authenticate sync access:
 
-```
+```json
 {
   "kty": "OKP",
   "crv": "Ed25519",
@@ -768,9 +798,9 @@ Ed25519 keypair used by Layer-0 to authenticate sync access:
 }
 ```
 
-Layer-1 does not use the CAK itself but it is contained in the same envelope as the AES encryption key and is documented here as part of everything managed by Layer-2 and Layer-3. 
+Layer-1 does not use the CAK itself but it is contained in the same envelope as the AES encryption key and is documented here as part of everything managed by Layer-2 and Layer-3.
 
-**Note:** For the sake of clarity, this Ed25519 key is **not** used to sign Artipoints. Artipoints are always signed by the originator’s personal identity key (typically ECDSA P-256 private key. The CAK functions as a shared *token* to authorize log access, not authorship.
+**Note**: For the sake of clarity, this Ed25519 key is **not** used to sign Artipoints. Artipoints are always signed by the originator’s personal identity key. The CAK functions as a shared token to authorize log access, not authorship.
 
 ### **9.2.3 Recipient Public Keys for Key Wrapping**
 
@@ -823,17 +853,17 @@ The envelope structure is **not** parsed by Layer-1. Instead, Layer-3 extracts k
 
 The complete normative specification of the \<channel-key-envelope> JSON structure is defined in §9.6.
 
-### **9.2.5 Prohibition on Layer-1 Parsing**
+### 9.2.5 Prohibition on Layer-1 Parsing
 
 Layer-1 MUST NOT parse Keyframe Artipoints or any of their attributes.
 
 Layer-1 MUST receive all cryptographic material in a pre-interpreted form via provisioning.
 
-## **9.3 KID Versioning and Selection Rules**
+## 9.3 KID Versioning and Selection Rules
 
-Keyframes provide stable, deterministic identifiers for the cryptographic state a Channel uses. The Channel Attribute `kid` points to the active Keyframe, enabling both authors and recipients to select the correct Keyframe version without ambiguity.
+Building on the Keyframe invariants defined in Section 9.1, Keyframes provide stable, deterministic identifiers for the cryptographic epoch a Channel uses. The Channel Attribute \`kid\` points to the active Keyframe, enabling both authors and recipients to select the correct Keyframe identifier (UUID) without ambiguity.
 
-### **9.3.1 Keyframe as Key Version**
+### **9.3.1 Keyframe Identifier**
 
 Each Channel Artipoint MUST have a `keyframe::kid` Attribute pointing to the current Keyframe associated with the channel:
 
@@ -874,7 +904,7 @@ This mapping is critical for rotation, described next.
 
 ## **9.4 Keyframe-Driven Rotation Events**
 
-Keyframes enable controlled rotation of the Channel's cryptographic state, including the AES Channel Key, the CAK replication keypair, and the set of recipient envelopes.
+Consistent with the non-retroactivity guarantees in Section 9.1, Keyframes enable controlled, forward-only rotation of the Channel's cryptographic state, including the AES Channel Key, the CAK replication keypair, and the set of recipient envelopes.
 
 Rotation MAY be performed to achieve forward secrecy, accommodate membership changes, respond to device compromise, or fulfill scheduled key-lifecycle policies.
 
@@ -887,7 +917,8 @@ Implementers at Layer-2 and Layer-3 **SHOULD** follow these steps to rotate the 
 3. Issue a new Keyframe Artipoint with a new Keyframe UUID.
 4. Articulate a new `keyframe:kid` attribute on the Channel Artipoint to point to the new Keyframe UUID and provision the new key material into Layer-1
 5. Senders now allowed to begin using the new Keyframe kid.
-6. Recipients retain access to old AES keys for historical decryption.
+6. Issue a new Keyframe Artipoint with a new Keyframe identifier (UUID).
+7. Articulate a new `keyframe:kid` attribute on the Channel Artipoint to point to the new Keyframe identifier (UUID) and provision the new key material into Layer-1
 
 ### **9.4.2 Rotation of the CAK (Ed25519)**
 
@@ -920,15 +951,15 @@ Historical decryptability MUST be preserved unless explicitly superseded by gove
 
 ## **9.5 Keyframe Invalidity or Supersession**
 
-A Keyframe becomes superseded when:
+As defined by the Keyframe epoch model in Section 9.1, a Keyframe becomes superseded when:
 
-- a new Keyframe Artipoint is created with a higher sequence or timestamp and the `keyframe:kid` attribute of the Channel Artipoint is pointed at it,
+- a new Keyframe Artipoint is created with a higher sequence or timestamp and the \`keyframe:kid\` attribute of the Channel Artipoint is pointed at it,
 - governance revokes access for some recipients (higher-layer decision),
 - or rotation is triggered by policy.
 
 Layer-1 MUST follow these rules:
 
-- Only the **latest Keyframe** may be used for new encryption.
+- Only the \*\*latest Keyframe\*\* may be used for new encryption.
 - All historical Keyframes remain valid for decrypting historical envelopes.
 - If a Keyframe’s cryptographic material becomes unavailable, envelopes referencing that Keyframe MAY become undecryptable, but MUST remain stored unchanged.
 
@@ -990,17 +1021,11 @@ This strict separation enables Channels to maintain long-term cryptographic stab
 
 # **10. Grammar Integration: Channel-Relevant Artipoints**
 
-ASCP Channels operate at Layer-1 and therefore do not interpret or parse Artipoint Grammar. However, Channels rely on the **existence and structure** of several Layer-2 Artipoint types whose semantics are evaluated by Layer-3 and then provisioned into Layer-1.
+ASCP Channels operate at Layer-1 and do not interpret or parse Artipoint Grammar. However, Channels depend on several Layer-2 Artipoint types whose semantics are evaluated by Layer-3 and provisioned into Layer-1 as cryptographic configuration.
 
-This section defines:
+This section documents the Layer-2 representations that give rise to Layer-1 behavior. It defines the Artipoint structures, attributes, and encoding patterns that influence cryptographic operations, while clarifying the separation between Grammar semantics (Layer-2) and cryptographic execution (Layer-1).
 
-- the Layer-2 *representation* of Channel-related Artipoints
-- the Artipoint-level attributes that influence Layer-1 cryptographic behavior
-- the precise separation between Grammar semantics (Layer-2) and Layer-1 execution
-- the mapping from typed attributes in Keyframes to Layer-1 configuration
-- examples demonstrating canonical encoding patterns
-
-Layer-1 observes these Artipoints only indirectly, through the configuration supplied by higher layers; it never parses or interprets Grammar content directly.
+Layer-1 observes these Artipoints only indirectly, through configuration supplied by higher layers. It never parses Grammar content directly.
 
 ## 10.1 Keyframe Artipoints
 
@@ -1013,9 +1038,9 @@ A Keyframe is a Layer-2 Artipoint of type `keyframe`, linked to a Channel using 
   ["keyframe", "HiringTeam:v1", "urn:keyframe:@HiringTeam:v1"].
   (
     version := 1,
-    payload_cipher := "AES256",
-    message_signing := "ECDSA-P256",
-    channel_access_alg := "Ed25519", 
+    payload_cipher := "<cipher-id>",
+    message_signing := "<signing-id>",
+    channel_access_alg := "<access-id>", 
   )
 ] supports {channel-uuid}
 
@@ -1032,7 +1057,7 @@ Layer-1 cares about Keyframes only insofar as:
 ### **10.1.2 Keyframe Required Attributes**
 
 - **version**: Keyframe format version number. MUST be `1` for this document version.
-- **payload\_cipher**: The symmetric cipher algorithm used for payload encryption. SHOULD match the Channel declaration, though Keyframes MAY specify different algorithm choices for future versions.
+- **payload\_cipher**: The symmetric cipher identifier used by Layer-3 to derive Layer-1 encryption configuration. This SHOULD match the Channel declaration, though Keyframes MAY specify different algorithm choices for future versions.
 - **message\_signing**: The signature algorithm used for message signing. SHOULD match the Channel declaration, though Keyframes MAY specify different algorithm choices for future versions.
 - **channel\_access\_alg**: The signature algorithm used for the Channel Access Key (CAK). SHOULD match the Channel declaration, though Keyframes MAY specify different algorithm choices for future versions.
 
@@ -1075,9 +1100,9 @@ A Channel is a Layer-2 Artipoint of type "channel" that declares the cryptograph
 [uuid, source, timestamp,
   ["channel", "Hiring Team", "@HiringTeam"] .
   (
-    payload_cipher := "A256GCM",
-    message_signing := "ECDSA-P256",
-    channel_access_alg := "Ed25519",
+    payload_cipher := "<cipher-id>",
+    message_signing := "<signing-id>",
+    channel_access_alg := "<access-id>",
     bootstrap := false,
     keyframe::kid := "ascp:keyframe:<uuid>" 
   )
@@ -1089,9 +1114,9 @@ Layer-1 never reads these attributes directly; Layer-3 processes them and genera
 
 ### **10.2.2 Required Attributes**
 
-- `payload_cipher`: The symmetric cipher algorithm used for payload encryption. Determines whether Layer-1 applies JWE encryption to envelopes. Use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Valid values include `"A256GCM"` or `"none"`. Note: In current implementations, a bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band.
-- `message_signing`: The signature algorithm required for Artipoint signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm. Typically `"ECDSA-P256"` for full interoperability with JOSE JWS standards-based elliptic curve key-pair systems.
-- `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. Determines the CAK algorithm used at Layer-0. `"Ed25519"` SHOULD be used, or `"none"` to disable channel access authentication.
+- `payload_cipher`: The symmetric cipher identifier used to determine whether Layer-1 applies JWE encryption to envelopes. Valid values are defined by Section 6.3 or use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Note: In current implementations, @bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band. See **ASCP Bootstrap Process and Channel Discovery** for details.
+- `message_signing`: The signature algorithm required for Artipoint signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
+- `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. Determines the CAK algorithm used at Layer-0. The algorithm used for the Channel Access Key (CAK) is determined by Layer-0 policy including a value for `"none"` for open channels.
 
 #### **10.2.3 Optional Attributes**
 
@@ -1117,19 +1142,21 @@ This strict separation preserves long-term stability and ensures that semantic e
 
 This table presents a brief summary of the different types of Articulation patterns associated with Channels. Note: This is not fully inclusive and is specific to Layer-2 and Layer-3, so this is informational only:
 
-| Purpose                 | Pattern                                              | Notes                                                            |
-| ----------------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Declare a Channel       | Artipoint("channel")                                 | Includes cipher and signing algorithm choices                    |
-| Activate Keyframe       | annotation(keyframe::kid :=)                         | Applied to Chanel UUID. Specifies the active Keyframe.           |
-| Manage Membership       | annotation(member +)                                 | Applied to Channel UUID.                                         |
-| Declare Keyframe        | Artipoint("keyframe") supports {channel}             | Supporting child of Channel                                      |
-| Distribute Key Envelope | annotation(envelope::user := \<channel-key-evelope>) | Typed attribute with direct JSON payload as the attribute value. |
+| Purpose                 | Pattern                                               | Notes                                                            |
+| ----------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| Declare a Channel       | Artipoint("channel")                                  | Includes cipher and signing algorithm choices                    |
+| Activate Keyframe       | annotation(keyframe::kid :=)                          | Applied to Channel UUID. Specifies the active Keyframe.          |
+| Manage Membership       | annotation(member +)                                  | Applied to Channel UUID.                                         |
+| Declare Keyframe        | Artipoint("keyframe") supports {channel}              | Supporting child of Channel                                      |
+| Distribute Key Envelope | annotation(envelope::user := \<channel-key-envelope>) | Typed attribute with direct JSON payload as the attribute value. |
 
 # **11. Message Processing Model**
 
-This section defines the operational sender and receiver workflows for ASCP Channels. It describes how Layer-1 constructs and validates envelopes, how they are handed off to and received from Layer-0 (ALSP), and when cleartext payloads are emitted upward to Layer-2.
+This section operationalizes the cryptographic requirements and envelope structures defined in Sections 6–9 by specifying the complete sender and receiver workflows for ASCP Channels. It defines how Layer-1 constructs and validates envelopes, how these envelopes are exchanged with Layer-0 (ALSP), and under what conditions cleartext payloads are emitted upward to Layer-2.
 
-Layer-1 MUST treat all payloads as opaque UTF-8 strings and MUST NOT alter, canonicalize, or interpret them. Layer-0 owns log storage and replication; Layer-1 owns cryptographic protection and validation. Message processing is strictly envelope-by-envelope. Implementations MUST NOT assume the presence, order, or completeness of surrounding log entries.
+The processing model enforces a clear separation of responsibilities: Layer-0 owns log storage and replication, while Layer-1 owns cryptographic protection and validation. Layer-1 MUST treat all payloads as opaque UTF-8 strings and MUST NOT alter, canonicalize, or interpret them.
+
+Message processing operates strictly on an envelope-by-envelope basis. Implementations MUST NOT assume the presence, order, or completeness of surrounding log entries when processing any individual envelope.
 
 ## **11.1 Producer Workflow**
 
@@ -1194,7 +1221,7 @@ For an `"ascp+jws+jwe"` envelope:
    - `kid` MUST reference a provisioned Keyframe.
    - `alg` and `enc` MUST match supported algorithms.
 3. Select the AES key associated with the Keyframe `kid`.
-4. Validate IV size and structure.
+4. validate IV size and structure according to §8.3.4.
 5. Attempt AES-GCM decryption.
 
 **If decryption fails:**
@@ -1297,17 +1324,17 @@ Instead, Layer-1 receives only the **cryptographic consequences** of membership 
 
 - the active and historical Channel AES keys for decrypting JWE envelopes,
 - the current Channel Access Keypair (CAK) used by Layer-0 for replication, and
-- Author identity certificates for JWS verification.
+- Certificate Artipoints used for JWS verification of Author signatures.
 
-Layer-1 performs **no per-recipient processing** and MUST NOT parse any membership-related attributes in the Layer-2 grammar. Layer-1 does not compute or reason about recipients as semantic entities; decryption success depends solely on whether provisioned key material matches the `kid` referenced in an envelope.
+Layer-1 performs **no per-recipient processing** and MUST NOT parse any membership-related attributes in the Layer-2 grammar. Layer-1 does not compute or reason about recipients as semantic entities; decryption success depends solely on whether provisioned key material matches the `kid` referenced in an envelope. Successful decryption or signature verification MUST NOT be interpreted as authorization or semantic permission.
 
 Membership changes (such as adding or removing participants) are reflected only through updated Keyframes and provisioning updates from Layer-3. Layer-1 treats such updates as external configuration and applies them without interpreting their semantic meaning.
 
-This section is informative and defines no normative requirements.
+Aside from the requirement stated above, this section is primarily informative.
 
 # **13. Security Considerations**
 
-ASCP Channels rely on a layered security model in which cryptographic protections, immutable replication, and governance-driven provisioning work together to ensure the confidentiality and integrity of Artipoint payloads. The Channel layer (Layer-1) is deliberately narrow in scope: it applies JOSE-based protections, verifies authorship, and decrypts content when permitted. It does not enforce or interpret semantic authorization, does not determine who should read or write, and does not evaluate governance rules. This section describes the security properties of Layer-1, the assumptions it makes about the rest of the ASCP stack, and the limitations that naturally follow from this design.
+ASCP Channels rely on a layered security model in which cryptographic protections, immutable replication, and governance-driven provisioning work together to ensure the confidentiality and integrity of Articulations Sequence payloads. The Channel layer (Layer-1) is deliberately narrow in scope: it applies JOSE-based protections, verifies authorship, and decrypts content when permitted. It does not enforce or interpret semantic authorization, does not determine who should read or write, and does not evaluate governance rules. This section describes the security properties of Layer-1, the assumptions it makes about the rest of the ASCP stack, and the limitations that naturally follow from this design.
 
 ### **13.1 Confidentiality**
 
@@ -1355,19 +1382,19 @@ Implementations should maintain a strict separation between the responsibilities
 
 All cryptographic state—identity certificates, the active and historical AES keys, the CAK, permitted algorithms, and Keyframe identifiers—must be supplied externally through a provisioning interface implemented by Layer-3. Channel implementers should design this interface carefully to avoid embedding any governance or Grammar logic inside Layer-1. This avoids tight coupling between layers and ensures long-term maintainability.
 
-## **14.3 Key Table Management**
+## **14.2 Key Table Management**
 
 Because Channels rely on multiple concurrent keys—current and historical AES keys, identity certificates, and the CAK—implementations should maintain a structured key table indexed by JOSE kid values. Updates to this table should be atomic to avoid inconsistent states during Keyframe rotation.
 
 Channel implementations must expect that historical AES keys remain in use indefinitely for decrypting older envelopes, even after rotation. Keys should therefore not be overwritten or removed unless explicitly directed by higher layers. Proper key table management ensures that historical decryptability remains stable and predictable across replicas.
 
-## **14.5 Diagnostics and Observability**
+## **14.3 Diagnostics and Observability**
 
 Operational debugging often depends on clear diagnostics from the Channel layer. Implementations should emit structured logs for conditions such as unknown kid values, failed signature verification, JWE decryption errors, or malformed envelopes—without revealing sensitive data such as decrypted payloads, private keys, or IVs.
 
 Channels should not assume that Layer-0 or Layer-3 will provide sufficient context for every failure. Logging minimal but precise information (e.g., envelope identifiers, failure class, algorithm mismatch) helps operators diagnose provisioning issues, governance misconfigurations, and interoperability problems across diverse environments.
 
-## **14.7 Forward Compatibility**
+## **14.4 Forward Compatibility**
 
 To ensure interoperability across evolving ASCP deployments, implementations should be tolerant of extensions and unrecognized fields. In particular, they should ignore unknown JOSE header parameters, avoid hardcoding algorithm lists, and support flexible provisioning that can accommodate future Keyframe attributes or new encryption/signature schemes.
 
