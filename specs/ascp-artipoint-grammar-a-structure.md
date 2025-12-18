@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.65 — Informational (Pre-RFC Working Draft)  
+Version: 0.67 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -23,13 +23,13 @@ This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the
 
 # **3. Introduction & Background**
 
-The Artipoint Grammar emerged in response to a fundamental gap in human-human and human-AI collaboration: the absence of durable, interpretable, and shared cognitive structure for coordination work. Most contemporary systems operate on ephemeral exchanges—messages, prompts, or transient memory updates—rather than persistent, structured meaning that makes collaborative work possible. What the web standardized for documents and APIs, ASCP seeks to standardize for **contextual coordination**.
+This Artipoint Grammar emerged in response to a fundamental gap in human-human and human-AI collaboration: the absence of durable, interpretable, and shared cognitive structure for coordination work. Most contemporary systems operate on ephemeral exchanges—messages, prompts, or transient memory updates—rather than persistent, structured meaning that makes collaborative work possible. What the web standardized for documents, ASCP seeks to standardize for **contextual coordination**.
 
 This challenge connects directly to what the Computer-Supported Cooperative Work (CSCW) literature calls **"articulation work"**—the essential but often invisible work that cooperating individuals must perform to partition work into units, divide it amongst themselves, and reintegrate it after completion. Articulation work is all the work around cooperative work that makes it possible—a secondary work process that enables primary collaborative activities. In human-AI teams, this articulation work becomes even more critical as it must bridge fundamentally different cognitive architectures while maintaining shared understanding over time.
 
 Traditional collaboration systems fail to capture the **auditable cognitive decisions** that constitute this articulation work. Instead of preserving the reasoning about *why* work is organized in particular ways, *how* pieces relate to each other, and *what* dependencies exist, they focus on content exchange. ASCP recognizes that effective collaboration requires a **persistent, shared cognitive substrate**—the immutable structure of how work gets organized, connected, and reasoned about.
 
-We studied prior efforts in provenance modeling (W3C PROV), distributed content graphs (Merkle DAGs, IPFS), semantic triple stores (RDF), and collaborative data models (CRDTs). While each informed our thinking, none fully addressed the dual needs of:
+We studied prior efforts in provenance modeling (W3C PROV), distributed content graphs (Merkle DAGs, IPFS), semantic triple stores (RDF), and collaborative data models (CRDTs). While each informed our thinking, no prior art addressed the dual needs of:
 
 1. **Expressing structured cognitive intent** in a form that is both deterministically machine-parseable and also fully human-relatable
 2. **Supporting co-evolution of meaning** across humans and agents, while preserving an immutable, auditable record of articulation decisions
@@ -58,7 +58,7 @@ Key design insight: **Artipoints capture cognitive structure, not dynamic conten
 
 When an Artipoint needs to incorporate evolving content—documents, databases, real-time streams—that mutable state lives externally and is referenced through URIs in the payload. This is the **"bookmark pattern"**: rather than embedding a 50-page research paper directly, you create a cognitive statement about it with a URI to the external document. The paper may be updated, moved, or versioned, but the cognitive decision—the structural relationship between paper and project—remains immutable and auditable within the DAG.
 
-The core unit follows this (non-normative) pattern:
+The core unit follows this non-normative pattern:
 
 ```
 [uuid, author, timestamp, expression];
@@ -87,16 +87,16 @@ Because Artipoints capture the persistent cognitive substrate rather than dynami
 **Example**: When an AI agent discovers a relevant research paper, it doesn't embed the paper's text:
 
 ```clike
-[a1b2c3d4-e5f6-7890-abcd-ef1234567890,
-     uuid-of-author-identity,
+[<uuid-of-this-articulation>,
+     <uuid-of-author-identity>,
      2024-03-15T14:30:22.123Z,
- [ paper,
+ [ "bookmark",
   "Attention Mechanisms in Transformer Models",  
   uri:"https://arxiv.org/abs/2023.12345" ]
-];
+] supports <relevant-stream-uuid>;
 ```
 
-This creates a permanent record: "this agent determined this paper was highly relevant to this project at this moment." The paper may be updated or moved, but the cognitive judgment—the structural relationship between paper and project—remains immutable and traceable.
+This creates a permanent record: "this agent determined this paper was highly relevant to this project at this moment." The paper may be updated or moved, but the cognitive judgment—the structural relationship between paper and project stream—remains immutable and traceable.
 
 ## 4.4 Structural Benefits
 
@@ -111,8 +111,7 @@ The result is true **shared cognition**: not just exchanging messages or files, 
 The core normative unit of an Artipoint in the grammar is as follows:
 
 ```bnf
-artipoint = "[" uuid "," author "," timestamp ["," expression ] "]"
-
+artipoint = "[" uuid "," author "," timestamp "," expression "]"
 ```
 
 **Fields:**
@@ -120,9 +119,7 @@ artipoint = "[" uuid "," author "," timestamp ["," expression ] "]"
 - **uuid**: RFC-4122 compliant universally unique identifier for this Artipoint
 - **author**: the UUID reference to the *identity* who is authoring this Artipoint. An author is always referencing a person or agentic identity. This must be the UUID of an Indentity Artipoint. See next section for details.
 - **timestamp**: This contains the RFC 3339 UTC timestamp for the time of articulation.
-- **expression**: Optional. One of four supported articulation patterns (see below)
-
-> Omitting the expression results in a "no-op" placeholder—a valid, referenceable cognitive atom that can be enriched or connected later.
+- **expression**: One of four supported articulation patterns (see below)
 
 ## 5.2 Articulation Statement
 
@@ -170,10 +167,10 @@ Actual delivery, visibility, and privacy are enforced solely by **ASCP Channels*
 
 In short:
 
-- **Governance Artipoints** express *who is included* in a collaborative scope;
-- **Channels** enforce *who actually receives* articulated statements.
+- **Governance Artipoints** and **Attributes** express *who is included* in a collaborative scope;
+- **Channels** where Articulation Sequences are distributed enforce *who actually receives* articulated statements.
 
-This maintains strict layering: articulation semantics and governance live at Layer-2, while distribution and access-control are implemented at Layer-1.
+This maintains strict layering: governance lives at Layer-3, articulation semantics lives at Layer-2, while distribution and access-control are implemented via Layer-1.
 
 # **6. Articulation Patterns**
 
@@ -199,7 +196,7 @@ instantiation = "[" artipoint-type "," label "," payload "]" [ "." attribute-lis
 
 Declares a typed and labeled unit of meaning with an embedded or referenced payload.
 
-- **type**: A semantic label like "task", "doc", "stream", etc. Types are not reserved keywords; they are open-ended domain vocabulary. New types MAY be freely introduced by any implementation to suit application-specific needs. Common types are defined in the Default Symbol Dictionary for efficient encoding, but implementations are not constrained to this set.
+- **type**: A semantic label like "task", "doc", "stream", etc. Types are not reserved keywords; they are open-ended domain vocabulary. New types MAY be introduced by an implementation to suit application-specific needs. Common types are defined in the Default Symbol Dictionary for efficient encoding, but implementations are not constrained to this set.
 - **label**: A human-readable title or descriptive caption. Implimentations **MAY** display this in a manner similar to how the title of browser bookmark is typically rendered.
 - **payload**: The main content—can be a typed embedded inline structure (ie: typedBlock), literal numeric value using various encodings, or an ordinary quoted UTF-8 string which would typically be a URL.
 - **attribute-list**: Optional semantic metadata. See the section on Artipoint Attributes.
@@ -211,7 +208,7 @@ annotation = uuidReference "." attribute-list
 
 ```
 
-Applies new attributes to an existing Artipoint. Used for modification, enrichment, or contextual update to prior context. Annotations and operators on them are fully explained in the **Artipoint Annotation Attributes** section.
+Applies new Attributes or updates existing Attributes onto an existing Artipoint. Used for modification, enrichment, or contextual update to prior context. Annotations and operators on them are fully explained in the **Artipoint Annotation Attributes** section.
 
 ## **6.3 Connection**
 
@@ -220,11 +217,13 @@ connection = uuidReference verb-operator uuidSet
 
 ```
 
-Establishes a semantic relationship between an existing source Artipoint (LHS) and one or more existing target Artipoints (RHS) using a verb-operator. A connection **MUST**:
+Establishes a semantic relationship between an existing source Artipoint (LHS) and one or more existing target Artipoints (RHS) using a verb-operator.
 
-- **Apply the Relationship Atomically:** Evaluate the operator semantics in a single articulation event with no intermediate states.
-- **Introduce No Implicit Creation or Movement:** A connection MUST NOT create new Artipoints or implicitly relocate existing ones.
-- **Apply Operator Semantics Directly:** The operator fully determines the structural effect of the relationship, including any hierarchical placement or masking of the RHS.
+A connection:
+
+- **MUST** be evaluated atomically as a single articulation event with no intermediate states.
+- **MUST NOT** create new Artipoint&#x73;**.** Only construction or instantiation expressions create new Artipoints.
+- **MUST** apply all structural effects as determined by the operator semantics, including hierarchical placement, masking behavior, and any Scoped Displacement Behavior (SDB) defined for that operator.
 
 See **Operator Semantics** for detailed definitions of structural, hierarchical, and Scoped Displacement Behavior effects.
 
@@ -235,11 +234,13 @@ construction = instantiation verb-operator uuidSet
 
 ```
 
-A construction expression creates a new Artipoint and applies a verb-operator between an existing Artipoint (LHS) and one or more existing Artipoints (RHS) in a **single, atomic articulation**. A construction **MUST**:
+A construction expression creates a new Artipoint and establishes a relationship with one or more existing Artipoints (RHS) using a verb-operator.
 
-- **Create and Relate Atomically:** Instantiate the new Artipoint and apply the operator-defined relationship in one inseparable step.
-- **Apply Operator Semantics at Birth:** The operator determines the new Artipoint’s initial structural position (“birth topology”) relative to the RHS. Any Scoped Displacement Behavior (SDB) MUST be evaluated using this birth context.
-- **Not Be Treated as Two Statements:** A construction MUST NOT be interpreted as an instantiation followed by a connection; semantics MUST reflect atomic evaluation.
+A construction:
+
+- **MUST** be evaluated atomically as a single articulation event with no intermediate states. The new Artipoint instantiation and operator application occur in one inseparable operation.
+- **MUST NOT** be treated as two separate operations (instantiation followed by connection).
+- **MUST** establish all structural effects through operator semantics, including the new Artipoint's initial hierarchical placement, masking behavior, and any Scoped Displacement Behavior (SDB) evaluated using the birth context.
 
 See **Operator Semantics** for the definitions of topological, hierarchical, and SDB effects.
 
@@ -247,25 +248,41 @@ See **Operator Semantics** for the definitions of topological, hierarchical, and
 
 ## 7.1 Payload Types
 
-The normative pattern for the payload of an Artipoint MUST be according to the following:
+The normative pattern for the payload of an Artipoint MUST be formed according to the following:
 
 ```bnf
 payload = quoted-string / typedBlock / scalar-value
 
 typedBlock = payload-type ":" ( jsonObject / quoted-string / scalar-value )
+
 payload-type = "json" / "string" / "uri" / "data" / "uuid" / future-type
+
 jsonObject = "{" *CHAR "}" ; A balanced JSON object per RFC 8259
+
 future-type = ALPHA *(ALPHA / DIGIT)
 
 ```
 
-The payload field, used both in instantiations and attribute values, accepts the following:
+The payload field, used in both instantiations and attribute values, **MUST** conform to one of three forms as defined in the grammar above:
 
-- A quoted-string
-- A typed block (e.g., embedded JSON, UUID or structured string)
-- Numeric scalar-values as integers, hex or binary constants in a C-language like way
+- A `quoted-string`
+- A `typedBlock` (e.g., `json:`, `uuid:`, `uri:`, `string:`, or `data:` followed by the value)
+- A `scalar-value` (numeric literals: integers, hexadecimal, or binary constants)
 
-The quoted-string form is just shorthand for the string typed block pattern and often will be a URL referencing the dynamic content or state of the artipoint.
+### 7.1.1 Type Safety and Semantic Correctness
+
+The simple `quoted-string` form is syntactic shorthand for the `string:` typed block pattern. Implementations **MUST** interpret bare quoted strings as string-typed content.
+
+When representing semantically-typed values, the appropriate typed block form **MUST** be used:
+
+- **UUIDs** **MUST** use the `uuid:` prefix (e.g., `uuid:"550e8400-e29b-41d4-a716-446655440000"`)
+- **URIs and URLs** **MUST** use the `uri:` prefix (e.g., `uri:"https://example.org/resource"`)
+- **Structured data** **MUST** use the `json:` prefix when representing JSON objects
+- **Arbitrary binary or opaque data** **SHOULD** use the `data:` prefix
+
+Bare quoted strings **MUST NOT** be used to represent UUIDs, URIs, or other semantically-typed values. This ensures type safety, enables proper validation, and allows implementations to apply type-specific processing (e.g., URI resolution, UUID canonicalization).
+
+Implementations **MAY** reject payloads that use bare quoted strings where typed blocks are semantically required, or **MAY** issue warnings while treating them as opaque string content.
 
 ## 7.2 JSON Payloads
 
@@ -757,7 +774,7 @@ articulation-statement  = OWS artipoint OWS ";" OWS [ end-of-line ]
 
 ; ----- Artipoint -----
 artipoint      = "[" OWS uuid separator author separator timestamp
-                     [ separator expression ] OWS "]"
+                     separator expression OWS "]"
 expression     = instantiation / annotation / connection / construction
 
 ; ----- Expressions -----
