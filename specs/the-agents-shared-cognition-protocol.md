@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.58 — Informational (Pre-RFC Working Draft)  
+Version: 0.60 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -84,14 +84,14 @@ This document is **informational**. It does **not** define any normative protoco
 
 All normative requirements—including syntax, cryptographic processing, synchronization algorithms, and governance semantics—are defined in the companion specifications referenced in the **Specification Map**.
 
-With the exception of the consolidated compliance matrix in the Appendix, this document should be read solely as the architectural and conceptual foundation for implementing ASCP.
+This document should be read solely as the architectural and conceptual foundation for implementing ASCP.
 
 # 6. Intended Audience
 
 This document is intended for readers who require an architectural understanding of ASCP, including:
 
 - **System architects** designing ASCP-compatible applications or infrastructure
-- **Protocol implementers** building clients, agents, or services that participate in ASCP Channels or parse the coordination grammar
+- **Protocol implementers** building clients, agents, or services that participate in ASCP Channels and generate or parse the coordination grammar
 - **Researchers and theorists** studying coordination, distributed cognition, or articulation-based models
 - **Technical evaluators and decision-makers** assessing ASCP for integration into organizational or multi-agent environments
 
@@ -161,7 +161,7 @@ This differs from existing coordination systems by introducing a common protocol
 
 In Computer-Supported Cooperative Work (CSCW), **articulation work** refers to the process by which cooperating individuals partition work into units, divide it amongst themselves and, after the work is performed, reintegrate it (Schmidt and Bannon, 1992). Articulation work represents the coordination effort required to ensure that distributed activities integrate effectively toward a common objective.
 
-ASCP formalizes articulation work through the **Articulation** primitive: an operation that writes context into a shared, durable log. An Articulation makes implicit coordination explicit by producing an immutable, addressable record that participants can reference and build upon.
+ASCP formalizes articulation work through **Artipoints**—a coined term representing "points of articulation." An Artipoint is an immutable, addressable record that makes implicit coordination explicit by capturing context in a form that participants can reference and build upon. Artipoints are the fundamental primitive of ASCP.
 
 The following scenarios illustrate the operational difference between systems without and with ASCP's articulation substrate:
 
@@ -177,7 +177,7 @@ The same meeting notes are articulated as an Artipoint within a shared Stream. T
 
 Artipoints are the foundational primitive of ASCP. Each Artipoint is an immutable, addressable, author-attributed unit of articulated context—a durable statement that can be referenced, related, extended, and reinterpreted over time. Artipoints form the basic substrate through which shared understanding emerges across human and AI collaborators.
 
-Artipoints are deliberately minimal. They do not encode application behavior, workflow state, or user interface expectations. Instead, they provide a precise, durable language for expressing relevance, relationships, intent, and interpretation—allowing meaning to be built up through articulation rather than inferred from mutable structures.
+Artipoints are deliberately minimal. They do not encode application behavior, workflow state, or user interface expectations. Instead, they provide a precise, durable mechanism for expressing relevance, relationships, intent, and interpretation—allowing meaning to be built up through articulation rather than inferred from mutable structures.
 
 ## **10.1 Artipoints Are Structured References**
 
@@ -204,7 +204,7 @@ An Artipoint includes:
 - a **UUID** (stable identifier),
 - an **author** (human or agent),
 - a **timestamp**,
-- a **payload** (commonly a URI or structured reference), and
+- a **payload** (commonly a URI or other structured reference), and
 - an optional **expression** describing the articulated claim.
 
 Immutability is essential. Once created, an Artipoint is never modified; new Artipoints refine, extend, supersede, or contextualize earlier ones. This allows the coordination log to record *how* shared understanding evolves rather than overwrite its history.
@@ -221,7 +221,7 @@ Artipoints are **declarative statements**, not representations of ground truth. 
 
 These statements capture a contributor’s perspective at a moment in time. Over the course of a collaboration, additional articulations may extend, clarify, reinterpret, or diverge from earlier ones. ASCP does not enforce consensus; it preserves the articulated perspectives so that alignment—or misalignment—can be surfaced and resolved through further articulation.
 
-This approach contrasts with traditional systems (e.g., CRMs, project plans, task lists) that implicitly present a single authoritative state, even when it is incomplete, out of date, or not uniformly agreed upon. ASCP instead records *what was articulated*, enabling a transparent trail of evolving understanding.
+This approach contrasts with the *impoverished idealizations* of traditional systems (e.g., CRMs, project plans, task lists) that implicitly present a single authoritative state, even when it is incomplete, out of date, or not uniformly agreed upon. ASCP instead records *what was articulated*, enabling a transparent trail of evolving understanding.
 
 ## **10.4 Artipoints Form Articulation Sequences and Statements**
 
@@ -244,7 +244,7 @@ Addressability enables ASCP to support differentiated visibility, participation,
 
 | **Mechanism** | **Governs**                | **Purpose**                                                       |
 | ------------- | -------------------------- | ----------------------------------------------------------------- |
-| **Channels**  | Visibility / Access        | Who can receive, decrypt, and store articulations                 |
+| **Channels**  | Visibility / Access        | Who can receive, decrypt, and store a sequences of articulations  |
 | **Members**   | Structural Participation   | Who is contextually part of a Space, Stream, Pile, or Channel     |
 | **Flags**     | Attention / Working Memory | Who is actively tracking or maintaining awareness of an Artipoint |
 
@@ -281,17 +281,17 @@ A Pile inherits governance and contextual semantics from the Stream or Space int
 
 Streams **may contain Piles and arbitrary Artipoints**, but they **do not contain other Streams**. This constraint maintains clarity: each Stream represents a distinct thread of work that can be independently shared, delegated, paused, or resumed.
 
-Examples include a hiring process, a product feature, a research investigation, or a customer escalation.
+Examples include a hiring process, a product feature, a research investigation, or a customer issue escalation.
 
-When shared among collaborators, Streams allow synchronized context while preserving individual views. Streams inherit governance from their parent Space unless overridden.
+When shared among collaborators, Streams allow synchronized context while preserving individual points of view. Streams inherit governance from their parent Space unless overridden.
 
 ## **11.3 Spaces: Accountability Bubbles**
 
 **Spaces** are Artipoints representing top-level accountability contexts. A Space can include other Spaces and any number of Streams, organizing coordination into meaningful domains such as teams, projects, programs, or organizational units.
 
-Each Space also functionally acts a special "*Stream Zero***"**, used for coordinating the Streams and other structures within that Space. This provides a consistent, durable scaffold for administrative and structural articulation.
+Each Space also functionally acts a special "*Stream Zero***"**, used for coordinating the Streams and other contructs within that Space. This provides a consistent, durable scaffold for administrative and structural articulation.
 
-Spaces form hierarchical trees that reflect organizational structure, ownership boundaries, and strategic initiatives. Like all structures in ASCP, Spaces gain their semantics through articulated relationships rather than predefined schema.
+Spaces form hierarchical trees that reflect organizational structure, ownership boundaries, or strategic initiatives. Like all structures in ASCP, Spaces gain their semantics through articulated relationships rather than predefined schema.
 
 # 12. Collaboration Model
 
@@ -320,7 +320,7 @@ Channels provide two guarantees:
 
 A Channel therefore expresses the **audience** of an articulation. It does *not* express:
 
-- whether the recipient is working on the topic (that’s **Members**)
+- whether the recipient is working on the topics referenced within (that’s **Members**)
 - whether they are paying attention to it (that’s **Flags**)
 
 A single collaborative Space might broadcast its coordination activity across multiple Channels—for example, a public one for general alignment and a private one for sensitive discussions—while preserving coherent context across both.
@@ -359,22 +359,15 @@ Flags serve two complementary purposes:
 
 A participant may flag something *for themselves* to keep it in their working memory.
 
-Systems can then surface it when related articulations appear.
+Systems can then surface the flagged Artipoint when related articulations appear.
 
 ### **2. Social Attention**
 
 Because Flags are articulated and broadcast through Channels, **everyone can see everyone’s Flags** (within the visibility scope).
 
-This enables rich collaborative behaviors:
+This creates a transparent layer of collaborative attention. Participants can flag Artipoints for others, directing attention to specific context. Collaborators observe what currently holds others' attention and see when Flags are removed—signaling shifts in focus. This transparency enables shared situational awareness without explicit coordination overhead. Agents detect attention patterns: convergence around particular Artipoints, divergence across concerns, or sustained attention signaling emerging priority.
 
-- You can flag something **for someone else**
-- You can see what others consider important
-- You can see when someone removes a Flag
-- The team develops **shared situational awareness**
-- Agents can detect when attention diverges or converges
-- Collaborative presence emerges (“I see what you’re paying attention to”)
-
-Flags do *not* alter visibility (Channels do that) or structural participation (Members do that).
+**Key Point**: Flags do *not* alter visibility (Channels do that) nor structural participation (Members do that).
 
 Instead, they create a **layer of social signaling** and **distributed working memory**:
 
@@ -402,7 +395,7 @@ This invariant allows context to remain durable, auditable, and interoperable ac
 
 ## **Everything Is an Artipoint**
 
-A fundamental implication of this design—visible across Sections 10, 11, and 12—is that **all collaborative constructs in ASCP are made of the same primitive**. Artipoints can represent domain objects, contextual structures (such as Piles, Streams, and Spaces), membership relations, attention signals (Flags), or any other coordination concept a system or team articulates.
+A fundamental implication of this design—visible across Sections 10, 11, and 12—is that **all collaborative constructs in ASCP are made of the same primitive**. Artipoints can represent domain objects, contextual constructs (such as Piles, Streams, and Spaces), membership relations, attention signals (Flags), or any other coordination concept a system or team articulates.
 
 There are **no reserved types**, no built-in hierarchies, and no privileged schema. All structure emerges from **how Artipoints are articulated and related**, not from predefined object classes. This architectural uniformity allows a simple grammar to support rich, evolving collaboration semantics while remaining straightforward to validate, synchronize, and reason about.
 
@@ -420,7 +413,7 @@ ASCP separates **authentication**, **authorization**, **visibility**, and **gove
 
 **Visibility is enforced cryptographically via Channels**, which define who may receive, decrypt, and store articulated context. Visibility boundaries are independent of governance semantics and cannot be overridden by authorization rules, ensuring that access control, authorship, and authority remain distinct dimensions.
 
-This separation ensures that **authorship remains verifiable even when authorization is disputed or revoked**. An articulation may be judged unauthorized, ignored, or superseded by governance rules, but it is never erased or anonymized. ASCP therefore preserves a complete, replayable, and auditable history of who said what and when, while allowing authority to evolve transparently over time.
+This separation ensures that **authorship remains verifiable even when authorization is disputed or revoked**. An articulation may be judged unauthorized, ignored, or superseded by governance rules, but it is never erased or anonymized. ASCP therefore preserves a complete, replayable, and auditable history of who "said" what and when, while allowing authority to evolve transparently over time.
 
 Normative details for identity binding, signature verification, governance evaluation, and certificate semantics are specified in the companion ASCP documents. This section summarizes the architectural principles that unify them.
 
@@ -444,7 +437,7 @@ ASCP’s trust model is built on immutable history, local verification, and scop
 
 Verification is local-first. Each replica carries the materials necessary to evaluate trust, identity, and governance without relying on a central authority. Two replicas evaluating the same log will arrive at the same trust decisions, yielding deterministic interpretation and eliminating hidden mutable state.
 
-Trust domains are bounded by Channels. Each Channel defines its own visibility scope, keyframes, authenticated participants, and provenance boundaries. ASCP does not require global trust infrastructure or certificate transparency; trust arises within each Channel's articulated and cryptographically enforced boundary. As explained in the ASCP Trust & Identity Architecture, this model generalizes across personal, organizational, and federated deployments without *requiring* shared PKI or global coordination—though deployments may layer these through articulated endorsements (see Section 14.5).
+Trust domains are bounded by Channels. Each Channel defines its own visibility scope, keyframes, authenticated participants, and provenance boundaries. ASCP does not require global trust infrastructure or certificate transparency; trust arises within each Channel's articulated and cryptographically enforced boundary. As explained in the ASCP Trust & Identity Architecture, this model generalizes across personal, organizational, and federated deployments without *requiring* shared PKI or global coordination—though deployments may layer these in through articulated endorsements (see Section 14.5).
 
 ## **14.4 Security Properties Emergent from the Architecture**
 
@@ -466,7 +459,7 @@ ASCP is organized into four architectural layers that maintain strict boundaries
 
 ## **15.1 Layer 3 — View & Governance Layer**
 
-Layer 3 is where articulated context becomes interpretable and actionable. It materializes the coordination graph into application-specific views, reconstructing Spaces, Streams, Piles, Roles, Flags, and other structures from the immutable history produced by Layers 0–2.
+Layer 3 is where articulated context becomes interpretable and actionable. It materializes the coordination graph into user-specific views, reconstructing Spaces, Streams, Piles, Roles, Flags, and other structures from the immutable history produced by Layers 0–2.
 
 **Governance semantics are evaluated and applied at this layer by applications and agents.** While Layer 2 expresses governance rules and Layer 1 scopes visibility, Layer 3 determines how articulated policies apply within a specific runtime environment. Enforcement, delegation, permissions, and workflow-specific behaviors are therefore realized through Layer-3 application logic, not through lower protocol layers.
 
@@ -493,7 +486,7 @@ Layer 2 defines the **semantic substrate** for the protocol suite. It provides t
 
 Layer 1 governs how articulated context is distributed and who can see it. Channels define cryptographic visibility scopes: an Articulation Sequence sent to a Channel is accessible only to participants who hold the relevant keys.
 
-Layer 1 manages signing and encryption, Channel membership keys, keyframes, and the provenance boundaries of each trust domain. It ensures that all authorized participants receive a coherent view of the articulated context, while unauthorized parties cannot decrypt or store it.
+Layer 1 manages signing and encryption, Channel key material, keyframes, and the provenance boundaries of each trust domain. It ensures that all authorized participants receive a coherent view of the articulated context, while unauthorized parties cannot decrypt or store it.
 
 Layer 1 does not interpret the meaning of articulations and does not evaluate governance. It simply provides secure, authenticated distribution.
 
@@ -533,32 +526,32 @@ Layer 1 enforces authenticated authorship and cryptographic privacy. It does *no
 
 Layer 0 receives the encrypted Channel envelope and appends it to the Channel’s **append-only log**. Using the ASCP LogSync Protocol (ALSP), Layer 0 synchronizes Channel logs across replicas in a local-first, eventually consistent manner.
 
-Layer 0 treats the envelope as **opaque**. It does not parse or validate the inner articulation. Its responsibilities are limited to durability, ordering, and deterministic convergence of Channel a given node is authorized to replicate.
+Layer 0 treats the envelope as **opaque**. It does not parse or validate the inner articulation. Its responsibilities are limited to durability, ordering, and deterministic convergence of Channels a given node is authorized to replicate.
 
-## **16.4 Decryption and Local Reconstruction (Layers 1 → 3)**
+## **16.4 Decryption and Local Reconstruction (Layers 1 → 2)**
 
 When a replica receives an envelope, **Layer 1 decrypts** it (subject to key access) and extracts the original Layer-2 Articulation Sequence. The sequence is then handed to Layer 3 for **interpretation**.
 
-Layer 3 reconstructs the materialized view of context — Streams, Spaces, Piles, roles, Flags, governance state — by evaluating the newly received articulation against prior articulated history. This process does not modify the underlying log; it merely updates the local, derived model.
-
 ## **16.5 Presentation and Interaction (Layer 3)**
+
+Layer 3 reconstructs the materialized view of context — Streams, Spaces, Piles, roles, Flags, governance state — by evaluating the newly received articulations against prior articulated history. This process does not modify the underlying log; it merely updates the local, derived model.
+
+Layer 3 also evaluates governance policies and permissions to determine whether a participant or agent is allowed to perform requested actions. Enforcement is application-specific and never performed by Layers 0–2 except as constructs provisioned via Layer-3 operations.
 
 Applications and agents present the updated coordination context through their chosen interfaces. When participants take actions that affect shared state — such as adding a dependency, changing a role, proposing a decision, or flagging an item — these actions are converted into new **Layer-2 articulations**, beginning the pipeline anew.
 
-Layer 3 also evaluates governance policies and permissions to determine whether a participant or agent is allowed to perform the requested action. Enforcement is application-specific and never performed by Layers 0–2 except as constructs provisioned via Layer-3 operations.
-
 # 17. Why ASCP Matters
 
-Modern computational systems lack a protocol for shared context. Applications maintain isolated internal models, messaging systems provide ephemeral coordination, and AI systems operate through stateless prompts. ASCP addresses this gap by standardizing **the articulation of context itself** as a first-class, durable, and interoperable substrate.
+Modern computational systems lack a protocol for shared context. Applications maintain isolated internal models, messaging systems provide ephemeral coordination, and AI systems operate through stateless prompts. ASCP addresses this gap by standardizing *the articulation of context itself* as a first-class, durable, and interoperable substrate.
 
-ASCP’s core innovation is not the invention of new collaboration primitives, but the **formalization and distribution** of existing coordination behaviors as immutable, machine-interpretable structures. By representing context as authored, addressable, and evolvable Artipoints—distributed through secure Channels and maintained in a durable log—ASCP enables a level of continuity, auditability, and shared understanding that is not possible with today’s ad-hoc mechanisms.
+ASCP’s core innovation is not the invention of new collaboration primitives per se, but the **formalization and distribution** of existing coordination behaviors as immutable, machine-interpretable structures. By representing context as authored, addressable, and evolvable Artipoints—distributed through secure Channels and maintained in a durable log—ASCP enables a level of continuity, auditability, and shared understanding that is not possible with today’s ad-hoc mechanisms.
 
 This substrate unlocks several capabilities:
 
 - **Human–human collaboration gains structure and persistence**, eliminating fragmentation across tools and enabling coherent, cross-application workflows.
 - **Human–agent collaboration becomes continuous rather than prompt-driven**, as agents can reference and contribute to the same durable context as their human counterparts.
 - **Multi-agent systems gain persistent working memory**, enabling richer coordination strategies, division of labor, and inference over stable context.
-- **Every contribution becomes auditable and interpretable**, allowing teams and agents to understand how meaning, roles, and decisions have evolved over time.
+- **Teams and agents gain auditable and interpretable**, allowing teams and agents to understand how meaning, roles, and decisions have evolved over time.
 
 Importantly, the underlying coordination graph remains invisible to end users. They interact through natural application views—threads, agendas, dashboards—while ASCP ensures these views remain private where needed, coherent across participants, and grounded in the same articulated context. ASCP does not mandate how work appears; it ensures that **meaning persists, synchronizes, and remains interpretable**.
 
