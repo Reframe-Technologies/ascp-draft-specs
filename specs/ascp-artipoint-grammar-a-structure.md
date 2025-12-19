@@ -66,6 +66,8 @@ The grammar is intentionally flat: **there is no nesting** within expressions. A
 
 ASCP’s core innovation is recognizing that collaboration requires a **persistent, shared cognitive substrate**—the articulated structure of how work is organized, connected, and reasoned about—distinct from the content itself. ASCP records the articulated structure of coordination: decisions about relevance, relationship, dependency, and organization, independent of the underlying content. This scaffolding persists and remains auditable even as underlying documents and data evolve.
 
+All Articulation Statements are applied to the coordination DAG in a strictly ordered, append-only manner; the evaluation model governing this application is defined in Section 9.
+
 #### Structural Effects vs Semantic Effects
 
 For the purposes of this specification, it is essential to distinguish between:
@@ -342,7 +344,7 @@ Verb-operators define **coordination relationships** between Artipoints. Their s
 - **Declarative Only:** Operators state relationships; they do not execute behavior, enforce policy, or encode workflow logic.
 - **Append-Only Structure:** Operators **MUST NOT** modify, delete, or overwrite any existing Artipoint or relationship. Each operator invocation extends the coordination DAG solely by the addition of new edges (and, in the case of constructions, a new node plus edges).
 - **Structural vs Semantic Effects:** Operators define **structural effects** on the coordination DAG (as defined in Section 4). Any masking, supersession, prioritization, or displacement behavior is a **semantic evaluation effect** applied during interpretation and **MUST NOT** alter the underlying DAG.
-- **Determinism:** Given an identical articulation history and identical scope resolution, all conforming implementations **MUST** derive identical structural DAG effects and identical semantic evaluation outcomes.
+- **Determinism:** Given an identical articulation history replayed in the same Layer-0 log order, and evaluated per Section 4, all conforming implementations MUST derive identical structural DAG effects and identical semantic evaluation outcomes.
 - **Forward Compatibility:** Operators MAY be extended with future verbs. Unrecognized operators **MUST** be admitted to the log and treated as **no-op** with respect to structural and semantic effects, while remaining fully addressable.
 
 ## 8.2 Verb Operator Structure and Hierarchy
@@ -581,11 +583,73 @@ uuidPile removes {uuidOldDoc};
 
 *Removes a document from a collection.*
 
-# **9. Artipoint Annotation Attributes**
+# **9. Articulation Evaluation Model (Normative)**
+
+This section defines the **evaluation model** governing how Articulation Statements are applied to the coordination DAG over time. It specifies the authoritative ordering, replay guarantees, and lifecycle rules under which the structural and semantic definitions in this specification MUST be interpreted.
+
+This section does **not** define operator semantics, scope rules, or Scoped Displacement Behavior (SDB). Those behaviors are defined exclusively in Section 8 and MUST be applied in accordance with the evaluation model defined here.
+
+## **9.1 Log-Order Invariant**
+
+All Articulation Statements MUST be evaluated **strictly in the order they are received from Layer-0 log replay**.
+
+- Layer-0 log order is the **sole authoritative ordering source** for Layer-2 evaluation.
+- Implementations MUST NOT reorder, buffer, batch, delay, speculate on, or retroactively reinterpret Articulation Statements.
+- Within a single Articulation Sequence, Articulation Statements MUST be applied **in sequence order**.
+
+No metadata — including timestamps, UUID values (including UUIDv7), payload contents, or operator types — MAY be used to alter evaluation order.
+
+## **9.2 Append-Only Replay Semantics**
+
+Evaluation of Articulation Statements is **monotonic and append-only**.
+
+- Each Articulation Statement is applied exactly once, at the time it is encountered during replay.
+- No previously applied structural or semantic result may be undone, reordered, or re-evaluated due to later statements.
+- All evolution of meaning, relevance, or activation is expressed solely by the addition of new Articulation Statements.
+
+This model ensures that evaluation is **prefix-deterministic**: given the same ordered prefix of a channel log, all conforming implementations MUST derive identical structural and semantic results for that prefix.
+
+## **9.3 Structural Replay vs Semantic Interpretation**
+
+Evaluation proceeds in two strictly ordered phases for each Articulation Statement:
+
+1. **Structural application**, in which the coordination DAG is extended according to the grammar and operator structure (Section 4).
+2. **Semantic interpretation**, in which operator-specific meaning — including scope, masking, prioritization, supersession, or displacement — is evaluated according to Section 8.
+
+Semantic interpretation MUST NOT modify the underlying coordination DAG. Structural effects are permanent; semantic effects are interpretive.
+
+## **9.4 Unresolved References and Deferred Interpretation**
+
+Articulation Statements MAY reference UUIDs that have not yet been observed during replay.
+
+- Such references MUST be admitted and recorded without buffering or rejection.
+- Any semantic interpretation that depends on an unresolved Artipoint MUST be deferred until that Artipoint becomes resolvable through later replay.
+- Deferred interpretation MUST NOT retroactively reorder or invalidate prior evaluation results.
+
+This rule enables deterministic local-first operation under out-of-order delivery and partial replication.
+
+## **9.5 Idempotency and Historical Fidelity**
+
+Duplicate or repeated Articulation Statements MAY appear in the log.
+
+- Repetition MUST NOT alter the effective structure or interpretation beyond the first applicable articulation.
+- Historical duplication MUST be preserved as part of the immutable record, even when semantically redundant.
+
+Idempotency is defined relative to **prior replayed history**, not by global deduplication or speculative analysis.
+
+## **9.6 Deterministic Evaluation Requirement**
+
+> **Given an identical Layer-0 log replayed in the same order, all conforming ASCP implementations MUST construct identical coordination DAGs and MUST derive identical semantic interpretation results.**
+
+No implementation-defined discretion is permitted at Layer-2 with respect to ordering, replay, or evaluation.
+
+This requirement is foundational to interoperability, shared cognition, and auditable collaboration within ASCP.
+
+# **10. Artipoint Annotation Attributes**
 
 Attributes provide optional metadata for Artipoints and are commonly used in annotations and bookmarks. Attributes do not introduce coordination relationships and do not modify the coordination DAG.
 
-## 9.1 Attribute Syntax
+## 10.1 Attribute Syntax
 
 The normative pattern for annotating Artipoints with attributes is as follows:
 
@@ -597,11 +661,11 @@ keyValuePair   = [class "::"] key attr-operator ( payload / uuidReference )
 
 An attribute list is a collection of key-value metadata pairs. Each key MAY optionally be qualified with a class prefix using the `::` separator. Values MUST be either a payload (quoted-string, typedBlock, or scalar-value) or a uuidReference to another Artipoint.
 
-## **9.2 Class-qualified keys**
+## **10.2 Class-qualified keys**
 
 When using the `class::key` pattern, implementations MUST NOT insert whitespace around the `::` separator. The class prefix, separator, and key form a single lexical token (e.g., `role::owner`, `signature::protocol`). Parsers encountering whitespace around `::` SHOULD emit a diagnostic warning but MAY accept the attribute as valid.
 
-## 9.3 Attribute Operators
+## 10.3 Attribute Operators
 
 Operators modify the value using the following available semantic patterns:
 
@@ -612,11 +676,11 @@ Operators modify the value using the following available semantic patterns:
 | :=           | Assigns an explicit value displacing any previous value or set. You can think of this as rebasing the value. An empty value string can be used to, in effect, clear and remove the attribute. |
 | =            | Equivalence. The attribute is considered an alias or equivalent to whatever value is specified. In this way, it makes that attribute an alias to be referenced elsewhere.                     |
 
-## **9.4 Attribute Key Extensibility**
+## **10.4 Attribute Key Extensibility**
 
 Attribute keys are fully extensible and represent open-ended domain vocabulary. Implementations MAY freely introduce custom attribute keys to support application-specific metadata needs. Common attributes (such as `member`, `owner`, `role::`, `signature::`) are defined in the Default Symbol Dictionary for efficient encoding, but the attribute namespace is not constrained to this set. Vendor-specific or application-specific attributes SHOULD use namespaced class prefixes (e.g., `myapp::custom_field`) to avoid conflicts. Implementations encountering unknown attributes MUST preserve them without error.
 
-## 9.5 Attribute Examples (non-normative)
+## 10.5 Attribute Examples (non-normative)
 
 ```
 (document_metadata :=
@@ -643,13 +707,13 @@ Attribute keys are fully extensible and represent open-ended domain vocabulary. 
 );
 ```
 
-# **10. Universally Unique Identifiers (UUIDs)**
+# **11. Universally Unique Identifiers (UUIDs)**
 
 Artipoints and Artipoint references use UUIDs as their canonical identifiers.
 
 Because these identifiers participate directly in DAG construction, causal evaluation, immutability semantics, and reference resolution, the UUID format is a compulsory part of the Artipoint Grammar.
 
-### **10.1 UUID Version Requirement**
+### **11.1 UUID Version Requirement**
 
 UUIDs is ASCP are defined based on RFC-4122, but they **MUST** be generated as **UUID version 7** (time-ordered, Unix epoch milliseconds + randomness) as defined in \[IETF draft-peabody-dispatch-new-uuid-format].
 
@@ -661,7 +725,7 @@ UUIDv7 is required at the grammar layer because Artipoint UUIDs are not opaque t
 
 Implementations **MUST** reject Artipoints whose UUID field is not a valid UUIDv7.
 
-### **10.2 Encoding Patterns**
+### **11.2 Encoding Patterns**
 
 - In the ASCP Grammar when encoded in Hexadecimal form, they may be written with or without hyphens (both accepted)
 - Hyphens are never present in binary forms such as in Binary Value Island (BVI) or in wire encodings.
@@ -673,25 +737,24 @@ Implementations **MUST** reject Artipoints whose UUID field is not a valid UUIDv
 - Hex with hyphens → 550e8400-e29b-41d4-a716-446655440000
 - Hex without hyphens → 550e8400e29b41d4a716446655440000
 
-### **10.3 Validation Rules**
+### **11.3 Validation Rules**
 
 - The grammar accepts uppercase or lowercase hexadecimal.
 - Version nibble (bits 48–51) **MUST** equal 0111 (v7).
 - Variant bits **MUST** conform to RFC-4122 (10x).
 - Parsers **MUST** accept hyphenated and non-hyphenated hex, Base64URL encoding may be accepted as well, but implementations MUST normalize internally to raw 16-byte representation.
 
-### **10.4 UUID Role in DAG Construction**
+### **11.4 UUID Role in DAG Construction**
 
 UUIDv7 identifiers are **structural elements** of the Artipoint Grammar, not opaque tokens. UUIDs provide:
 
 - **immutable identity** of every Artipoint
 - **reference stability** across all articulation statements
-- **temporal-sortability** used for deterministic DAG evaluation
 - **collision resistance** suitable for distributed authorship
 
-Because the semantics of instantiation, reference, masking, and supersession require stable and time-sortable identifiers, UUIDv7 is a **normative structural requirement** of the grammar. The DAG **MUST** be evaluated using the UUID as the authoritative identity of each Artipoint.
+Because the semantics of instantiation, reference, masking, and supersession require stable identifiers, UUIDv7 is a **normative structural requirement** of the grammar. The DAG **MUST** be evaluated using the UUID as the authoritative identity of each Artipoint.
 
-# **11. Timestamps**
+# **12. Timestamps**
 
 ```bnf
 timestamp = date "T" time [fraction] "Z"
@@ -711,7 +774,9 @@ Timestamps in ASCP Artipoints represent the **articulation time**—the moment w
 - No timezone offsets permitted in this grammar (reserved for future extensions)
 - Case-insensitive: both "T"/"Z" and "t"/"z" are valid per RFC 3339
 
-# **12. Provenance and Authorship**
+Timestamps represent authorial articulation time and provenance metadata. They MUST NOT be used to reorder, delay, or reschedule Articulation Statements during Layer-2 evaluation. Evaluation order is defined exclusively by Layer-0 log replay as specified in Section 9.
+
+# **13. Provenance and Authorship**
 
 ```bnf
 author = uuidReference
@@ -724,7 +789,7 @@ Represents the author, signer, and generator of the Artipoint.
 
 Cryptographic integrity, privacy, and audience scoping are all handled by **ASCP channel encoding**, not the grammar.
 
-# **13. Strings and Escaping**
+# **14. Strings and Escaping**
 
 Strings **MUST** be double-quoted ("...") and support the full JSON standard string escaping mechanisms per RFC 8259:
 
@@ -757,17 +822,17 @@ safe-char  = %x20-21 / %x23-5B / %x5D-7E
 "File path: C:\\Users\\Documents\\file.txt"
 ```
 
-# **14. Collections and Structures**
+# **15. Collections and Structures**
 
 There is no nesting of expressions within expressions. Instead, **collections** (e.g. streams, piles, lists) are formed using the construction pattern with a bookmark that refers to an external document or resource.
 
 The **Artipoint's own UUID** serves as the persistent ID of that structure. Metadata lives in the referenced document; relations live in the DAG.
 
-# **15. Examples (Future Section)**
+# **16. Examples (Future Section)**
 
 Coming soon: a set of validated Artipoint examples including bookmarks, annotations, equivalence chains, collections, and agent-generated updates.
 
-# **16. Summary**
+# **17. Summary**
 
 This grammar defines a minimal but powerful **cognitive substrate**—a way to persistently structure thought, reasoning, and coordination into a universally interpretable form. It is:
 
@@ -779,7 +844,7 @@ This grammar defines a minimal but powerful **cognitive substrate**—a way to p
 
 It provides the foundational syntax for durable, auditable collaboration between humans and intelligent systems.
 
-# 17. Future Considerations
+# 18. Future Considerations
 
 In the future we could/should add sections covering:
 
