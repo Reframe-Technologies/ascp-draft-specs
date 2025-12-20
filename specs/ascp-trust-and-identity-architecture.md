@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.48 — Informational (Pre-RFC Working Draft)  
+Version: 0.49 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -45,7 +45,11 @@ These mechanisms provide the foundational trust substrate on which all ASCP coll
 
 ### **Note on Transparency Architectures**
 
-Certificate Transparency (CT) and related Verifiable Data Structure (VDS) systems establish trust through public auditability and globally comparable append-only logs. ASCP Channels operate under a different trust model in which all participants are authenticated collaborators with verifiable authorship and scoped access. Confidentiality, selective visibility, key rotation, and forward secrecy are first-class requirements. As a result, CT/VDS-style transparency mechanisms are neither required nor appropriate inside ASCP Channels.
+Certificate Transparency (CT) and related Verifiable Data Structure (VDS) systems have demonstrated the power of public auditability through globally comparable append-only logs. ASCP draws directly on these principles—immutability, append-only semantics, and verifiable historical state—and adapts them for a different operational context.
+
+Where CT/VDS systems optimize for public transparency and detection of misbehavior in certificate issuance, ASCP Channels operate in environments where all participants are authenticated collaborators with verifiable authorship and scoped access. In these settings, confidentiality, selective visibility, key rotation, and forward secrecy are first-class requirements that shape the trust model.
+
+As a result, ASCP adopts the core transparency principles while optimizing for a different set of tradeoffs suited to collaborative, confidential environments. This represents an intentional design choice for the specific use case rather than a departure from transparency as a foundational concept.
 
 ## **3.2 Scope of this Specification**
 
@@ -117,7 +121,7 @@ The ASCP trust model in which all trust decisions derive from immutable, signed 
 
 ### **Bootstrap Channel (or Bootstrap Log)**
 
-A special ASCP channel containing the genesis Artipoint and the RootCA Artipoint, forming the immutable foundation of trust for the repository.
+A special ASCP channel containing the genesis Artipoints including the RootCA Artipoint, forming the immutable foundation of trust for the repository.
 
 ### **Endorsement**
 
@@ -131,13 +135,14 @@ A first-party declaration attached to a Certificate Artipoint that specifies the
 
 A double-encrypted payload attached to a Certificate Artipoint containing encrypted private key material used for secure recovery or device migration.
 
-### **JWK / JWS / JWT**
+### **JWE / JWK / JWS / JWT**
 
 Standardized JOSE structures:
 
+- **JWE**: JSON Web Encryption, for encrypted payloads.
 - **JWK**: JSON Web Key, for encoding public keys;
 - **JWS**: JSON Web Signature, for signed payloads;
-- **JWT**: JSON Web Token, for structured claims and identity assertions.
+- **JWT**: JSON Web Token, for structured claims and identity assertions;
 
 ### **PKI (Public Key Infrastructure)**
 
@@ -206,7 +211,7 @@ ALSP provides:
 
 ALSP does **not** evaluate identity provenance or certificate semantics. It only ensures authenticated sessions and consistent log replication.
 
-This separation of concerns ensures trust remains **local, composable, and durable**, without requiring a global ledger or a single shared trust root.
+This separation of concerns ensures trust remains **local, composable, and durable**, without requiring a global ledger or a single real-time shared trust root.
 
 ## **5.3 Relationship to External PKI / DID Systems**
 
@@ -294,7 +299,7 @@ ASCP represents identities, certificates, and trust anchors as immutable, compos
 
 ## **6.1 Identity as an Addressing Construct**
 
-In ASCP, an *Identity* represents a participant—human, agent, or system component—that can author Artipoints and participate in collaborative structures. Identities function as **addressing constructs**:
+In ASCP, an *Identity* represents a participant—human, agent, or system component—that can author Artipoints and participate in collaborative structures. Identities function as an **addressing construct**: 
 
 - They provide a stable, long-lived identifier for the participant.
 - They bind the participant to cryptographic certificates used for authorship, authentication, and channel key agreement.
@@ -327,9 +332,9 @@ A Security Construct Artipoint containing a public key (JWK) and attributes decl
 
 A distinguished Certificate Artipoint introduced at bootstrapping time as the root of all trust. It anchors:
 
-- **Repository-level trust** — All certificate chains and trust decisions within the instance trace back to the RootCA as the ultimate trust source.
+- **Repository-level trust** — All certificate chains and trust decisions within the instance SHOULD trace back to the RootCA as the ultimate trust source.
 - **Onboarding verification** — New participant certificates are validated as legitimate by verifying they are signed by or chain back to the RootCA.
-- **Cross-instance trust** — When ASCP instances establish trust relationships, the RootCA can be endorsed by external systems (enterprise PKI, public CAs) to bridge independent trust domains.
+- **Cross-instance trust** — When ASCP instances establish trust relationships, the RootCA MAY be endorsed by external systems (enterprise PKI, public CAs) to bridge independent trust domains.
 
 ### **Endorsements / Attestations**
 
@@ -358,7 +363,7 @@ All information needed for verification—keys, endorsements, rotation history�
 
 ### **3. First-class composability**
 
-Identities participate in the same Graph of Meaning as work artifacts (Spaces, Streams, Groups), allowing governance, distribution, and identity systems to interoperate without special-case mechanisms.
+Identities participate in the same DAG as work artifacts (Spaces, Streams, Groups), allowing governance, distribution, and identity systems to interoperate without special-case mechanisms.
 
 ### **4. Decoupled lifecycle events**
 
@@ -639,7 +644,7 @@ These endorsements MUST be recorded as attributes on the RootCA Artipoint.
 If a RootCA must be rotated:
 
 1. A new RootCA MUST be introduced in a future bootstrap epoch.
-2. The new RootCA MUST endorse the old RootCA for continuity, or vice-versa.
+2. The new RootCA MUST endorse the old RootCA for continuity and vice-versa.
 3. Verifiers MUST treat the old RootCA as authoritative for all historical log entries prior to the rotation point.
 
 ASCP does not support destructive revocation of RootCAs; supersession MUST be explicit and additive.
@@ -723,14 +728,14 @@ This distinction prevents semantic overload common in DID Documents and PKI and 
 
 ### **8.1.3 Endorsement Schema**
 
-All endorsements MUST follow the schema below. While inspired by the structural conventions of the W3C Verifiable Credentials model—particularly the separation of subject, issuer, claim, and proof—ASCP endorsements remain JOSE-native constructs without reliance on JSON-LD or VC processing rules:
+All endorsements MUST follow the schema below. While inspired by the structural conventions of the W3C Verifiable Credentials model—particularly the separation of subject, issuer, claim, and proof—ASCP endorsements use simple JSON encoding with JOSE structures for cryptographic evidence, without reliance on JSON-LD or VC processing rules:
 
 ```json
 {
   "schema": "ascp.endorsement.v1",
   "subject": "cert" | "identity",
   "attestation": "<attestation-type>",
-  "fingerprint": "sha256:<hex>",
+  "thumbprint": "sha256:<hex>",
   "issuer": {
     "mechanism": "<method>",
     "hint": "<display-string>"
@@ -748,7 +753,7 @@ All endorsements MUST follow the schema below. While inspired by the structural 
 
 - schema
 - attestation
-- fingerprint
+- thumbprint
 - issuer.mechanism
 - issued\_at
 - evidence
@@ -759,15 +764,15 @@ All endorsements MUST follow the schema below. While inspired by the structural 
 - issuer.hint
 - tsa block
 
-#### **Fingerprint Requirement (Normative)**
+#### **Thumbprint  Requirement (Normative)**
 
-The fingerprint MUST equal the RFC-7638 JWK thumbprint of the Certificate Artipoint being endorsed.
+The thumbprint MUST equal the RFC-7638 JWK thumbprint of the key material being endorsed.
 
 ### **8.1.4 Attestation Types (Normative)**
 
 | **Type**      | **Meaning**                                           | **Mechanisms**            |
 | ------------- | ----------------------------------------------------- | ------------------------- |
-| fingerprint   | Endorser vouches for correctness of key fingerprint   | jws-x5c, jws-kid, did-jws |
+| fingerprint   | Endorser vouches for correctness of key thumbprint    | jws-x5c, jws-kid, did-jws |
 | issuance-time | Endorser vouches key existed at or before a timestamp | tsa-rfc3161               |
 | id-binding    | Endorser binds key to an account or identifier        | oidc-icb, did-jws         |
 
@@ -797,7 +802,7 @@ Evidence MUST contain a DER-encoded Time-Stamp Token verifying issuance-time.
 
 A verifier MUST:
 
-1. Verify that fingerprint == certificate RFC-7638 thumbprint
+1. Verify that thumbprint == key RFC-7638 thumbprint
 2. Validate mechanism-specific evidence:
    - **jws-x5c**: Verify JWS → Validate x5c chain
    - **jws-kid**: Resolve endorser certificate → Verify JWS
@@ -914,7 +919,7 @@ See Section 11 for all details around constructing the recovery envelope and in 
     ( endorsement::jws-x5c + json:{
         "schema":"ascp.endorsement.v1",
         "attestation":"fingerprint",
-        "fingerprint":"sha256:abcd1234...",
+        "thumbprint":"sha256:abcd1234...",
         "issuer":{"mechanism":"jws-x5c","hint":"ca.example.org"},
         "evidence":{
             "jws":"<compact JWS>",
@@ -932,7 +937,7 @@ See Section 11 for all details around constructing the recovery envelope and in 
     ( endorsement::oidc-icb + json:{
         "schema":"ascp.endorsement.v1",
         "attestation":"id-binding",
-        "fingerprint":"sha256:abcd1234...",
+        "thumbprint":"sha256:abcd1234...",
         "issuer":{"mechanism":"oidc-icb","hint":"accounts.google.com"},
         "evidence":{ "icb":"<IdentityClaimBundle JWS>" },
         "issued_at":"2025-08-08T14:30:25Z" }
@@ -948,7 +953,7 @@ See Section 11 for all details around constructing the recovery envelope and in 
     ( endorsement::did-jws + json:{
         "schema":"ascp.endorsement.v1",
         "attestation":"fingerprint",
-        "fingerprint":"sha256:abcd1234...",
+        "thumbprint":"sha256:abcd1234...",
         "issuer":{"mechanism":"did-jws","hint":"did:key:z6Mk..."},
         "evidence":{"did":"did:key:z6Mk...","jws":"<compact JWS>"},
         "issued_at":"2025-08-20T10:00:00Z" }
@@ -964,7 +969,7 @@ See Section 11 for all details around constructing the recovery envelope and in 
     ( endorsement::tsa-rfc3161 + json:{
         "schema":"ascp.endorsement.v1",
         "attestation":"issuance-time",
-        "fingerprint":"sha256:abcd1234...",
+        "thumbprint":"sha256:abcd1234...",
         "issuer":{"mechanism":"tsa-rfc3161","hint":"tsa.example.org"},
         "evidence":{"tst":"<base64-der-TST>"},
         "issued_at":"2025-08-13T14:02:00Z" }
@@ -976,7 +981,7 @@ See Section 11 for all details around constructing the recovery envelope and in 
 
 This section defines how ASCP participants—human users or autonomous agents—establish verifiable identity by combining (1) self-generated signing keys and (2) authentication by an external Identity Provider (IdP). The resulting **Identity Claim Bundle (ICB)** is a compact, portable JWS structure that provides durable, cryptographically self-contained evidence binding an ASCP public key to an externally authenticated identity.
 
-The design is intentionally patterned after the architectural principles used by **WebAuthn attestation**: a *proof-of-possession* step tied to a caller-supplied nonce establishes the authenticity of the key material, while a subsequent external attestation binds this key to a real-world identity. ASCP generalizes this pattern into a reusable, self-contained endorsement object suitable for persistent log-anchored verification.
+The design is intentionally patterned after the architectural principles used by **WebAuthn attestation**: a *proof-of-possession* step tied to a caller-supplied nonce to establishe the authenticity of the key material, while a subsequent external attestation binds this key to a real-world identity. ASCP generalizes this pattern into a reusable, self-contained endorsement object suitable for persistent log-anchored verification.
 
 The ICB is the normative evidence used to construct **endorsement::oidc-icb** attributes on Certificate Artipoints (Section 8). Although OIDC will be the most common mechanism, the ICB design is IdP-agnostic and supports any JWT-based identity assertion that satisfies the normative requirements below.
 
@@ -1152,7 +1157,7 @@ Verifiers MUST apply the following temporal constraints:
 3. **ICB Submission Freshness**
    - now − id\_token.iat MUST NOT exceed Δ₃.
 4. **Replay Protection**
-   - A Signed Key Package MUST NOT be reused.
+   - A Signed Key Package nonce MUST NOT be reused.
    - An id\_token nonce (pop\_hash) MUST NOT be reused.
 
 Deployments MAY enforce stricter policies.
@@ -1251,7 +1256,7 @@ Example showing an Identity Artipoint, Certificate Artipoint, and resulting endo
   ( endorsement::oidc-icb + json:{
       "schema":"ascp.endorsement.v1",
       "attestation":"id-binding",
-      "fingerprint":"sha256:abcd...",
+      "thumbprint":"sha256:abcd...",
       "issuer":{"mechanism":"oidc-icb","hint":"accounts.google.com"},
       "evidence":{
         "icb":"<IdentityClaimBundle JWS>"
