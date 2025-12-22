@@ -63,6 +63,40 @@ An Artipoint Record encapsulates a serialized Articulation Sequence within a Cha
 
 The use of the term *Artipoint* in this context reflects that the record exists to preserve articulated meaning, not merely to log events. While the articulation act has passed, the resulting record serves as the durable carrier of the Artipoints introduced or affected by that act.
 
+# Channel Log
+
+A **Channel Log** is the concrete, protocol-level append-only log maintained for a specific ASCP Channel.
+
+Each Channel Log contains an ordered sequence of **Artipoint Records**, where each record encapsulates a signed and optionally encrypted **Articulation Sequence** distributed within that Channel. The Channel Log is the unit of durable storage, replication, and convergence for articulated coordination scoped to a particular visibility and trust domain.
+
+A Channel Log has the following defining properties:
+
+- It is **append-only**: records are never modified or removed once written.
+- It is **cryptographically scoped**: only participants holding the Channel’s keys can decrypt and interpret its contents.
+- It is **replica-synchronized**: multiple replicas converge on the same ordered history via the ASCP LogSync Protocol (ALSP).
+- It is **semantically opaque to lower layers**: transport and synchronization treat records as uninterpreted payloads.
+
+A Channel Log does not itself define meaning, authority, or governance. It merely preserves and distributes articulated coordination within the Channel’s scope. Interpretation of the recorded Artipoints, evaluation of governance rules, and materialization of collaborative structures occur at higher layers.
+
+Each Channel in ASCP maintains exactly one Channel Log. There is no global or cross-Channel log.
+
+# Coordination Log
+
+The **Coordination Log** is the architectural abstraction representing the durable, append-only history through which articulated coordination is preserved, replayed, and audited within ASCP.
+
+Conceptually, the Coordination Log is not a semantic object and does not itself constitute meaning. Meaning arises from **Artipoints** introduced and related through articulation. The Coordination Log preserves the *temporal evolution* of those articulations—recording *when*, *by whom*, and *in what order* coordination was expressed—without collapsing that history into a single authoritative state.
+
+From an architectural perspective, the Coordination Log fulfills several essential roles:
+
+- It provides a **complete and auditable memory of articulation**, preserving authorship independently of later authorization or governance decisions.
+- It enables **deterministic reconstruction of shared context** by replaying articulated history in order.
+- It supports **local-first replication and convergence**, allowing distributed participants to synchronize context without central authority.
+- It anchors **trust and provenance**, enabling verification of authorship, signatures, and governance semantics against immutable history.
+
+The Coordination Log is **realized concretely as Channel Logs**. Each ASCP Channel maintains its own append-only Channel Log, scoped by cryptographic visibility boundaries and synchronized via the ASCP LogSync Protocol (ALSP). There is no global Coordination Log spanning multiple Channels.
+
+In summary, the Coordination Log names the *architectural role* played by Channel Logs: it is the **immutable memory of articulation** through which shared meaning can persist, be interpreted, and evolve over time.
+
 # Terminological Rationale
 
 The coexistence of the terms *Artipoint* and *Articulation* across ASCP is deliberate and reflects a fundamental conceptual distinction. **Artipoint** names the semantic object: the stable unit of meaning within the coordination graph. **Articulation** names the act: the authored coordination work through which meaning is introduced, modified, or related.
@@ -77,7 +111,7 @@ This primer is intended to be read alongside the ASCP architectural overview and
 
 By making the underlying conceptual model explicit, this document aims to reduce ambiguity, improve readability, and support the long-term coherence of the ASCP specification suite.
 
-# Quick Reference Table
+# Table 1: Artipoint vs. Articulation
 
 | **Conceptual Role** | **Correct Term**       |
 | ------------------- | ---------------------- |
@@ -87,5 +121,10 @@ By making the underlying conceptual model explicit, this document aims to reduce
 | Batch of acts       | Articulation Sequence  |
 | Logged artifact     | Artipoint Record       |
 
+# Table 2: Coordination Log vs. Channel Log
 
+| **Concept**          | **Scope**     | **Nature**              |
+| -------------------- | ------------- | ----------------------- |
+| **Coordination Log** | Architectural | Abstract role           |
+| **Channel Log**      | Per-Channel   | Concrete data structure |
 
