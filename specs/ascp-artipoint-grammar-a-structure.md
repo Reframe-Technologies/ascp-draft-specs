@@ -2,14 +2,14 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.68 — Informational (Pre-RFC Working Draft)  
+Version: 0.69 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
 # **1. Status of This Document**
 
-This document is part of the ASCP specification suite and defines the grammar used to express immutable, addressable Artipoints within ASCP. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the Artipoint syntax and related semantics.
+This document is part of the ASCP specification suite and defines the Layer-2 grammar used to express immutable, addressable **Artipoint Expressions** within ASCP. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the grammar, articulation patterns, and structural coordination semantics it defines.
 
 This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Implementations based on this document should be considered **experimental**.
 
@@ -19,7 +19,7 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 # **2. Abstract**
 
-This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). Artipoints are immutable, timestamped, and author-attributed statements forming the foundational units of the ASCP coordination graph. This grammar specifies the structure of Artipoints, articulation patterns, operator semantics, payload formats, and the ABNF definition required for deterministic parsing and interoperability.
+This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). The grammar specifies the structure of **Artipoint Expressions**, expressed as immutable, timestamped, and author-attributed **Articulation Statements** that introduce and relate **Artipoints** within the ASCP coordination graph. This specification defines articulation patterns, operator semantics, payload formats, and the ABNF required for deterministic parsing and interoperability.
 
 # **3. Introduction & Background**
 
@@ -46,13 +46,20 @@ Context is never modified, deleted, or overwritten. All evolution of meaning, st
 
 This invariant applies uniformly across all articulation patterns and operator semantics defined in this specification.
 
+## 3.2 Terminology Reference
+
+Terminology in this document follows the definitions established in the **ASCP Terminology Primer**, particularly the distinction between **Artipoints** (semantic units) and **Articulation Statements** (acts of coordination).
+
 # **4. Structural Model of the Grammar**
 
-The **Artipoint Grammar** defines a minimalist syntax for representing cognitive atoms—called **Artipoints**—as immutable, addressable statements. Multiple Artipoints form an **articulation sequence**, where each Artipoint is a semicolon-terminated line that captures a complete, atomic declaration of intent or structure.
+The Artipoint Grammar defines a minimalist syntax for representing **acts of articulation** that introduce cognitive atoms—called Artipoints—as immutable, addressable statements. Multiple Articulation Statements form an **Articulation Sequence**, where each Artipoint is a semicolon-terminated line that captures a complete, atomic declaration of intent or structure.
 
 #### The Coordination DAG
 
-The **coordination DAG** is the directed acyclic graph formed by **Artipoints as nodes** and **verb-operator articulations as labeled edges**.
+The **coordination DAG** is a directed acyclic graph with two types of elements:
+
+- **Nodes:** semantic Artipoints introduced by Articulation Statements
+- **Edges:** verb-operator articulations that connect those nodes
 
 The coordination DAG is global, append-only, and fully historical: once an Artipoint or edge is introduced, it remains addressable for the lifetime of the system. No articulation ever removes or mutates existing nodes or edges; all change occurs through monotonic extension of the graph.
 
@@ -72,7 +79,7 @@ All Articulation Statements are applied to the coordination DAG in a strictly or
 
 For the purposes of this specification, it is essential to distinguish between:
 
-- **Structural effects**, which describe how an articulation extends the coordination DAG (i.e., the creation of new Artipoints and/or new labeled edges); and
+- **Structural effects**, which describe how an articulation extends the coordination DAG (i.e., the introduction of new semantic Artipoints via Articulation Statements and/or new labeled edges); and
 - **Semantic effects**, which describe how articulated relationships are *interpreted* when materializing views of the graph within a given context.
 
 The Artipoint Grammar defines **structural effects only**, as recorded in the coordination DAG. Semantic effects — including activation, masking, prioritization, supersession, or displacement — are deterministic evaluation rules applied during interpretation and **MUST NOT** modify the underlying DAG.
@@ -145,9 +152,9 @@ The result is true **shared cognition**: not just exchanging messages or files, 
 
 # **5. Core Articulation Elements**
 
-## **5.1 Artipoint**
+## **5.1 Artipoint Expression**
 
-The core normative unit of an Artipoint in the grammar is as follows:
+The core normative grammatical representation of an Artipoint is as follows:
 
 ```bnf
 artipoint = "[" uuid "," author "," timestamp "," expression "]"
@@ -169,7 +176,7 @@ articulation-statement = artipoint ";" [ end-of-line ]
 
 ```
 
-The Articulation Statement forms a "Cognitive Atom"—a fully atomic unit that captures a specific statement, timestamp, and author.
+The Articulation Statement forms a "Cognitive Atom"—an atomic **act of articulation** that captures a specific coordination assertion made by an author at a specific time, whose semantic result is the introduction or modification of one or more Artipoints.
 
 ## 5.3 Articulation Sequences
 
@@ -180,11 +187,11 @@ articulation-sequence = 1*(artipoint-statement)
 
 ```
 
-An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All Artipoints in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1.
+An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All **Articulation Statements** in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1.
 
 ## **5.4 Statement Author**
 
-Every Artipoint represents a statement made by an **author**, creating a direct link between cognitive assertions and their originators. The author field contains a **uuidReference** that points to an **Identity Artipoint**—an immutable record containing the author's attributes including handles, decentralized identifiers (DIDs), email addresses, and cryptographic key material.
+An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All **Articulation Statements** in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1. The author field contains a **uuidReference** that points to an **Identity Artipoint**—an immutable record containing the author's attributes including handles, decentralized identifiers (DIDs), email addresses, and cryptographic key material.
 
 This design ensures that authorship becomes an integral part of the immutable DAG of cognition itself: statements are always authored, and authors are themselves first-class Artipoints with persistent, verifiable identities.
 
@@ -597,7 +604,7 @@ All Articulation Statements MUST be evaluated **strictly in the order they are r
 - Implementations MUST NOT reorder, buffer, batch, delay, speculate on, or retroactively reinterpret Articulation Statements.
 - Within a single Articulation Sequence, Articulation Statements MUST be applied **in sequence order**.
 
-No metadata — including timestamps, UUID values (including UUIDv7), payload contents, or operator types — MAY be used to alter evaluation order.
+Metadata — including timestamps, UUID values (including UUIDv7), payload contents, or operator types — MUST NOT be used to alter evaluation order.
 
 ## **9.2 Append-Only Replay Semantics**
 
@@ -613,7 +620,7 @@ This model ensures that evaluation is **prefix-deterministic**: given the same o
 
 Evaluation proceeds in two strictly ordered phases for each Articulation Statement:
 
-1. **Structural application**, in which the coordination DAG is extended according to the grammar and operator structure (Section 4).
+1. **Structural application**, in which the coordination DAG is extended according to the grammar and operator structure outlined in Section 4.
 2. **Semantic interpretation**, in which operator-specific meaning — including scope, masking, prioritization, supersession, or displacement — is evaluated according to Section 8.
 
 Semantic interpretation MUST NOT modify the underlying coordination DAG. Structural effects are permanent; semantic effects are interpretive.
@@ -840,7 +847,7 @@ This grammar defines a minimal but powerful **cognitive substrate**—a way to p
 - Friendly to both humans and agents
 - Built to support persistent shared cognition across systems
 - Designed for cryptographically scoped, decentralized distribution via ASCP
-- Organized as **semantic statements**, each explicitly terminated with a ; for clarity and structure
+- Organized as articulated coordination statements, each explicitly terminated with a semi-colon (;) for clarity and structure
 
 It provides the foundational syntax for durable, auditable collaboration between humans and intelligent systems.
 
@@ -857,18 +864,19 @@ In the future we could/should add sections covering:
 ```ebnf
 ; Artipoint Grammar Definition (ABNF)
 ; -----------------------------------
-; This grammar captures the syntax of Artipoints for structured,
-; immutable cognitive statements within the Cortex Layer
+; This grammar captures the syntax of Artipoints Expressions for 
+; structured, immutable cognitive statements within the Cortex Layer
 ; of the ASCP (Agent Shared Cognition Protocol).
 
 ; Core definitions cover:
-; - Artipoint structure
+; - Artipoint Expression structure
 ; - Author attribution
 ; - Operators and articulation patterns
 ; - Referencing, typing and composition
 
 ; Design Principles:
-; - Everything is an Artipoint
+; - All articulated meaning is represented as Artipoints
+; - Artipoints are introduced and related via Articulation Statements
 ; - Immutable, addressable units forming a DAG
 ; - Self-similar and recursive
 ; - No reserved keywords for types (artipoint-type, payload-type, etc.)
@@ -884,12 +892,12 @@ In the future we could/should add sections covering:
 articulation-sequence   = 1*(articulation-statement)
 articulation-statement  = OWS artipoint OWS ";" OWS [ end-of-line ]
 
-; ----- Artipoint -----
+; ----- Artipoint Expression -----
 artipoint      = "[" OWS uuid separator author separator timestamp
                      separator expression OWS "]"
 expression     = instantiation / annotation / connection / construction
 
-; ----- Expressions -----
+; ----- Expression Forms -----
 instantiation  = "[" OWS artipoint-type separator
                      label separator payload OWS "]"
                      [ dot attribute-list ]
