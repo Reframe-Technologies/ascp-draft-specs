@@ -1,6 +1,6 @@
 # ASCP Terminology Primer
 
-Version: 0.50 — Informational  
+Version: 0.51 — Informational  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
