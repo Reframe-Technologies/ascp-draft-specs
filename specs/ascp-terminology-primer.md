@@ -1,119 +1,347 @@
-# ASCP Terminology Primer
+# **ASCP Terminology Primer**
 
-Version: 0.51 — Informational  
+**Terminology and Architectural Layering Reference**
+
+Version: 0.6 — Informational  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
-# Status of This Document
+# **1. Status of This Document**
 
-This document is an **informative, non-normative primer** intended to clarify the terminology used across the Agents Shared Cognition Protocol (ASCP) specification suite. It provides conceptual grounding, definitional precision, and naming rationale for core ASCP terms. Its purpose is twofold: first, to educate readers encountering ASCP for the first time; and second, to serve as a **terminological reference** for authors, reviewers, and implementers when drafting, reviewing, or maintaining ASCP specifications.
+This document is an **informative, non-normative primer** intended to define and stabilize the terminology used across the Agents Shared Cognition Protocol (ASCP) specification suite.
 
-This document does not define protocol requirements and does not introduce new semantics beyond those already present in the normative specifications. Where key words such as MUST or SHOULD appear, they are used descriptively rather than normatively.
+It serves as the **authoritative terminological reference** for ASCP, covering:
 
-# Articulation and Articulation Work
+- Core coordination primitives (Artipoints, Articulation, Channels, Logs)
+- The conceptual distinction between acts, semantic units, and durable records
+- The architectural layering model used throughout ASCP specifications
 
-ASCP is grounded in the concept of **articulation work** as developed in the Computer-Supported Cooperative Work (CSCW) literature. Articulation work refers to the meta-level activity through which cooperative work is made possible: the ongoing effort to partition tasks, align understanding, negotiate meaning, establish dependencies, and reintegrate results. This work is structural rather than procedural, and contextual rather than content-bearing. It concerns *how* work is organized and related, not *what* the work product itself contains.
+This document does **not** define protocol requirements and does not introduce new semantics beyond those present in the normative ASCP specifications. Where key words such as MUST or SHOULD appear, they are used descriptively rather than normatively.
 
-In most contemporary systems, articulation work is implicit, informal, and transient. It is scattered across conversations, documents, and tool-specific state, and is rarely preserved in a durable or interoperable form. ASCP addresses this gap by treating articulation work as **first-class, persistent data**, expressed through a formal grammar and preserved in an immutable coordination history.
+# **2. Articulation and Articulation Work**
+
+ASCP is grounded in the concept of **articulation work** as developed in the Computer-Supported Cooperative Work (CSCW) literature. Articulation work refers to the meta-level activity through which cooperative work is made possible: the ongoing effort to partition tasks, align understanding, negotiate meaning, establish dependencies, and reintegrate results.
+
+This work is structural rather than procedural, and contextual rather than content-bearing. It concerns *how* work is organized and related, not *what* the work product itself contains.
+
+In most contemporary systems, articulation work is implicit, informal, and transient. It is scattered across conversations, documents, and tool-specific state, and is rarely preserved in a durable or interoperable form.
+
+ASCP addresses this gap by treating articulation work as **first-class, persistent data**, expressed through a formal grammar and preserved in an immutable coordination history.
 
 The term **Articulation** in ASCP therefore refers to an *act of coordination*: a discrete authored move that expresses or modifies shared understanding. Articulation is inherently active and temporal. It is something that is *performed* by a human or agent at a moment in time.
 
-# Artipoint
+# **3. Artipoint**
 
 An **Artipoint** is a conceptual, immutable unit of articulated meaning within the ASCP coordination model. The term is a coined contraction of *point of articulation*, emphasizing that an Artipoint represents a precise and atomic outcome of articulation work.
 
-An Artipoint is a semantic construct, not a data structure. It names a stable unit of meaning that can be referenced, related, extended, or superseded over time. Examples include the articulation of an identity, the declaration of relevance between artifacts, the establishment of a dependency, or the introduction of a collaborative structure such as a Stream or Space.
+An Artipoint is a **semantic construct**, not a data structure. It names a stable unit of meaning that can be referenced, related, extended, or superseded over time.
+
+Examples include:
+
+- the articulation of an identity
+- the declaration of relevance between artifacts
+- the establishment of a dependency
+- the introduction of a collaborative structure such as a Stream or Space
 
 Artipoints are **atomic with respect to coordination semantics**. Each Artipoint has a single author, a single articulation time, and a single semantic intent. Larger collaborative structures do not constitute larger Artipoints; instead, they emerge from graphs of many Artipoints related through further articulation.
 
-An Artipoint is independent of any particular encoding, serialization, cryptographic signature, or transport mechanism. It exists at the semantic layer of ASCP and is the foundational unit of the shared cognition graph.
+An Artipoint exists at the semantic layer of ASCP and is independent of any particular encoding, serialization, cryptographic signature, or transport mechanism.
 
 Unless otherwise qualified, the term *Artipoint* refers to this semantic concept.
 
-# Artipoint Expression
+# **4. Artipoint Expression**
 
-An **Artipoint Expression** is the Layer-2 grammatical representation of an Artipoint, as defined by the ASCP Artipoint Grammar. It is the syntactic form through which an Artipoint’s semantic content is made explicit and machine-parseable.
+An **Artipoint Expression** is the Layer-2 grammatical representation of an Artipoint, as defined by the ASCP Artipoint Grammar.
 
 An Artipoint Expression encodes the structural fields necessary to represent an Artipoint, including its identifier, author reference, timestamp, and articulation expression. It is a representation *of* an Artipoint, not an act of articulation itself.
 
-Artipoint Expressions are purely structural artifacts. They do not carry cryptographic guarantees, imply trust or authority, or define visibility or distribution. Those concerns are addressed by lower protocol layers. The role of the Artipoint Expression is to provide a deterministic, canonical form suitable for signing, encryption, replication, and interpretation.
+Artipoint Expressions are purely structural artifacts. They do not carry cryptographic guarantees, imply trust or authority, or define visibility or distribution. Those concerns are addressed by lower protocol layers.
 
-# Articulation Statement
+The role of the Artipoint Expression is to provide a deterministic, canonical form suitable for signing, encryption, replication, and semantic interpretation.
+
+# **5. Articulation Statement**
 
 An **Articulation Statement** is a single, atomic act of articulation expressed using the ASCP grammar. Each Articulation Statement corresponds to exactly one coordination move performed by an author at a specific time.
 
-While an Artipoint names a unit of meaning, an Articulation Statement names the *act* that introduces, relates, annotates, or constructs that meaning within the shared coordination graph. This distinction is intentional and reflects the CSCW view that articulation work consists of discrete, authored coordination actions.
+While an Artipoint names a unit of meaning, an Articulation Statement names the *act* that introduces, relates, annotates, or constructs that meaning within the shared coordination graph.
+
+This distinction is intentional and reflects the CSCW view that articulation work consists of discrete, authored coordination actions.
 
 An Articulation Statement is therefore act-oriented rather than object-oriented. It is not itself an Artipoint, but rather the grammatical vehicle through which Artipoints come into being or are related to one another.
 
-# Articulation Sequence
+# **6. Articulation Sequence**
 
 An **Articulation Sequence** is an ordered collection of one or more Articulation Statements authored together by the same identity. It represents a compound episode of articulation work.
 
-The Articulation Sequence is the unit passed from the articulation layer to the secure distribution layer. All statements in a sequence share authorship and are jointly secured during channel processing. Conceptually, the sequence captures the fact that coordination work often occurs in small clusters of related actions rather than in isolation.
+The Articulation Sequence is the unit passed from the articulation layer to the secure distribution layer. All statements in a sequence share authorship and are jointly secured during Channel processing.
 
 An Articulation Sequence is not a semantic object in its own right and does not introduce additional meaning beyond the statements it contains. Its purpose is organizational and operational, not semantic.
 
-# Artipoint Record
+# **7. Artipoint Record**
 
-An **Artipoint Record** is the durable, cryptographically secured materialization of an Articulation Sequence within an ASCP Channel log. It is the artifact over which trust, provenance, visibility, and replication semantics operate.
+An **Artipoint Record** is the durable, cryptographically secured materialization of an Articulation Sequence within an ASCP Channel Log.
 
-An Artipoint Record encapsulates a serialized Articulation Sequence within a Channel Envelope, applies cryptographic signing to establish authorship integrity, and may apply encryption to enforce visibility scope. Once appended to a Channel log, an Artipoint Record is immutable and addressable.
+An Artipoint Record encapsulates a serialized Articulation Sequence within a Channel envelope, applies cryptographic signing to establish authorship integrity, and may apply encryption to enforce visibility scope.
 
-The use of the term *Artipoint* in this context reflects that the record exists to preserve articulated meaning, not merely to log events. While the articulation act has passed, the resulting record serves as the durable carrier of the Artipoints introduced or affected by that act.
+Once appended to a Channel Log, an Artipoint Record is immutable and addressable. While the articulation act has passed, the resulting record serves as the durable carrier of the Artipoints introduced or affected by that act.
 
-# Channel Log
+# **8. Channel Log**
 
 A **Channel Log** is the concrete, protocol-level append-only log maintained for a specific ASCP Channel.
 
-Each Channel Log contains an ordered sequence of **Artipoint Records**, where each record encapsulates a signed and optionally encrypted **Articulation Sequence** distributed within that Channel. The Channel Log is the unit of durable storage, replication, and convergence for articulated coordination scoped to a particular visibility and trust domain.
+Each Channel Log contains an ordered sequence of Artipoint Records distributed within that Channel. Channel Logs are:
 
-A Channel Log has the following defining properties:
+- append-only
+- cryptographically scoped
+- replica-synchronized
+- semantically opaque to lower layers
 
-- It is **append-only**: records are never modified or removed once written.
-- It is **cryptographically scoped**: only participants holding the Channel’s keys can decrypt and interpret its contents.
-- It is **replica-synchronized**: multiple replicas converge on the same ordered history via the ASCP LogSync Protocol (ALSP).
-- It is **semantically opaque to lower layers**: transport and synchronization treat records as uninterpreted payloads.
+A Channel Log preserves and distributes articulated coordination within a defined visibility and trust boundary. It does not itself define meaning, authority, or governance.
 
-A Channel Log does not itself define meaning, authority, or governance. It merely preserves and distributes articulated coordination within the Channel’s scope. Interpretation of the recorded Artipoints, evaluation of governance rules, and materialization of collaborative structures occur at higher layers.
-
-Each Channel in ASCP maintains exactly one Channel Log. There is no global or cross-Channel log.
-
-# Coordination Log
+# **9. Coordination Log**
 
 The **Coordination Log** is the architectural abstraction representing the durable, append-only history through which articulated coordination is preserved, replayed, and audited within ASCP.
 
-Conceptually, the Coordination Log is not a semantic object and does not itself constitute meaning. Meaning arises from **Artipoints** introduced and related through articulation. The Coordination Log preserves the *temporal evolution* of those articulations—recording *when*, *by whom*, and *in what order* coordination was expressed—without collapsing that history into a single authoritative state.
+Meaning does not reside in the Coordination Log itself, but arises from Artipoints introduced and related through articulation. The Coordination Log preserves *when*, *by whom*, and *in what order* articulation occurred.
 
-From an architectural perspective, the Coordination Log fulfills several essential roles:
+The Coordination Log is realized concretely as per-Channel Channel Logs. There is no global Coordination Log spanning multiple Channels.
 
-- It provides a **complete and auditable memory of articulation**, preserving authorship independently of later authorization or governance decisions.
-- It enables **deterministic reconstruction of shared context** by replaying articulated history in order.
-- It supports **local-first replication and convergence**, allowing distributed participants to synchronize context without central authority.
-- It anchors **trust and provenance**, enabling verification of authorship, signatures, and governance semantics against immutable history.
+# **10. Architectural Layering Model**
 
-The Coordination Log is **realized concretely as Channel Logs**. Each ASCP Channel maintains its own append-only Channel Log, scoped by cryptographic visibility boundaries and synchronized via the ASCP LogSync Protocol (ALSP). There is no global Coordination Log spanning multiple Channels.
+ASCP is specified as a **strictly layered protocol suite**, in which architectural layers define responsibility boundaries rather than implementation units.
 
-In summary, the Coordination Log names the *architectural role* played by Channel Logs: it is the **immutable memory of articulation** through which shared meaning can persist, be interpreted, and evolve over time.
+Layers:
 
-# Terminological Rationale
+- are conceptual, not physical
+- define *what* responsibility is handled, not *how*
+- prevent semantic leakage between concerns
 
-The coexistence of the terms *Artipoint* and *Articulation* across ASCP is deliberate and reflects a fundamental conceptual distinction. **Artipoint** names the semantic object: the stable unit of meaning within the coordination graph. **Articulation** names the act: the authored coordination work through which meaning is introduced, modified, or related.
+The layering model ensures that meaning, authority, enforcement, and transport remain clearly separated, supporting evolvability, interoperability, and long-term auditability.
 
-This distinction mirrors long-standing CSCW theory, in which articulation work is understood as an active, ongoing process, while the structures it produces endure beyond any single act. By preserving both terms and assigning them consistent grammatical roles, ASCP is able to model both coordination dynamics and durable shared understanding without conflating the two.
+Layers in ASCP are **not**:
 
-In practical terms, ASCP uses *Articulation* to name act-level constructs and syntactic groupings, such as Statements and Sequences, and uses *Artipoint* to name semantic entities and their durable representations, such as Expressions and Records. This naming scheme avoids ambiguity, preserves theoretical fidelity, and provides a clear guide for consistent usage across specifications.
+- software modules or libraries
+- deployment units or processes
+- APIs or service boundaries
+- trust boundaries
+- network hops or transport layers
 
-# Intended Use
+A single concrete implementation may collapse multiple layers into a single executable or service, or distribute them across multiple components. The layering model exists to define **conceptual responsibility boundaries**, not to prescribe implementation structure.
 
-This primer is intended to be read alongside the ASCP architectural overview and normative specifications. It may be cited informatively, used as a checklist when reviewing specification language, or consulted as a reference to ensure terminological consistency across documents and implementations.
+# **11. Syntax vs. Semantics**
 
-By making the underlying conceptual model explicit, this document aims to reduce ambiguity, improve readability, and support the long-term coherence of the ASCP specification suite.
+A foundational distinction in ASCP is between syntax and semantics:
 
-# Table 1: Artipoint vs. Articulation
+- **Syntax** concerns structure and form
+- **Semantics** concerns meaning and interpretation
 
-| **Conceptual Role** | **Correct Term**       |
+**Layering invariants:**
+
+- **Layer-0** is responsible for durable, ordered replication of opaque log entries.
+- **Layer-1** realizes semantic constraints through cryptographic encoding and decoding.
+- **Layer-2** defines the syntax of Artipoint Expressions.
+- **Layer-3** defines the semantics of Artipoints and their relationships.
+
+# **12. Representation vs. Interpretation**
+
+The distinction between **representation** and **interpretation** is fundamental to ASCP’s layering model and is closely related to — but distinct from — the syntax–semantics boundary.
+
+- **Representation** refers to how articulated coordination is encoded into deterministic, machine-parseable form.
+- **Interpretation** refers to how meaning, authority, and consequence are derived from articulated history over time.
+
+In ASCP:
+
+- **Layer-2 (Artipoint Grammar)** is responsible for *representation*. It defines the canonical structure of **Artipoint Expressions** and **Articulation Statements**, ensuring that articulated coordination can be parsed, validated, signed, encrypted, replicated, and replayed.
+- **Layer-3 (Semantic Evaluation)** is responsible for *interpretation*. It evaluates Artipoints, their relationships, and their accumulated history to derive meaning, governance state, trust decisions, and application-specific views.
+
+A construct may be fully represented at Layer-2 without Layer-2 having *any knowledge* of its meaning. Conversely, all Layer-3 interpretation operates exclusively over representations produced and validated by Layer-2.
+
+This separation ensures that **syntax never implies semantics**, and that meaning can evolve without requiring changes to the grammar or transport layers.
+
+# **13. Semantic Constructs and Coordination Constructs**
+
+## **13.1 Semantic Constructs**
+
+A **Semantic Construct** is an architectural classification for concepts whose meaning exists *only* through **Layer-3 semantic interpretation**.
+
+Semantic Constructs:
+
+- are **represented** using Layer-2 Artipoint Expressions,
+- are **authored** via Articulation Statements,
+- are **recorded** durably as Artipoint Records,
+- but are **never defined, interpreted, or evaluated by Layer-2 itself**.
+
+The term *Semantic Construct* describes **where meaning lives in the architecture**, not how something is encoded or transported.
+
+Semantic Constructs include both:
+
+- **First-class coordination elements** (explicitly articulated Artipoints), and
+- **Derived semantic structures** that emerge from interpreting articulated history over time.
+
+## **13.2 Coordination Constructs**
+
+A **Coordination Construct** is a specific class of Semantic Construct that plays a **first-class role in the ASCP coordination graph**.
+
+Formally, a Coordination Construct is an **Artipoint** whose semantic role is to organize, scope, address, distribute, or secure articulated coordination.
+
+Coordination Constructs:
+
+- are authored as semantic acts (Articulation Statements),
+- are represented using the Layer-2 grammar,
+- are interpreted and evaluated at Layer-3,
+- participate explicitly as nodes in the coordination graph.
+
+All Coordination Constructs are Semantic Constructs.
+
+Not all Semantic Constructs are Coordination Constructs.
+
+## **13.3 Classes of Coordination Constructs**
+
+### **13.3.1 Contextual Constructs**
+
+Contextual Constructs organize Artipoints into meaningful scopes of work.
+
+Examples include:
+
+- **Spaces** — top-level accountability and organizational domains
+- **Streams** — coherent threads of work
+- **Piles** — thematic groupings
+
+They define *what the work is about*, independent of visibility, cryptographic distribution, or enforcement.
+
+### **13.3.2 Addressing Constructs**
+
+Addressing Constructs identify *who* participates in coordination.
+
+Examples include:
+
+- **Identity Artipoints**
+- **Group Artipoints**
+
+They define addressable participants, while governance semantics (roles, delegation, authority) are expressed through articulated attributes and interpreted at Layer-3.
+
+### **13.3.3 Distribution Constructs (Channels)**
+
+A **Channel** is a Distribution Construct defined **semantically at Layer-3**.
+
+A Channel defines:
+
+- the intended audience for articulated context,
+- the semantic trust domain under which interpretation occurs,
+- the scope within which articulation is shared.
+
+A Channel is **not** a transport, encryption scheme, or encoding format.
+
+Its semantics are *realized* by Layer-1 through cryptographic encoding and decoding of Articulation Sequences into Artipoint Records.
+
+The distinction between Channel semantics and their mechanical realization is central to ASCP’s layering model.
+
+#### Channel Encoder, Channel Decoder, and “Codec” Terminology
+
+While a **Channel** is defined semantically at Layer-3, its semantics are *realized* mechanically at Layer-1 through two concrete functions:
+
+- the **Channel Encoder**
+- the **Channel Decoder**
+
+The **Channel Encoder** accepts a validated Articulation Sequence and, using parameters derived from the Channel’s semantic definition, produces a channel-admissible Artipoint Record. This process may include cryptographic signing, encryption, and the application of visibility or admission constraints.
+
+The **Channel Decoder** accepts a received Artipoint Record from a Channel Log, verifies its admissibility and authenticity, and decodes it back into an Articulation Sequence suitable for semantic interpretation at Layer-3.
+
+Together, the Channel Encoder and Channel Decoder are informally referred to as the **Channel Codec**. The term *Codec* is used here in its classical communications sense (encoder/decoder pair) and **does not** imply audio, video, or media compression semantics. In ASCP, a Channel Codec operates over **Articulation Sequences**, not media streams.
+
+Critically, the Channel Encoder and Decoder are **parameterized by Channel semantics defined at Layer-3**, but they do **not** interpret, evaluate, or modify those semantics. All meaning, authority, and governance remain the responsibility of Layer-3.
+
+### **13.3.4 Security Constructs**
+
+Security Constructs establish cryptographic material or security-relevant configuration.
+
+Examples include:
+
+- **Keyframe Artipoints**
+- certificate or endorsement Artipoints
+
+They specify *what cryptographic material exists*, while trust relationships and authorization outcomes are evaluated semantically at Layer-3.
+
+# **14. Derived Semantic Structures**
+
+Not all meaning in ASCP corresponds to explicitly articulated Artipoints.
+
+**Derived Semantic Structures** are semantic states assembled by Layer-3 through interpretation of articulated history over time.
+
+Examples include:
+
+- the coordination DAG,
+- effective membership sets,
+- active Keyframe state,
+- governance and authorization outcomes,
+- materialized application views.
+
+Derived Semantic Structures:
+
+- **are not Artipoints**,
+- **are not represented at Layer-2**,
+- **are not enforced by Layer-1**,
+- **exist only as interpretive results** at Layer-3.
+
+This distinction ensures that ASCP preserves a complete, immutable history of articulation while allowing flexible, context-dependent interpretation.
+
+# **15. Definition vs. Enforcement**
+
+ASCP strictly separates **definition** from **enforcement** as a core architectural invariant.
+
+- **Definition** establishes meaning, authority, or consequence.
+- **Enforcement** mechanically applies consequences derived elsewhere.
+
+In ASCP:
+
+- **Layer-3 defines meaning -** (identity semantics, trust evaluation, governance rules, membership, Channel semantics).
+- **Layer-1 realizes defined semantics -** by signing, encrypting, validating, and admitting Articulation Sequences as Artipoint Records.
+- **Layer-0 enforces durability and convergence -** by replicating Channel Logs without interpreting their contents.
+
+Lower layers never decide *what something means* or *whether it is authorized*. They only enforce consequences derived from Layer-3 interpretation.
+
+# **16. Layer Responsibilities**
+
+| **Layer** | **Name**                    | **Primary Responsibility**                                                                    |
+| --------- | --------------------------- | --------------------------------------------------------------------------------------------- |
+| 3         | Semantic Evaluation & Views | Interpretation of Artipoints; governance, trust, membership, derived state, application views |
+| 2         | Artipoint Grammar           | Canonical syntax for Artipoint Expressions and Articulation Statements                        |
+| 1         | Channel Encoding / Decoding | Cryptographic realization of Channel semantics; creation and validation of Artipoint Records  |
+| 0         | Log Synchronization         | Durable, ordered, local-first replication of Channel Logs                                     |
+
+# **17. Common Category Errors**
+
+The following errors are explicitly avoided by the ASCP layering model:
+
+- ❌ *Identity is a Layer-2 construct*  
+  ✅ Identity is a **Layer-3 Semantic Construct** represented using Layer-2 grammar
+- ❌ *Channels define membership*  
+  ✅ Membership is defined by **Layer-3 interpretation**; Layer-1 enforces visibility cryptographically
+- ❌ *The coordination DAG exists at Layer-2*  
+  ✅ The DAG is a **Derived Semantic Structure** assembled at Layer-3
+- ❌ *Trust is enforced by Layer-1*  
+  ✅ Trust is **evaluated at Layer-3**; Layer-1 enforces cryptographic consequences
+
+# **18. ASCP Layering Terminology Table**
+
+| **Layer** | **Concept**                 | **Architectural Role**                                    | **ASCP-Specific Artifact(s)**                  |
+| --------- | --------------------------- | --------------------------------------------------------- | ---------------------------------------------- |
+| 3         | Semantic Construct          | Meaning and interpretation                                | Artipoints                                     |
+| 3         | Coordination Construct      | First-class coordination semantics                        | Spaces, Streams, Piles, Channels, Identity     |
+| 3         | Derived Semantic Structure  | Interpreted state derived from articulated history        | DAGs, membership sets, governance outcomes     |
+| 2         | Representation              | Canonical syntactic form                                  | Artipoint Expressions, Articulation Statements |
+| 2         | Grammar Validation          | Structural correctness                                    | ABNF grammar                                   |
+| 1         | Channel Encoding / Decoding | Cryptographic realization of Channel semantics            | Artipoint Records                              |
+| 1         | Visibility Enforcement      | Confidentiality and admission                             | Channel envelopes                              |
+| 0         | Log Synchronization         | Durable, ordered replication                              | Channel Logs                                   |
+| Meta      | Coordination Log            | Architectural abstraction of durable articulation history | Realized via Channel Logs                      |
+
+# **19. Terminological Tables**
+
+## **Table 1: Artipoint vs. Articulation**
+
+| **Conceptual Role** | **Term**               |
 | ------------------- | ---------------------- |
 | Semantic unit       | Artipoint              |
 | Grammar form        | Artipoint Expression   |
@@ -121,10 +349,20 @@ By making the underlying conceptual model explicit, this document aims to reduce
 | Batch of acts       | Articulation Sequence  |
 | Logged artifact     | Artipoint Record       |
 
-# Table 2: Coordination Log vs. Channel Log
+## **Table 2: Coordination Log vs. Channel Log**
 
-| **Concept**          | **Scope**     | **Nature**              |
-| -------------------- | ------------- | ----------------------- |
-| **Coordination Log** | Architectural | Abstract role           |
-| **Channel Log**      | Per-Channel   | Concrete data structure |
+| **Concept**      | **Scope**     | **Nature** |
+| ---------------- | ------------- | ---------- |
+| Coordination Log | Architectural | Abstract   |
+| Channel Log      | Per-Channel   | Concrete   |
 
+# **20. Intended Use**
+
+This document is the **governing terminology reference** for the ASCP specification suite. It should be used to:
+
+- interpret normative specifications
+- guide consistent language across drafts
+- prevent semantic drift
+- support rigorous external review
+
+By unifying coordination vocabulary and architectural layering in a single primer, ASCP establishes a durable conceptual spine for shared cognition infrastructure.
