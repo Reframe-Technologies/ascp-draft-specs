@@ -2,7 +2,7 @@
 
 **Terminology and Architectural Layering Reference**
 
-Version: 0.6 — Informational  
+Version: 0.61 — Informational  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -235,7 +235,7 @@ A Channel is **not** a transport, encryption scheme, or encoding format.
 
 Its semantics are *realized* by Layer-1 through cryptographic encoding and decoding of Articulation Sequences into Artipoint Records.
 
-The distinction between Channel semantics and their mechanical realization is central to ASCP’s layering model.
+The distinction between Channel semantics and their mechanical realization is central to ASCP's Architecture.
 
 #### Channel Encoder, Channel Decoder, and “Codec” Terminology
 
@@ -295,9 +295,9 @@ ASCP strictly separates **definition** from **enforcement** as a core architectu
 
 In ASCP:
 
-- **Layer-3 defines meaning -** (identity semantics, trust evaluation, governance rules, membership, Channel semantics).
-- **Layer-1 realizes defined semantics -** by signing, encrypting, validating, and admitting Articulation Sequences as Artipoint Records.
-- **Layer-0 enforces durability and convergence -** by replicating Channel Logs without interpreting their contents.
+- **Layer-3 defines meaning:** identity semantics, trust evaluation, governance rules, membership, Channel semantics.
+- **Layer-1 realizes defined semantics:** by signing, encrypting, validating, and admitting Articulation Sequences as Artipoint Records.
+- **Layer-0 enforces durability and convergence:** by replicating Channel Logs without interpreting their contents.
 
 Lower layers never decide *what something means* or *whether it is authorized*. They only enforce consequences derived from Layer-3 interpretation.
 
