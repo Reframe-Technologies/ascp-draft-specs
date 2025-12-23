@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.50 — Informational (Pre-RFC Working Draft)  
+Version: 0.51 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -25,7 +25,7 @@ Feedback from protocol designers, implementers, cryptographers, and distributed 
 
 # **2. Abstract**
 
-This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**. It defines how human participants and autonomous agents are identified, how cryptographic authorship of articulated statements is verified, and how trust relationships are evaluated over time in a distributed, append-only coordination system.
+This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**. It defines how human participants and autonomous agents are identified, how cryptographic authorship of articulated statements is verified, and how trust relationships are evaluated over time in a distributed, append-only **Coordination Log**.
 
 ASCP employs a **log-anchored trust model** in which identities, certificates, endorsements, and key-binding events are recorded as immutable, cryptographically signed log entries. Trust verification is performed against historical log state rather than through real-time certificate validation, enabling durable authorship verification, offline replayability, and deterministic trust evaluation independent of external infrastructure availability.
 
@@ -37,7 +37,11 @@ This document is limited to identity representation, cryptographic provenance, a
 
 This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**. It defines how participants—human users, autonomous agents, and system components—are identified, how cryptographic authorship of ASCP statements is verified, and how trust relationships are evaluated over time using immutable, append-only logs.
 
-In ASCP, identity and trust function as **provenance mechanisms**, not as permission or policy systems. Cryptographic identity establishes *who authored a statement* and *which cryptographic material was valid at the time of authorship*. Whether a statement is authorized, accepted, or acted upon is determined independently by governance and access-control semantics defined in companion specifications. This separation ensures that authorship and historical verifiability remain stable even as roles, authority, or participation evolve.
+**Identity is a Layer-3 Addressing Construct**: a semantic reference used to attribute authorship, anchor governance semantics, and enable durable provenance. It is *represented* using the Layer-2 Artipoint Grammar and *interpreted* exclusively at Layer-3, not enforced by cryptographic mechanism alone.
+
+Identity and trust function as **provenance mechanisms** rather than permission or policy systems. Cryptographic identity establishes *who authored a statement* and *which cryptographic material was valid at the time of authorship*. All identity–key bindings are expressed as **articulated state**—immutable coordination history recorded in the log—rather than as mutable system assertions.
+
+This design ensures that authorship and historical verifiability remain stable even as roles, authority, or participation evolve. Whether a statement is authorized, accepted, or acted upon is determined independently by governance and access-control semantics defined in companion specifications.
 
 All trust decisions in ASCP are derived from **immutable, signed log entries** rather than from real-time certificate validation or mutable external state. This *log-anchored* model enables deterministic, replayable trust evaluation that remains valid offline and independent of the continued availability of third-party infrastructure.
 
@@ -84,12 +88,9 @@ All normative requirements in this document describe the **intended behavior** o
 
 This document does **not** define:
 
-- Governance semantics, authorization decisions, membership rules, or role evaluation
-- → See *ASCP Governance and Access Control Specification*.
-- Distribution-layer cryptographic behavior, including channel encryption and message delivery
-- → See *ASCP Channels: Secure Distribution Layer*.
-- Transport, replication, ordering, or peer authentication semantics
-- → See *ASCP Log Synchronization Protocol (ALSP)*.
+- Governance semantics, authorization decisions, membership rules, or role evaluation. See *ASCP Governance and Access Control Specification*.
+- Distribution-layer cryptographic behavior, including channel encryption and message delivery. See *ASCP Channels: Secure Distribution Layer*.
+- Transport, replication, ordering, or peer authentication semantics. See *ASCP Log Synchronization Protocol (ALSP)*.
 - Application-specific user interfaces or workflow behavior beyond cryptographic identity concerns.
 
 ## **3.5 Relationship to Other ASCP Specifications**
@@ -104,7 +105,7 @@ Together, these specifications form a coherent architecture for secure, composab
 
 # **4. Terminology**
 
-This section defines terms used throughout this specification.
+This section defines terms used throughout this specification and this document follows the terminology and layering conventions defined in the **ASCP Terminology Primer**, which serves as the authoritative reference for distinguishing semantic constructs, representations, derived structures, and enforcement mechanisms across the ASCP specification suite.
 
 Unless explicitly stated otherwise, all definitions in this section are **informational**. Normative requirements are defined in subsequent sections.
 
@@ -138,7 +139,7 @@ Artipoint Records are the concrete artifacts stored in ASCP logs and replicated 
 
 A class of **Artipoints** whose semantic meaning pertains to **cryptographic identity, trust, provenance, or key lifecycle state**.
 
-Security Construct Artipoints are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP channel logs.
+Security Construct Artipoints are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP Channels.
 
 Examples include Identity Artipoints, Certificate Artipoints, RootCA Artipoints, and Keyframe Artipoints.
 
@@ -251,9 +252,9 @@ Each replica maintains all information required to validate historical authorshi
 
 ### **3. Deterministic authorship verification**
 
-Signed statements reference cryptographic keys via a kid, which resolves—through historical log state—to a Certificate Artipoint containing the corresponding public key. Because identities, certificates, bindings, and endorsements are immutably recorded, verifiers can reproduce historical trust decisions with deterministic accuracy.
+Signed statements reference cryptographic keys via a kid, which resolves—through historical log state—to a Certificate Artipoint containing the corresponding public key. Because identities, certificates, bindings, and endorsements are immutably recorded, verifiers can reproduce historical trust decisions with deterministic accuracy. The effective trust state at any point in time is a **Derived Semantic Structure**, assembled through Layer-3 interpretation of articulated history rather than stored explicitly.
 
-This resolution and evaluation process is defined **entirely at Layer-3** and operates exclusively over historical log state.
+This resolution and evaluation process is defined **entirely at Layer-3** and operates exclusively over historical log state. Cryptographic verification supplies evidence; **trust itself is a semantic judgment** derived from that evidence through deterministic interpretation.
 
 This model contrasts with global transparency systems (e.g., Certificate Transparency), which assume untrusted operators and public auditability. ASCP Channels operate within authenticated collaboration boundaries and therefore prioritize **durable provenance** over global consistency proofs.
 
@@ -282,13 +283,15 @@ Security Construct Artipoints are **Layer-3 semantic constructs** that are repre
 
 ### **Layer-1: Channels (Secure Distribution Layer)**
 
-Layer-1 Channels provide authenticated, append-only distribution of Artipoint Records among participants. Their trust boundary:
+Layer-1 Channels provide authenticated, append-only distribution of Artipoint Records among participants. Channels **enforce cryptographic consequences** derived from Layer-3 trust evaluation but do not themselves define, evaluate, or provide trust.
+
+Their trust boundary:
 
 - assumes authenticated membership,
 - validates signatures and declared key purposes,
 - enforces confidentiality and selective visibility.
 
-Channels consume cryptographic consequences provisioned by Layer-3 but do **not** interpret identity semantics, endorsements, or governance meaning.
+Channels consume cryptographic consequences provisioned by Layer-3 without interpreting identity semantics, endorsements, or governance meaning.
 
 ### **Layer-0: ALSP (Log Synchronization Protocol)**
 
@@ -389,7 +392,7 @@ This section is **informational**. It establishes the mental model required to i
 
 ## **6.1 Identity as an Addressing Construct**
 
-In ASCP, an *Identity* represents a participant—human, autonomous agent, or system component—that may author Artipoints and participate in collaborative structures. Identities function as an **addressing construct**, not as credentials or permissions.
+In ASCP, an *Identity* represents a participant—human, autonomous agent, or system component—that may author Artipoints and participate in collaborative structures. Identity functions as a **semantic addressing construct** rather than a credential, account, or permission bearer.
 
 An identity provides:
 
@@ -512,7 +515,7 @@ This section defines the **normative Security Construct Artipoints** used by ASC
 
 Each Security Construct Artipoint defined below is a **peer construct**. All follow the same structural pattern and are evaluated under the same log-anchored trust model.
 
-All Security Construct Artipoints share the following common normatie requirements:
+All Security Construct Artipoints share the following common normative requirements:
 
 1. They **MUST** be immutable Artipoints conforming to the ASCP Artipoint Grammar.
 2. They **MUST** be sufficient for deterministic reconstruction of trust state at any historical time (“log-time trust”).
@@ -614,7 +617,7 @@ A RootCA:
 - Acts as an author (may sign Artipoints directly)
 - Does **not** require an Identity Artipoint pointing to it
 
-The RootCA represents an implied, unnamed authority anchoring the instance.
+The RootCA represents an implied, unnamed **semantic authority** anchoring the instance. It is a trust anchor for verification and provenance, not a participant identity and not a governance actor unless explicitly referenced by articulated governance rules.
 
 ### 7.3.2 Canonical Form
 
