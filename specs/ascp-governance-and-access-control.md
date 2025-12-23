@@ -2,14 +2,14 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.32 — Informational (Pre-RFC Working Draft)  
+Version: 0.33 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
 # **1. Status of This Document**
 
-This document is part of the ASCP specification suite and defines the **governance and access control mechanisms** for ASCP collaborative structures, including membership attributes, inheritance semantics, RACI-style roles, and Channel governance. It is published at this time to gather community feedback on the governance model and evaluation semantics.
+This document is part of the ASCP specification suite and defines the **governance and access control mechanisms** for ASCP coordination constructs, including membership attributes, inheritance semantics, RACI-style roles, and Channel governance. It is published at this time to gather community feedback on the governance model and evaluation semantics.
 
 This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Implementations based on this document should be considered **experimental**.
 
@@ -19,27 +19,29 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 # 2. Abstract
 
-This document defines the governance and access control model for the Agents Shared Cognition Protocol (ASCP). It specifies how collaborative structures—Spaces, Streams, Piles, and Groups—encode membership, authorship privileges, administrative stewardship, delegation, and role semantics as immutable Artipoints. The governance substrate defines the semantics of authority and participation but delegates enforcement to ASCP-compliant applications and agents.
+This document defines the governance and access control model for the Agents Shared Cognition Protocol (ASCP). It specifies how coordination constructs—Spaces, Streams, Piles, and Groups—encode membership, authorship privileges, administrative stewardship, delegation, and role semantics as immutable Artipoints. The governance substrate defines the semantics of authority and participation but delegates enforcement to ASCP-compliant applications and agents.
 
-The model enables decentralized, append-only, auditable governance for hybrid human–AI teams. It supports modular participant sets, hierarchical inheritance, dynamic virtual groups, RACI-style coordination roles, and explicit deny/expiration semantics. This specification describes the normative evaluation rules for deriving effective permissions and roles within the ASCP structural DAG.
+The model enables decentralized, append-only, auditable governance for hybrid human–AI teams. It supports modular participant sets, hierarchical inheritance, dynamic virtual groups, RACI-style coordination roles, and explicit deny/expiration semantics. This specification describes the normative evaluation rules for deriving effective participation, authority, and role assignments within the ASCP structural DAG.
 
 This document depends on and integrates with the cryptographic identity model defined in **ASCP Identity & Trust** and the distribution semantics of **ASCP Channels**.
 
 # 3. Introduction
 
-Distributed collaborative systems require explicit mechanisms to express participation, authority, and accountability across autonomous replicas without centralized coordination. This specification defines the governance layer (Layer-2/3) of ASCP, which provides the semantic foundation for access control and role assignment. It operates above the cryptographic identity layer and provides policy input to the distribution layer, enabling applications to make consistent authorization decisions across the coordination graph.
+Distributed collaborative systems require explicit mechanisms to express participation, authority, and accountability across autonomous replicas without centralized coordination. This specification defines the governance semantics of **Layer-3** of ASCP, represented using **Layer-2 Artipoint grammar**, which together provide the semantic foundation for access control and role assignment. It operates above the cryptographic identity layer and provides policy input to the distribution layer, enabling applications to make consistent authorization decisions across the coordination graph via the **Effective Governance Set**.
 
 ## 3.1 Design Principles
 
 The governance model is built on three core principles:
 
 1. **Declarative Policy, External Enforcement** — Governance declares semantic authority; enforcement is performed by application logic and transport layers
-2. **Inheritance with Explicit Override** — Attributes flow from parent to child structures unless explicitly overridden
+2. **Inheritance with Explicit Override** — Attributes flow from parent to child Constructs unless explicitly overridden
 3. **Composable Participant Sets** — Groups and virtual references enable flexible, reusable participant definitions
+
+All governance semantics are introduced exclusively through **Articulation Statements** that create or modify **Artipoints**. No governance meaning exists outside articulated history.
 
 ## 3.2 Scope of this Specification
 
-This specification defines the governance attributes that express participation and authority within ASCP structures, including Group composition for reusable participant sets, RACI-style coordination roles for responsibility assignment, and inheritance rules that propagate governance from parent to child structures. It further specifies deny and expiration semantics for overriding and time-limiting grants, virtual group resolution for dynamic participant references, and the normative evaluation algorithm for computing the effective governance set from the structural DAG.
+This specification defines the governance attributes that **declare semantic participation and authority** within ASCP Constructs, including Group composition for reusable participant sets, RACI-style coordination roles for responsibility assignment, and inheritance rules that propagate governance from parent to child Constructs. It further specifies deny and expiration semantics for overriding and time-limiting grants, virtual group resolution for dynamic participant references, and the normative evaluation algorithm for computing the effective governance set from the structural DAG.
 
 #### Syntax vs. Semantics Boundary
 
@@ -55,11 +57,11 @@ This specification does not define application-level UI behavior or runtime enfo
 
 # 4. Terminology
 
-Key terms defined or referenced in this document beyond the definitions of Artipoints, Articulation Statements and other key terms which appear in the ASCP top-level specification:
+Key terms defined or referenced in this document beyond the definitions of Artipoints, Articulation Statements, and other foundational terms which appear in the ASCP top-level specification. All terminology in this document is used according to the definitions in the **ASCP Terminology Primer**, which serves as the authoritative reference for ASCP language and architectural layering.
 
 ## **4.1 Coordination Construct**
 
-A **Coordination Construct** is an Artipoint whose type declares a first-class role within the ASCP coordination graph. Constructs define high-level coordination functions such as contextual scoping, participant addressing, cryptographic distribution, or security provisioning. Constructs MAY carry attributes that express governance, trust, attestation, or configuration semantics, but such semantics ARE NOT themselves Constructs.
+A **Coordination Construct** is an Artipoint whose type declares a first-class role within the ASCP coordination graph. Constructs define high-level coordination functions such as contextual scoping, participant addressing, cryptographic distribution, or security provisioning. Constructs MAY carry attributes that express governance, trust, attestation, or protocol configuration semantics, but such semantics ARE NOT themselves Constructs.
 
 ## **4.2 Contextual Construct**
 
@@ -67,7 +69,7 @@ A **Contextual Construct** organizes Artipoints into meaningful scopes of work. 
 
 ## **4.3 Addressing Construct**
 
-An **Addressing Construct** defines one or more addressable participants. Addressing Constructs—including Identities and Groups—resolve to sets of Identity Artipoints for participation, membership, or audience evaluation. Addressing Constructs specify *who is involved*, while related governance semantics (roles, delegations, constraints) are expressed via attributes, not as separate constructs.
+An **Addressing Construct** is a **Semantic Construct** that defines one or more addressable participants. Addressing Constructs—including Identities and Groups—resolve to sets of Identity Artipoints for participation, membership, or audience evaluation. Addressing Constructs specify *who is involved*, while related governance semantics (roles, delegations, constraints) are expressed via attributes, not as separate constructs.
 
 ## **4.4 Distribution Construct**
 
@@ -95,7 +97,7 @@ A **Virtual Group** is a symbolic participant reference (e.g., @members, @writer
 
 ## **4.10 Vector of Execution**
 
-A **Vector of Execution** is a bounded, directed context within which articulated work progresses toward a specific outcome or purpose. Vectors of Execution are primarily expressed through Stream Artipoints, which define self-contained execution contexts with clear scope, participants, and accountability. The term emphasizes both directionality (oriented toward an outcome) and boundedness (containing only artifacts and context relevant to that outcome).
+A **Vector of Execution** is a bounded, directed context within which articulated work progresses toward a specific outcome or purpose. Vectors of Execution are primarily expressed through Stream Artipoints, which define self-contained execution contexts with clear scope, participants, and accountability. The term emphasizes directionality toward an outcome and boundedness to only those artifacts and context relevant to that outcome. A Vector of Execution does **not** imply scheduling, procedural control, execution engines, or runtime orchestration.
 
 # **5. Governance Model**
 
@@ -125,7 +127,7 @@ Governance semantics are:
 - **Semantic** — interpreted by agents and applications
 - **Deterministic** — evaluated identically across replicas
 
-Governance is therefore neither advisory nor merely descriptive. Attributes such as writer and owner define **permission and authority** that MUST be honored by compliant systems.
+Governance is therefore neither advisory nor merely descriptive; it defines semantic authority, not execution behavior. Attributes such as writer and owner define **permission and authority** that MUST be honored by compliant systems.
 
 ## **5.2 Governance Constructs and Scope**
 
@@ -173,7 +175,7 @@ Governance defines **what is permitted and authoritative**, but does not perform
 
 Responsibility is intentionally separated across layers:
 
-- **Governance (Layer-2 / Layer-3)**
+- **Governance** (Layer-3 semantics, represented at Layer-2)
   - Defines permission, authority, participation, and roles
   - Produces the **Effective Governance Set**
 - **Applications and Agents**
@@ -185,7 +187,7 @@ Responsibility is intentionally separated across layers:
 - **Transport (Layer-0)**
   - Performs append-only replication without semantic interpretation
 
-This separation ensures that governance meaning remains human- and agent-interpretable while cryptographic execution remains deterministic and semantically agnostic.
+This separation ensures that governance meaning remains human and agent interpretable while cryptographic execution remains deterministic and semantically agnostic.
 
 ## **5.5 Effective Governance Set**
 
@@ -225,7 +227,7 @@ Governance inheritance and role evaluation are defined in detail in **Section 12
 
 All Governance attributes defined in this specification are **Coordination Construct** agnostic. They **MAY** apply to Spaces, Streams, Piles, Channels, Groups and other future Artipoint types.
 
-## 6.2 Writer
+## 6.1 Writer
 
 ```
 writer + <participant>  
@@ -234,7 +236,7 @@ writer - <participant>
 
 Indicates who may articulate into the Structure.
 
-## 6.3 Owner
+## 6.2 Owner
 
 ```
 owner := <participant>
@@ -242,7 +244,7 @@ owner := <participant>
 
 Defines the administrative steward of a Structure.
 
-## 6.4 Inheritance Override
+## 6.3 Inheritance Override
 
 ```
 inherits := <structure-ref | "default">
@@ -250,7 +252,7 @@ inherits := <structure-ref | "default">
 
 Defines explicit inheritance source.
 
-## 6.5 Deny Semantics
+## 6.4 Deny Semantics
 
 ```
 deny::<attribute> := <participant>
@@ -258,7 +260,7 @@ deny::<attribute> := <participant>
 
 Denials override inherited and local positives.
 
-## 6.6 Expiration Semantics
+## 6.5 Expiration Semantics
 
 ```
 expiration::<attribute> := (<participant>, <timestamp>)
@@ -271,39 +273,40 @@ Expired grants MUST NOT be effective after the timestamp.
 ## 7.1 Member
 
 ```
-member + <participant>  
-member - <participant>
+member + <identity-uuid>  
+member - <identity-uuid>
 ```
 
-The \`member\` attribute expresses semantic inclusion of a participant within a Structure. It defines participation and coordination visibility at the semantic layer and is evaluated according to the inheritance and override rules described in this specification.
+The `member` attribute expresses semantic inclusion of a participant within a Construct. It defines participation and coordination visibility at the semantic layer and is evaluated according to the inheritance and override rules described in this specification.
 
 Membership does not itself grant cryptographic access to Channel content or any other transport-layer authorization. Cryptographic access is determined exclusively by the Layer-1 Channel key provisioning mechanism, which is configured based on governance evaluation performed by Layer-3 clients.
 
-Governance defines \*who is considered part of a Structure\*. Channels define \*who receives decryptable payloads\*. These domains are intentionally orthogonal but connected through Keyframes and Layer-3 interpretation.
+Governance defines who is considered part of a Construct. Channels define **who receives decryptable payloads**. These domains are intentionally orthogonal but connected through Keyframes and Layer-3 interpretation.
 
-**Note**: Keyframes are NOT governance Artipoints but may be created as a result of governance evaluations provided to Layer-1.
+**Note**: Keyframes are NOT governance Artipoints but may be created as a result of governance evaluations provided to Layer-1 via the provisioning of key material for Channel Encoder and Channel Decoder operations.
 
 ## 7.2 Flag
 
 ```
-flag + <participant>  
-flag - <participant>
+flag + <identity-uuid>  
+flag - <identity-uuid>
 ```
 
 Operations:
 
-- flag + user\@domain — user is actively tracking this Artipoint
-- flag - user\@domain — user is no longer tracking it
+- flag + \<identity-uuid> — user is actively tracking this Artipoint
+- flag - \<identity-uuid> — user is no longer tracking it
 
 Scope:
 
 - **Applies to any Artipoint**, including Streams, Piles, Spaces, and content-level statements
-- Flags are visible to all Channel members and act as a social contract—indicating who is maintaining awareness
-- Used to drive attention, notifications, inboxes, and working memory interfaces
+- Flags, as attributes on Artipoints, are visible to all Channel members and act as a social contract—indicating who is maintaining awareness.
+- MAY be used to drive attention, notifications, inboxes, and working memory interfaces
+- Flag visibility follows Channel distribution semantics and is not itself governed by the flag attribute.
 
 # **8. Contextual Construct Artipoints**
 
-Contextual Constructs are Layer-2 Artipoints whose **type** declares a first-class semantic role within the ASCP coordination graph. They define the **contextual boundaries** within which articulated work is grouped, interpreted, governed, and related. Unlike Addressing or Distribution Constructs, Contextual Constructs specify **what the work is about**, not *who* participates or *how* it is distributed.
+Contextual Constructs are Layer-2 encoded Artipoints whose **type** declares a first-class semantic role within the ASCP coordination graph. They define the **contextual boundaries** within which articulated work is grouped, interpreted, governed, and related. Unlike Addressing or Distribution Constructs, Contextual Constructs specify **what the work is about**, not *who* participates or *how* it is distributed.
 
 Each Construct contributes a distinct cognitive and structural function:
 
@@ -324,7 +327,7 @@ Payloads serve as **semantic anchors**—they provide external references, descr
 
 ## **8.1 Bookmark Artipoint**
 
-A **Bookmark** is a Layer-2 Artipoint of type bookmark representing the most atomic Contextual Construct. It records an immutable cognitive decision that a particular external resource is relevant to a given context at a specific moment.
+A **Bookmark** is a Layer-2 encoded Artipoint of type bookmark representing the most atomic Contextual Construct. It records an immutable cognitive decision that a particular external resource is relevant to a given context at a specific moment.
 
 A Bookmark:
 
@@ -362,7 +365,7 @@ A Bookmark captures the *Reference Principle*: ASCP separates **cognitive struct
 
 ## **8.2 Pile Artipoint**
 
-A **Pile** is a Layer-2 Artipoint of type pile representing a **flat, thematic grouping** of Artipoints. It provides associative clustering without hierarchy, sequence, or recursion.
+A **Pile** is a Layer-2 encoded Artipoint of type pile representing a **flat, thematic grouping** of Artipoints. It provides associative clustering without hierarchy, sequence, or recursion.
 
 A Pile:
 
@@ -412,7 +415,7 @@ Piles do not constrain governance semantics. Any governance attributes—includi
 
 ## **8.3 Stream Artipoint**
 
-A **Stream** is a Layer-2 Artipoint of type stream representing a **context-switchable thread of work**—the atomic unit of *execution* in the ASCP model.
+A **Stream** is a Layer-2 encoded Artipoint of type stream representing a **context-switchable thread of work**—the atomic unit of *execution* in the ASCP model.
 
 A Stream:
 
@@ -463,7 +466,7 @@ Streams do not constrain governance semantics. Any governance attributes—inclu
 
 ## **8.4 Space Artipoint**
 
-A **Space** is a Layer-2 Artipoint of type space representing an **accountability container**. Spaces define the highest-level contextual boundaries—corresponding to teams, programs, departments, or strategic initiatives.
+A **Space** is a Layer-2 encoded Artipoint of type space representing an **accountability container**. Spaces define the highest-level contextual boundaries—corresponding to teams, programs, departments, or strategic initiatives.
 
 A Space:
 
@@ -541,21 +544,21 @@ Contextual Constructs may evolve through later articulations. The following exam
 
 These evolutionary paths allow lightweight clustering to mature into structured execution contexts without losing provenance. The specific evolution semantics depend on the operators used and the governance attributes applied during the transition.
 
-# 9. **Addressing** Contruct Artipoints
+# 9. **Addressing** Construct Artipoints
 
-Addressing Constructs define reusable participant sets for use with the other types of Collaboration Contructs. These constructs are expressed as Artipoints following the Layer-2 Artipoint Grammar.
+Addressing Constructs define reusable participant sets for use with the other types of Coordination Constructs. These constructs are expressed as encoded Artipoints following the Layer-2 Artipoint Grammar.
 
 ## **9.1 Identity Artipoint (Informational)**
 
-Declares a human, agent, or system identity. The normative reference for this Artipoint type can be found in **ASCP Trust and Indentity Architecture**.
+Declares a human, agent, or system identity. The normative reference for this Artipoint type can be found in **ASCP Trust and Identity Architecture**.
 
-## **9.1 Group Artipoint**
+## **9.2 Group Artipoint**
 
-A **Group Artipoint** is a Layer-2 Artipoint of type group representing a **reusable, addressable participant set** used for governance and access-control semantics. A Group functions as a modular component that can be referenced by Spaces, Streams, Piles, Channels, or other Groups. Groups **MAY** contain explicit participants, referenced Groups, or Virtual Groups (e.g., @owners, @members), and **MAY** carry governance attributes such as role assignments. Groups **DO NOT** participate in structural inheritance and have no ordering or hierarchical semantics beyond explicit composition expressed via Articulation Statements.
+A **Group Artipoint** is a Layer-2 encoded Artipoint of type group representing a **reusable, addressable participant set** used for governance and access-control semantics. A Group functions as a modular component that can be referenced by Spaces, Streams, Piles, Channels, or other Groups. Groups **MAY** contain explicit participants, referenced Groups, or Virtual Groups (e.g., @owners, @members), and **MAY** carry governance attributes such as role assignments. Groups **DO NOT** participate in structural inheritance and have no ordering or hierarchical semantics beyond explicit composition expressed via Articulation Statements.
 
 A Group is immutable once instantiated; all evolution of its definition occurs through additional articulations referencing it.
 
-### **9.1.1 Canonical Form**
+### **9.2.1 Canonical Form**
 
 ```c
 [uuid, author, timestamp,
@@ -565,7 +568,7 @@ A Group is immutable once instantiated; all evolution of its definition occurs t
 ]
 ```
 
-### **9.1.2 Field Requirements (Normative)**
+### **9.2.2 Field Requirements (Normative)**
 
 A Group Artipoint **MUST** conform to the Artipoint Grammar defined in the ASCP Artipoint Grammar specification. The following requirements apply specifically to Group instantiation:
 
@@ -583,11 +586,11 @@ A Group Artipoint **MUST** conform to the Artipoint Grammar defined in the ASCP 
   - If typed, the payload **SHOULD** use the uri: prefix, referencing the Group’s authoritative external representation (e.g., a directory or application metadata).
   - The payload **MUST NOT** contain nested Artipoint grammar constructs or embedded articulation expressions.
 
-### **9.1.3 Required Attributes**
+### **9.2.3 Required Attributes**
 
 A Group Artipoint defines **no required attributes** beyond those mandated by the core Artipoint structure.
 
-### **9.1.4 Optional Attributes**
+### **9.2.4 Optional Attributes**
 
 All optional attributes **MUST** adhere to the normative governance semantics defined elsewhere in the ASCP specification suite. A Group Artipoint **MAY** include optional attributes to express participant membership and governance semantics, including but not limited to:
 
@@ -680,13 +683,42 @@ member - @writers
 
 During evaluation, each Virtual Group expands into a concrete set of identity UUIDs according to current governance state.
 
-# **10. Channels as Governance-Controlled Distribution Structures**
+# **10. Channels as Governance-Controlled Distribution Construct**
 
-Channels are the ASCP **Distribution Construct** that define the cryptographic delivery boundaries for articulated context. Channels determine how Artipoints are signed, encrypted, transported, and synchronized across replicas. Governance interacts with Channels by determining *who* participates in a Channel and *when* a Channel’s cryptographic configuration must change. These governance decisions are reflected in **Keyframes**, which act as declarative, immutable markers of cryptographic epochs.
+Channels are the ASCP **Distribution Construct** that define the cryptographic delivery boundaries for articulated context. Channels determine how Articulation Sequences are signed, encrypted, transported, and synchronized across replicas. Governance is evaluated to determine *who* participates in a Channel and *when* a Channel Encoder and Decoder cryptographic configuration must change. These governance decisions are reflected via **Keyframes**, which act as declarative, immutable markers of cryptographic epochs.
 
 This section defines how governance influences Channel state, how Keyframes express that state, and how Layer-3 provisions the resulting cryptographic material to lower layers.
 
-## **10.1 Governance Role in Channels**
+## **10.1 Channel Artipoints**
+
+A Channel Artipoint is a Layer-2 encoded Distribution Construct of type `channel` that declaratively records cryptographic and operational configuration to be interpreted by Layer-3 and realized by the Channel Encoder and Decoder at Layer-1 (e.g., encryption algorithms, signing requirements) and the Channel Access Key (CAK) at Layer-0.
+
+### **10.1.1 Canonical Form**
+
+```bnf
+[uuid, source, timestamp,
+  ["channel", "Hiring Team", "@HiringTeam"] .
+  (
+    payload_cipher := "<cipher-id>",
+    message_signing := "<signing-id>",
+    channel_access_alg := "<access-id>",
+    bootstrap := false,
+    keyframe::kid := "ascp:keyframe:<uuid>" 
+  )
+]
+
+```
+
+Layer-1 never reads these attributes directly; Layer-3 processes them and generates a provisioning configuration for Layer-1.
+
+### **10.1.2 Required Attributes**
+
+- `payload_cipher`: The symmetric cipher identifier used to determine whether Layer-1 applies JWE encryption to envelopes. Valid values are defined by Section 6.3 or use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Note: In current implementations, @bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band. See **ASCP Bootstrap Process and Channel Discovery** for details.
+- `message_signing`: The signature algorithm required for Artipoint signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
+- `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. Determines the CAK algorithm used at Layer-0. The algorithm used for the Channel Access Key (CAK) is determined by Layer-0 policy including a value for `"none"` for open channels.
+- `keyframe::kid`: The identifier for the currently active symmetric key. Each Channel Artipoint MUST have a `keyframe::kid` Attribute pointing to the current Keyframe associated with the channel in value form of `ascp:keyframe:<uuid>`. The kid identifies the AES and CAK keys in use for the Keyframe’s lifetime.
+
+#### **10.1.3 Optional Governance Attributes**
 
 Channels may carry any governance attributes defined by this specification, including `member`, `writer`, `owner`, `role::*`, and `deny` or `expiration` semantics. These attributes determine:
 
@@ -701,9 +733,24 @@ It does **not** define the mechanics of encryption, signing, or replication.
 
 Changes in governance state—such as adding or removing participants, modifying responsibilities, or responding to a compromise event—MAY require a new cryptographic epoch for the Channel. These epochs are expressed through **Keyframes**.
 
+#### **10.1.4 Other Optional Attributes**
+
+- `bootstrap`: Boolean flag indicating if this is the organizational bootstrapping Channel. Special case for Channels without Keyframes (initial system Channel). Current implementations do not support encryption for a bootstrap Channel as there is no defined mechanism for passing the symmetric key out-of-band of any channel.
+
+### **10.1.5 Example Channel Artipoint**
+
+```bnf
+[uuid, source, timestamp,
+  channel-uuid .
+  (
+    keyframe::kid := "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002",
+  )
+]
+```
+
 ## **10.2 Keyframes as Channel Cryptographic Epochs**
 
-A **Keyframe** is a Layer-2 Artipoint of type keyframe that declares the intended cryptographic state of a Channel at a particular point in time. Keyframes:
+A **Keyframe** is a Layer-2 encoded Artipoint of type keyframe that declares the intended cryptographic state of a Channel at a particular point in time. Keyframes:
 
 - identify a new cryptographic epoch,
 - reference the Channel they configure,
@@ -943,20 +990,16 @@ This structure ensures that every execution context is enclosed within a clear a
 
 # 13. Security Considerations
 
-Governance requires verified identities. All governance Artipoints MUST be signature-verified prior to evaluation. Identity verification, trust chain validation, and key material handling are defined in:
+Governance requires verified identities. All Articulation Sequences carrying governance semantics MUST be signature-verified. Identity verification, trust chain validation, and key material handling are defined in:
 
 - **ASCP Identity & Trust**
 - **ASCP Channels: Secure Distribution Layer Specification**
 
 **Important**: Governance evaluation **MUST** occur before any cryptographic state changes in Channels. Incorrect or malicious governance interpretation can result in unauthorized inclusion or exclusion at the semantic layer, but Layer-1’s cryptographic rules remain strict and independent.
 
-# 14. Interaction with Bootstrap (TBD)
+# 14. Interaction with Bootstrap
 
-Bootstrap establishes the initial trust root and authoritative governance metadata. Clients MUST follow:
-
-- **ASCP: Bootstrap Process and Channel Discovery**
-
-Incorrect bootstrap results in incorrect governance state.
+Bootstrap establishes the initial trust root and authoritative governance metadata. Clients MUST follow policies and procedures defined by **ASCP: Bootstrap Process and Channel Discovery**. Incorrect bootstrap may result in incorrect governance state.
 
 # Appendix A — Examples (Informative)
 
@@ -966,11 +1009,11 @@ Incorrect bootstrap results in incorrect governance state.
 [group-irt-guid, source, timestamp,
   ["group", "Incident Response Team", "urn:group:irt"] .
   (
-    member + alice@org.com,
-    member + bob@org.com,
-    owner := carol@org.com,
-    role::responsible := alice@org.com,
-    role::accountable := carol@org.com
+    member + "550e8400-e29b-41d4-a716-446655440010",
+    member + "550e8400-e29b-41d4-a716-446655440011",
+    owner := "550e8400-e29b-41d4-a716-446655440012",
+    role::responsible := "550e8400-e29b-41d4-a716-446655440010",
+    role::accountable := "550e8400-e29b-41d4-a716-446655440012"
   )
 ] < {group-guid-ops-team}
 ```
@@ -979,8 +1022,8 @@ Incorrect bootstrap results in incorrect governance state.
 
 ```
 inherits := default  
-writer + eng-team@org.com  
-deny::writer := temp-contractor@org.com
+writer + "550e8400-e29b-41d4-a716-446655440013"
+deny::writer := "550e8400-e29b-41d4-a716-446655440014"
 ```
 
 ## A.3 Virtual Group Use Case
