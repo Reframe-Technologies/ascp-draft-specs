@@ -492,7 +492,7 @@ Failure at any step **MUST** result in envelope rejection for Layer-2 handoff.
 
 ## **6.5 Channel AES Key Requirements**
 
-For each active keyframe/epoch, Layer-1 uses a symmetric **Channel AES Key** to encrypt and decrypt Articulation Sequence payloads (JWE `alg = "dir"`).
+For each active **Keyframe-state**, Layer-1 uses a symmetric **Channel AES Key** to encrypt and decrypt Articulation Sequence payloads (JWE `alg = "dir"`).
 
 The Channel AES Key:
 
@@ -732,7 +732,7 @@ For each **Keyframe-state**, Layer-1 is provisioned with a set of cryptographic 
 
 Provisioned cryptographic state is supplied to Layer-1 via an implementation-defined provisioning interface from higher layers. Layer-1 consumes only cryptographic material and identifiers; it does not receive Grammar structures or governance metadata.
 
-For a given epoch, provisioned state **MUST** include:
+For a given **Keyframe-state**, provisioned state **MUST** include:
 
 - the **Channel AES Key** used for JWE payload encryption and decryption,
 - the set of **public verification keys** used to verify JWS signatures referenced by `kid` values,
@@ -793,15 +793,15 @@ Recipient public keys are selected via `kid` and used for JWE key agreement or w
 
 ## **9.3 Keyframe-State Selection and** `kid` **Usage**
 
-The `kid` value present in a Channel Envelope uniquely determines the cryptographic epoch and key material used for processing that envelope.
+The `kid` value present in a Channel Envelope uniquely determines the **Keyframe-state** used for processing that envelope.
 
 ### **9.3.1 Encoding Behavior**
 
 When constructing new Channel Envelopes, the Channel Encoder:
 
-- **MUST** select the currently active cryptographic epoch for the Channel,
-- **MUST** reference that epoch by including its corresponding `kid` value in the JOSE protected header,
-- **MUST NOT** reference deprecated or inactive epochs when encoding new envelopes.
+- **MUST** select the currently active **Keyframe-state** for the Channel,
+- **MUST** reference that **Keyframe-state** by including its corresponding `kid` value in the JOSE protected header,
+- **MUST NOT** reference deprecated or inactive **Keyframe-state** when encoding new envelopes.
 
 ### **9.3.2 Decoding Behavior**
 
@@ -809,23 +809,23 @@ When processing received Channel Envelopes, the Channel Decoder:
 
 - **MUST** extract the `kid` value from the JOSE protected header,
 - **MUST** select cryptographic material corresponding to that `kid`,
-- **MUST** apply verification and decryption using the selected epoch state.
+- **MUST** apply verification and decryption using the selected **Keyframe-state** state.
 
 If cryptographic material for a referenced `kid` is unavailable, the envelope is **undecryptable** at Layer-1. Such envelopes MUST be retained in the Channel Log but are not admissible for Layer-2 handoff until the required cryptographic state becomes available.
 
 ## **9.4 Keyframe-State Advancement (Key Rotation)**
 
-Key rotation in ASCP Channels is realized at Layer-1 as **epoch advancement**.
+Key rotation in ASCP Channels is realized at Layer-1 as **Keyframe-state advancement**.
 
-When a new cryptographic epoch is provisioned:
+When a new **Keyframe-state** is provisioned:
 
-- the new epoch becomes active for subsequent envelope encoding,
-- previously active epochs remain available for envelope decoding,
+- the new Keyframe-state becomes active for subsequent envelope encoding,
+- previously active Keyframe-states remain available for envelope decoding,
 - no existing envelopes are re-encoded or re-interpreted.
 
-Layer-1 treats epoch advancement as a change in **available cryptographic state**, not as a modification of existing Channel history.
+Layer-1 treats Keyframe-state advancement as a change in **available cryptographic state**, not as a modification of existing Channel history.
 
-The selection of when and why a new epoch is introduced is outside the scope of Layer-1 and is determined by higher-layer semantics. Layer-1 behavior is fully determined by the provisioned epoch state and the `kid` values present in Channel Envelopes.
+The selection of when and why a new Keyframe-state is introduced is outside the scope of Layer-1 and is determined by higher-layer semantics. Layer-1 behavior is fully determined by the provisioned Keyframe-state and the `kid` values present in Channel Envelopes.
 
 # **10. Provisioning Interface (Informative)**
 
@@ -842,7 +842,7 @@ Layer-1 expects the following categories of inputs to be provisioned by higher l
   - public verification keys for JWS signature validation,
   - additional key material required for JWE key agreement or wrapping, if applicable.
 - **Key identifiers (**`kid`**)** used to index and select cryptographic material.
-- **Epoch activation state**, indicating which cryptographic epoch is currently active for envelope encoding.
+- **Epoch activation state**, indicating which **Keyframe-state** is currently active for envelope encoding.
 - **Replication credentials** (e.g., Channel Access Keys), consumed exclusively by Layer-0.
 
 The representation and transport of these inputs to Layer-1 are implementation-defined and outside the scope of this specification.
@@ -1053,11 +1053,11 @@ Resistance to replay at the system level is provided by the immutable, append-on
 
 If cryptographic keys are compromised, the security properties of the Channel degrade accordingly:
 
-- Compromise of a Channel AES Key allows decryption of all envelopes encrypted under the corresponding epoch.
+- Compromise of a Channel AES Key allows decryption of all envelopes encrypted under the corresponding **Keyframe-state**.
 - Compromise of an Author signing key allows forgery of envelopes that will pass Layer-1 verification.
 - Compromise of replication credentials may expose encrypted envelopes but does not grant decryption capability.
 
-Layer-1 supports mitigation through cryptographic epoch advancement. New epochs apply only to newly encoded envelopes; historical envelopes remain bound to the cryptographic state in effect at the time of encoding. Layer-1 does not retroactively revoke access to previously decryptable content.
+Layer-1 supports mitigation through **Keyframe-state** advancement. New **Keyframe-states** apply only to newly encoded envelopes; historical envelopes remain bound to the **Keyframe-state** in effect at the time of encoding. Layer-1 does not retroactively revoke access to previously decryptable content.
 
 ## **12.5 Provisioning Assumptions**
 
@@ -1112,7 +1112,7 @@ Nothing in this section introduces additional protocol requirements.
 
 Implementations are encouraged to maintain a strict separation between the responsibilities of Layer-1 (Channels) and those of adjacent layers. Layer-1 is responsible solely for constructing and validating JWS and JWE Channel Envelopes and for applying provisioned cryptographic state.
 
-Layer-1 implementations should avoid embedding any Grammar parsing, governance evaluation, membership reasoning, or policy logic. All cryptographic material—including verification keys, Channel AES Keys, Channel Access Keys, permitted algorithms, and epoch activation state—is supplied through an external provisioning interface.
+Layer-1 implementations should avoid embedding any Grammar parsing, governance evaluation, membership reasoning, or policy logic. All cryptographic material—including verification keys, Channel AES Keys, Channel Access Keys, permitted algorithms, and Keyframe activation state—is supplied through an external provisioning interface.
 
 Clear separation at this boundary reduces coupling between layers, simplifies reasoning about correctness, and supports long-term maintainability.
 
@@ -1120,7 +1120,7 @@ Clear separation at this boundary reduces coupling between layers, simplifies re
 
 Channel implementations typically maintain multiple concurrent cryptographic keys, including current and historical Channel AES Keys, verification keys, and replication credentials. Maintaining a structured key table indexed by JOSE `kid` values can simplify deterministic key selection and reduce error-prone conditional logic.
 
-Updates to provisioned cryptographic state are ideally applied atomically to avoid transient inconsistencies during cryptographic epoch transitions. Historical keys may remain necessary for decrypting older envelopes and should not be discarded unless explicitly directed by higher layers.
+Updates to provisioned cryptographic state are ideally applied atomically to avoid transient inconsistencies during **Keyframe-state** transitions. Historical keys may remain necessary for decrypting older envelopes and should not be discarded unless explicitly directed by higher layers.
 
 Careful key table management supports stable historical decryptability and predictable behavior across replicas.
 
