@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.51 — Informational (Pre-RFC Working Draft)  
+Version: 0.52 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -25,93 +25,77 @@ Feedback from protocol designers, implementers, cryptographers, and distributed 
 
 # **2. Abstract**
 
-This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**. It defines how human participants and autonomous agents are identified, how cryptographic authorship of articulated statements is verified, and how trust relationships are evaluated over time in a distributed, append-only **Coordination Log**.
+This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**.
 
-ASCP employs a **log-anchored trust model** in which identities, certificates, endorsements, and key-binding events are recorded as immutable, cryptographically signed log entries. Trust verification is performed against historical log state rather than through real-time certificate validation, enabling durable authorship verification, offline replayability, and deterministic trust evaluation independent of external infrastructure availability.
+It defines a **log-anchored, replica-local, deterministically evaluable** trust model in which a verifier derives trust state by replaying immutable, append-only **Coordination Log** history and applying replica-local policy. In this model, identities, certificates, endorsements, key-binding events, and recovery artifacts are recorded as cryptographically verifiable log entries, enabling durable authorship verification, offline replayability, and reconstruction of historical trust state without dependence on continuous external infrastructure.
 
-This specification defines mechanisms for identity bootstrap, certificate publication and rotation, optional anchoring to external trust systems (including public-key infrastructures and identity providers), and privacy-preserving key recovery. It explicitly separates **authentication and authorship verification** from **authorization, governance, and policy evaluation**, which are defined in companion ASCP specifications.
+This specification normatively defines the core Layer-3 security constructs and artifacts used to represent and evaluate trust over time, including schemas and semantics for **Identity**, **Certificate**, **Keyframe**, and **RootCA** Artipoints, as well as associated distribution and evidence objects such as **Identity Claim Bundles (ICB)**, **Recovery Envelopes**, and **Channel Key Envelopes (CKE)**. It also specifies certificate publication and rotation semantics, optional anchoring to external trust systems (e.g., public-key infrastructures and identity providers), and privacy-preserving key recovery mechanisms.
 
-This document is limited to identity representation, cryptographic provenance, and trust evaluation semantics. It does not define governance rules, access-control decisions, distribution-layer encryption, or log synchronization behavior.
+This document explicitly separates **authentication and authorship verification** from **authorization, governance, and policy evaluation**, which are defined in companion ASCP specifications. It does not define governance rules, access-control decisions, distribution-layer encryption, or log synchronization behavior.
 
 # **3. Introduction**
 
-This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**. It defines how participants—human users, autonomous agents, and system components—are identified, how cryptographic authorship of ASCP statements is verified, and how trust relationships are evaluated over time using immutable, append-only logs.
+This document specifies the **Trust and Identity Architecture** for the **Agents Shared Cognition Protocol (ASCP)**. It defines how participants—humans, agents, and system components—are identified, and how trust is evaluated over time from immutable, append-only log history. ASCP separates **signature integrity validation** performed by the **Channel Codec (Layer-1)** from **authorship attribution and trust interpretation** performed by **Layer-3**, yielding deterministic **log-time** provenance derived from recorded evidence.
 
-**Identity is a Layer-3 Addressing Construct**: a semantic reference used to attribute authorship, anchor governance semantics, and enable durable provenance. It is *represented* using the Layer-2 Artipoint Grammar and *interpreted* exclusively at Layer-3, not enforced by cryptographic mechanism alone.
+In ASCP, **identity is provenance**, not permission. Cryptographic identity establishes *who authored a statement* and *which key material was bound to that identity at the relevant log-time*. Whether a statement is authorized, accepted, or acted upon is determined by governance and policy semantics defined in companion specifications.
 
-Identity and trust function as **provenance mechanisms** rather than permission or policy systems. Cryptographic identity establishes *who authored a statement* and *which cryptographic material was valid at the time of authorship*. All identity–key bindings are expressed as **articulated state**—immutable coordination history recorded in the log—rather than as mutable system assertions.
-
-This design ensures that authorship and historical verifiability remain stable even as roles, authority, or participation evolve. Whether a statement is authorized, accepted, or acted upon is determined independently by governance and access-control semantics defined in companion specifications.
-
-All trust decisions in ASCP are derived from **immutable, signed log entries** rather than from real-time certificate validation or mutable external state. This *log-anchored* model enables deterministic, replayable trust evaluation that remains valid offline and independent of the continued availability of third-party infrastructure.
+ASCP’s trust model is **log-anchored**: trust decisions are derived from signed log entries and their recorded relationships, rather than from real-time certificate validity checks or mutable external state. This enables deterministic, replayable evaluation that remains valid offline and does not require continuous availability of third-party infrastructure.
 
 ## **3.1 Layering Invariant**
 
-ASCP strictly separates **syntactic representation** from **semantic interpretation** across its protocol layers.
+ASCP strictly separates **representation** from **interpretation**:
 
-- **Layer-2 (Artipoint Grammar)** defines only the canonical syntax, serialization, and structural validity of ASCP statements. It assigns no identity meaning, trust semantics, governance authority, or security interpretation to any construct.
-- **Layer-3 (Trust, Identity, Governance, and View Evaluation)** defines all semantic interpretation, including identity meaning, cryptographic provenance, trust evaluation, key lifecycle rules, and governance consequences.
+- **Layer-2 (Artipoint Grammar)** defines the canonical syntax, serialization, and structural validity of ASCP statements.
+- **Layer-3 (Trust and Identity)** defines the semantic meaning of trust-related constructs and the evaluation rules that derive cryptographic consequences.
 
-All constructs defined in this document are **Layer-3 semantic constructs**. They are *represented* using the Layer-2 grammar and *parsed* according to Layer-2 rules, but they are **never defined, interpreted, or evaluated by Layer-2 itself**.
+All constructs defined in this document are **Layer-3 semantic constructs**. They are represented using the Layer-2 grammar and parsed according to Layer-2 rules, but are defined and interpreted only by Layer-3.
 
-This invariant applies throughout the ASCP specification suite and governs the interpretation of all identity- and trust-related constructs.
-
-## **3.2 Design Intent**
+## **3.2 Design Goals**
 
 The Trust and Identity Architecture defined in this document is intended to provide:
 
-- **Durable identity** — stable participant identifiers that persist across key rotation and device changes.
-- **Cryptographic provenance** — immutable recording of authorship, key bindings, and trust evidence in ASCP logs.
-- **Interoperable trust** — optional anchoring to external trust ecosystems (e.g., PKI, OIDC, DID, TSA) without creating hard dependencies.
-- **Extensible verification** — endorsement mechanisms that allow new forms of attestation to be introduced without altering core semantics.
-- **User-controlled recovery** — key recovery workflows that preserve confidentiality while supporting device migration and continuity.
-
-These mechanisms establish the foundational trust substrate on which all ASCP collaborative and cryptographic operations depend.
-
-The log-anchored trust model defined here draws inspiration from transparency architectures such as Certificate Transparency and other Verifiable Data Structure (VDS) systems, which have demonstrated the value of append-only logs and verifiable historical state. ASCP adopts these core principles of immutability, append-only semantics, and replayable verification, but applies them within a different operational context. Rather than providing global public auditability, ASCP's transparency guarantees are scoped to channel visibility boundaries, reflecting the collaborative and privacy-preserving nature of its intended deployments.
-
-ASCP Channels operate among authenticated collaborators with scoped access and confidentiality requirements. As a result, the trust architecture optimizes for durable provenance, selective visibility, key rotation, and forward secrecy rather than for global public auditability. This represents an intentional design choice aligned with collaborative, privacy-preserving environments rather than a departure from transparency as a foundational concept.
+- **Durable identity** across key rotation and device change.
+- **Cryptographic provenance** via immutable recording of authorship, bindings, and attestations in ASCP logs.
+- **Deterministic evaluation** over historical log state (“log-time trust”).
+- **Extensibility** through endorsement mechanisms that admit new attestation forms without changing core semantics.
+- **Optional external anchoring** to ecosystems such as enterprise PKI, OIDC, DIDs, and timestamping authorities, without introducing hard runtime dependencies.
+- **Recovery continuity** mechanisms supporting device migration while preserving confidentiality.
 
 ## **3.3 Scope of This Specification**
 
 This document defines:
 
-- The **log-anchored trust model** used throughout ASCP.
-- The **Security Construct Artipoints** used to represent identities, certificates, trust anchors, endorsements, and related cryptographic state.
-- Mechanisms for **identity bootstrap**, **certificate validation**, **key rotation**, and **key recovery**.
-- Optional procedures for **external trust anchoring** and third-party attestation.
-- Verification rules required for interoperable Trust and Identity implementations.
+- Trust-relevant **Security Construct Artipoints** used to represent identity, certificates, trust anchors, endorsements, key lifecycle state, and recovery evidence.
+- The Layer-3 verification and evaluation rules for **identity bootstrap**, **certificate binding**, **key rotation**, and **recovery**.
+- Verification requirements needed for interoperable Trust and Identity implementations.
 
-All normative requirements in this document describe the **intended behavior** of ASCP-compliant implementations unless otherwise stated.
+Normative requirements use the terms **MUST**, **SHOULD**, and **MAY** as described in RFC 2119 and RFC 8174.
 
 ## **3.4 Out of Scope**
 
 This document does **not** define:
 
-- Governance semantics, authorization decisions, membership rules, or role evaluation. See *ASCP Governance and Access Control Specification*.
-- Distribution-layer cryptographic behavior, including channel encryption and message delivery. See *ASCP Channels: Secure Distribution Layer*.
-- Transport, replication, ordering, or peer authentication semantics. See *ASCP Log Synchronization Protocol (ALSP)*.
-- Application-specific user interfaces or workflow behavior beyond cryptographic identity concerns.
+- Governance semantics, authorization decisions, membership rules, role evaluation, or view derivation (see ASCP Governance and Access Control specification).
+- Layer-1 Channel Envelope formats or codec behavior, including distribution-layer cryptographic mechanics (see ASCP Channels).
+- Transport, replication, ordering, or peer authentication semantics (see ALSP).
+- Discovery and onboarding procedures for initial trust establishment (see Bootstrap and Channel Discovery).
+- Application UI or workflow behavior.
+
+This specification is strictly Layer-3: it defines **what** trust evidence exists and **how** it is evaluated to produce cryptographic consequences for use by other layers.
 
 ## **3.5 Relationship to Other ASCP Specifications**
 
-The Trust and Identity Architecture provides the cryptographic foundation on which other ASCP layers rely:
+This document provides Layer-3 trust evidence and evaluation rules that other specifications consume:
 
-- **Channels (Layer-1)** depend on certificates and purpose bindings to verify authorship and provision encrypted delivery.
-- **ALSP (Layer-0)** relies on identity-bound credentials for session authentication and replication authorization.
-- **Governance and View Evaluation (Layer-3)** resolve participants and roles using Identity and Certificate Artipoints defined here.
-
-Together, these specifications form a coherent architecture for secure, composable, and durable shared cognition.
+- **Channels (Layer-1)** use cryptographic consequences derived from Layer-3 evaluation (e.g., selected keys and recipient sets) to sign and/or encrypt Articulation Sequences into Artipoint Records. Channels enforce these consequences mechanically and do not interpret trust semantics.
+- **ALSP (Layer-0)** replicates Channel Logs without semantic interpretation; any identity-bound session or transport credentials are defined by ALSP.
+- **Governance and View Evaluation (Layer-3)** consumes Identity and Certificate constructs defined here as input evidence when deriving roles, membership sets, and application views; governance rules themselves are defined elsewhere.
 
 # **4. Terminology**
 
 This section defines terms used throughout this specification and this document follows the terminology and layering conventions defined in the **ASCP Terminology Primer**, which serves as the authoritative reference for distinguishing semantic constructs, representations, derived structures, and enforcement mechanisms across the ASCP specification suite.
 
 Unless explicitly stated otherwise, all definitions in this section are **informational**. Normative requirements are defined in subsequent sections.
-
-### **ASCP (Agents Shared Cognition Protocol)**
-
-A distributed protocol suite that enables humans and autonomous agents to collaborate using **immutable, cryptographically verifiable logs** and **structured coordination constructs**, supporting persistent shared cognition across time, tools, and replicas.
 
 ### **Artipoint**
 
@@ -129,29 +113,55 @@ A **Layer-2 syntactic representation** of an Artipoint, defined by the ASCP Arti
 
 An Artipoint Expression encodes the type, label, payload, and attributes of an Artipoint in a canonical form suitable for signing, distribution, and replication. Artipoint Expressions carry **no inherent trust, authorship, or governance semantics** until evaluated by Layer-3.
 
+### **Articulation Statement**
+
+A **Layer-2 syntactic statement** that asserts, introduces, or relates Artipoints using the ASCP Artipoint Grammar.
+
+Articulation Statements have no inherent trust, governance, or authorization meaning until interpreted at Layer-3.
+
+### **Articulation Sequence**
+
+An **ordered sequence of Articulation Statements** that forms the payload committed to a Channel Log.
+
+An Articulation Sequence is the unit encoded, protected, and carried by the Channel Envelope.
+
+### **Channel Envelope**
+
+A **Layer-1 container** that encapsulates a serialized Articulation Sequence together with the metadata and cryptographic protections required for channel distribution (e.g., signing and optional encryption).
+
+### **Channel Log**
+
+An **append-only log** for a specific Channel consisting of Artipoint Records.
+
 ### **Artipoint Record**
 
-A **signed, immutable log entry** that encapsulates an Artipoint Expression and records its authorship, timestamp, and provenance within an ASCP Channel.
+A durable, cryptographically secured materialization of an **Articulation Sequence** within an ASCP **Channel Log**. An Artipoint Record encapsulates a serialized Articulation Sequence within a **Channel Envelope**, applies signing to establish authorship integrity, and MAY apply encryption to enforce visibility scope.
 
-Artipoint Records are the concrete artifacts stored in ASCP logs and replicated across peers. Trust and identity evaluation operates over Artipoint Records by interpreting the contained Artipoint Expressions under Layer-3 semantics.
+### **Addressing Construct (Artipoints)**
 
-### **Security Construct Artipoint**
+In the ASCP terminology taxonomy, **Addressing Constructs** are Artipoints whose primary semantic role is to identify *who* participates in coordination and to provide stable, durable references to participants over time.
 
-A class of **Artipoints** whose semantic meaning pertains to **cryptographic identity, trust, provenance, or key lifecycle state**.
+Addressing Constructs are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP Channels.
 
-Security Construct Artipoints are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP Channels.
+Examples include Identity Artipoints and, in other ASCP documents, Group Artipoints.
 
-Examples include Identity Artipoints, Certificate Artipoints, RootCA Artipoints, and Keyframe Artipoints.
+### **Security Construct (Artipoints)**
+
+In the ASCP terminology taxonomy, **Security Constructs** are Artipoints whose primary semantic role is to establish or describe **cryptographic material, provenance evidence, trust anchors, or security-relevant lifecycle state**.
+
+Security Constructs are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP Channels.
+
+This specification defines Security Constructs that are evaluated in relationship to **Addressing Constructs** (i.e., participants). Concretely: Addressing Constructs like Identity Artipoints name participants, while Security Constructs like Certificate, RootCA, and Keyframe Artipoints define cryptographic keys, anchors, and epochs that can be bound to those participants and evaluated at log-time.
 
 ### **Identity Artipoint**
 
-A Security Construct Artipoint that declares the existence of a participant—human, agent, or system component—and provides a **durable addressing reference** for that participant.
+An **Addressing Construct** Artipoint that declares the existence of a participant—human, agent, or system component—and provides a **durable addressing reference** for that participant.
 
 An Identity Artipoint does **not** contain cryptographic key material. Instead, it references one or more Certificate Artipoints via `certificate::kid` attributes to establish which keys are currently bound to the identity.
 
 ### **Certificate Artipoint**
 
-A Security Construct Artipoint that publishes a **public cryptographic key** (encoded as a JWK) and declares the cryptographic purposes, endorsements, and recovery material associated with that key.
+A **Security Construct** Artipoint that publishes a JWK encoded **public cryptographic key** and declares the cryptographic purposes, endorsements, and recovery material associated with that key.
 
 Certificate Artipoints are the canonical source of cryptographic material used for authorship signing, authentication, and key agreement in ASCP.
 
@@ -171,13 +181,13 @@ Keyframe Artipoints encapsulate Layer-3 cryptographic configuration and distribu
 
 In ASCP, trust is an evaluation performed by a verifier over immutable evidence. The ASCP trust model ensures that **all trust decisions derive from immutable, signed Artipoint Records** rather than from real-time certificate validation or mutable external state.
 
-Trust evaluation is performed against **historical log state** ("log-time trust"), enabling deterministic, replayable verification independent of external infrastructure availability.
+Trust evaluation is performed against historical log state ("log-time trust") and explicitly configured local policy inputs, enabling deterministic, replayable verification independent of external infrastructure availability.
 
 ### **Bootstrap Channel (or Bootstrap Log)**
 
 A special ASCP Channel that contains the **genesis Artipoint Records** of an instance, including the RootCA Artipoint.
 
-The Bootstrap Channel establishes the immutable foundation of trust for the repository.
+The Bootstrap Channel establishes the immutable foundation of trust for the ASCP instance.
 
 ### **Endorsement**
 
@@ -191,6 +201,42 @@ A **first-party declaration** attached to a Certificate Artipoint that specifies
 
 Purpose attributes constrain key usage but do not confer trust or governance authority.
 
+### **Author**
+
+The **Author** is the **Layer-3** participant identity to which an Articulation Sequence is attributed.
+
+Authorship is evidenced by **signature material** (e.g., a JWS) produced using a private key that is bound—at the relevant **log-time**—to the Author’s Identity Artipoint via a Certificate Artipoint.
+
+**Layer-1** validates signature integrity as part of Channel Envelope processing. **Layer-3** attributes authorship by resolving the signing key reference (e.g., `kid`) to the applicable Certificate and Identity history and evaluating log-time binding and endorsement evidence.
+
+### **Sender**
+
+The **Sender** is the operational actor that constructs and commits a Channel Envelope into the Channel log.
+
+The Sender:
+
+- renders the Articulation Sequence payload into a JWS-signed object using the **Author’s** signing key,
+- optionally encrypts the signed payload for a Recipient Set under the active Keyframe, and
+- submits the resulting envelope for replication via Layer-0 (ALSP).
+
+The Sender is often the Author, but may be a delegated agent or service acting on the Author’s behalf. The Sender’s transport identity is not treated as a substitute for authorship; authorship is determined only by the Author-bound signature evidence evaluated under this specification.
+
+### **Author / Sender / Recipient Roles**
+
+ASCP separates:
+
+- **Author** (semantic authorship of payload),
+- **Sender** (operational submission of an envelope), and
+- **Recipient** (membership in the set for whom decryptable key material is issued).
+
+This separation is intentional: the Recipient Set is a cryptographic distribution decision, while authorship is a provenance claim. These roles are not required to be symmetric.
+
+### **Recipient (Recipient Set)**
+
+A **Recipient** is an identity included in the evaluated **Recipient Set** for which the Keyframe consequences include a decryptable JWE channel-key-envelope (i.e., wrapped key material enabling payload decryption for the associated key version).
+
+Recipient Sets define confidentiality scope for a given key version. Replication authorization (e.g., CAK use at Layer-0) is defined independently.
+
 ### **Recovery Envelope**
 
 A **double-encrypted payload** attached to a Certificate Artipoint that contains encrypted private key material for secure recovery or device migration.
@@ -199,9 +245,31 @@ Recovery Envelopes enable key recovery without exposing private keys to ASCP ser
 
 ### **Channel**
 
-A named ASCP construct that defines **scoped distribution and replication** of Artipoint Records among authorized participants.
+A named ASCP construct that defines **scoped distribution and replication** of Artipoint Records among authorized participants. Channels provide append-only ordering, confidentiality, and authenticated participation but do not define identity semantics or governance rules.
 
-Channels provide append-only ordering, confidentiality, and authenticated participation but do not define identity semantics or governance rules.
+A Channel defines a scoped trust domain for replicated coordination history.
+
+Within a Channel:
+
+- all trust conclusions are derived from the immutable, append-only log contents plus local policy inputs,
+- confidentiality is enforced via Recipient Sets and Keyframe-distributed key material, and
+- replication authorization is enforced via CAK-based mechanisms at Layer-0.
+
+No participant is required to trust external availability of third-party infrastructure at runtime. Trust evaluation is replica-local and derivable from log evidence (and permitted external attestations) as defined by this specification.
+
+### **Channel Access Key (CAK)**
+
+The **Channel Access Key (CAK)** is a replication credential used to authenticate access to a Channel’s Layer-0 synchronization domain.
+
+Properties:
+
+- The CAK authorizes **Layer-0 replication only** (e.g., production of Channel Access Proofs).
+- The CAK has **no semantic meaning** at Layer-1 or Layer-2.
+- The CAK **does not grant decryption rights** for payload confidentiality.
+- The CAK **does not grant authorship rights** and is not used to infer authorship.
+- CAK key material is declared and distributed as part of Keyframe consequences, but is **enforced only** by Layer-0 replication procedures.
+
+Layer-1 and Layer-2 treat the CAK as opaque and do not attempt to validate, interpret, or derive meaning from CAK material beyond what is provisioned by Layer-3 evaluations.
 
 ### **ALSP (ASCP Log Synchronization Protocol)**
 
@@ -220,175 +288,85 @@ Standardized JSON-based cryptographic structures defined by the JOSE specificati
 
 ASCP uses JOSE structures for key representation, signing, encryption, and external attestations.
 
-### **PKI (Public Key Infrastructure)**
+### **Public Key Infrastructure (PKI)**
 
 An external certificate trust system (e.g., public or enterprise CA hierarchy) that **MAY** be used to provide endorsements or anchoring evidence for ASCP certificates.
 
 PKI validity is evaluated at log-time and does not impose real-time dependencies.
 
-### **TSA (Time-Stamping Authority)**
+### **Time-Stamping Authority (TSA)**
 
 An RFC 3161-compliant service that issues Time-Stamp Tokens (TSTs), providing independent temporal attestation that specific cryptographic material existed at or before a given time.
 
 # **5. ASCP Trust Architecture Overview**
 
-ASCP establishes trust through **immutable, signed log records** rather than through real-time certificate validation or mutable external state. Every cryptographic decision—identity binding, authorship verification, key rotation, endorsement evaluation—is grounded in the durable provenance of the channel logs.
+ASCP establishes trust using **durable, signed log records** rather than mutable external state or real-time certificate validation. Identity binding, authorship verification, endorsement evaluation, and key lifecycle interpretation are derived from the **history articulated in the Channel log** (“log-time trust”).
 
-This section provides an architectural overview of ASCP’s **log-anchored trust model**, the boundaries within which it operates, and its relationship to external trust ecosystems. It is informational in nature and prepares the reader for the normative specifications that follow in Sections 6–9.
+This section is **informative**. It provides architectural context and scope boundaries for the normative requirements in Sections 6–9.
 
-## **5.1 Log-Anchored Trust Model**
+## **5.1 Log-Anchored Trust Model (Informative)**
 
-ASCP’s trust model is based on three core principles.
+ASCP’s trust model is grounded in three architectural principles:
 
-### **1. Immutable provenance**
+1. **Immutable provenance -** Trust-relevant events (e.g., identity declarations, certificate bindings, endorsements, and key lifecycle events) are expressed as signed artifacts and committed to an append-only history. Verifiers evaluate evidence **as recorded**, not as reinterpreted under present-day external conditions.
+2. **Replica-local validation -** A replica can validate authorship and trust evidence from log contents plus explicitly configured local policy inputs. External systems may strengthen provenance, but are **not required** for correctness or availability.
+3. **Deterministic evaluation over articulated history -** Trust conclusions are derived by deterministic Layer-3 interpretation of the log state. Cryptographic verification provides evidence; trust is the semantic interpretation of that evidence under the rules defined by this document.
 
-All trust-relevant material—including identities, certificates, endorsements, and key lifecycle events—is expressed as **signed Artipoint Records**. Verification is performed against the state of the log at the time an event occurred (“**log-time trust**”), rather than against present-day external validity conditions.
+## **5.2 Scope and Layer Boundaries (Informative)**
 
-This approach avoids reliance on online revocation services, mutable certificate registries, or continuously available third-party infrastructure.
+ASCP separates responsibilities across layers. This document specifies **Layer-3 (Trust and Identity)** semantics and their evaluation rules.
 
-### **2. Self-contained validation**
+- **Layer-3 (this document):** defines the meaning and evaluation of trust-related constructs (e.g., Identity, Certificate, RootCA, Keyframe, endorsements, recovery). It specifies how trust state is derived from log history and local policy inputs.
+- **Layer-2 (Artipoint Grammar):** defines the syntactic structure and encoding of statements. It does not define trust meaning or evaluation.
+- **Layer-1 (Channels / Channel Envelope Codec):** defines envelope admissibility and codec behavior. It applies cryptographic protections and verifies cryptographic integrity **using Layer-3-derived consequences**, but does not define trust semantics, governance, or key agreement procedures.
+- **Layer-0 (ALSP):** replicates the log and provides authenticated synchronization. It does not interpret trust, identity, or authorship semantics.
 
-Each replica maintains all information required to validate historical authorship, certificate bindings, and endorsements. As a result, trust evaluation is **offline-capable and autonomous**: external systems may strengthen provenance but are never required for correctness.
+This separation is intentional: **Layer-3 defines meaning; Layer-1 carries and validates bytes; Layer-0 synchronizes history.**
 
-### **3. Deterministic authorship verification**
+## **5.3 Relationship to External Trust Ecosystems (Informative)**
 
-Signed statements reference cryptographic keys via a kid, which resolves—through historical log state—to a Certificate Artipoint containing the corresponding public key. Because identities, certificates, bindings, and endorsements are immutably recorded, verifiers can reproduce historical trust decisions with deterministic accuracy. The effective trust state at any point in time is a **Derived Semantic Structure**, assembled through Layer-3 interpretation of articulated history rather than stored explicitly.
+ASCP can operate without external trust infrastructure. When external systems are used (e.g., enterprise PKI, identity providers, DIDs, timestamping), they contribute **immutable evidence** captured in the log as endorsements or attestations.
 
-This resolution and evaluation process is defined **entirely at Layer-3** and operates exclusively over historical log state. Cryptographic verification supplies evidence; **trust itself is a semantic judgment** derived from that evidence through deterministic interpretation.
+ASCP does not require online revocation checks or runtime dependency on third-party availability for correctness. External evidence may strengthen provenance, but the trust model remains **log-anchored and replica-local**.
 
-This model contrasts with global transparency systems (e.g., Certificate Transparency), which assume untrusted operators and public auditability. ASCP Channels operate within authenticated collaboration boundaries and therefore prioritize **durable provenance** over global consistency proofs.
+(Concrete mechanisms and normative requirements for endorsements and external evidence are specified in later sections.)
 
-## **5.2 Trust Domains and Boundaries**
+## **5.4 Replica-Local Evaluation Invariants (Normative)**
 
-ASCP separates trust responsibilities across four layers, each with clear scope and constraints.
+Implementations MUST support local-first operation in which envelope arrival order, partial replication state, and multi-writer convergence behavior do not change the interpretation rules defined by Layer-3.
 
-### **Layer-3: Semantic Identity and Trust (this document)**
+- Layer-1 envelope codec processing MUST be atomic with respect to each envelope and MUST NOT depend on global ordering, causal delivery, or replica convergence state.
+- Layer-3 trust evaluation MUST be a deterministic function of the articulated history available to the replica (and explicitly configured local policy inputs).
+- During partial replication, conclusions are necessarily provisional; however, once replicas possess identical articulated history for the relevant scope, they MUST derive equivalent trust results under equivalent policy inputs.
 
-Layer-3 defines the **Security Construct Artipoints**—including Identity, Certificate, RootCA, Keyframe, endorsement, and recovery constructs—and specifies:
+## **5.5 Non-Goals and Related Mechanisms (Informative)**
 
-- how participants are identified,
-- how keys are bound to identities,
-- how endorsements strengthen provenance,
-- how trust anchors are introduced and rotated.
+ASCP does not require global transparency logs or Merkle consistency proofs to define trust or authorship semantics. Implementations MAY use hash chains, Merkle trees, or similar structures **within Layer-0** to optimize synchronization and detect divergence among authenticated peers, but such mechanisms:
 
-All trust semantics are defined and evaluated exclusively at this layer.
+- are performance- and convergence-oriented, and
+- MUST NOT be interpreted as providing identity, authorship, or trust semantics.
 
-### **Layer-2: Artipoint Grammar**
+All trust decisions remain grounded in signed log evidence and Layer-3 evaluation.
 
-Layer-2 defines **only the syntactic representation** of ASCP statements, including encoding, decoding, and structural validity.
+## **5.6 Security Properties at a Glance (Informative)**
 
-Layer-2 does **not** define identity meaning, trust semantics, cryptographic interpretation, governance authority, or lifecycle behavior. All such semantics belong exclusively to Layer-3.
+The log-anchored model provides the following high-level properties:
 
-Security Construct Artipoints are **Layer-3 semantic constructs** that are represented using the Layer-2 grammar but are never defined or interpreted by it.
+- **Verifiable provenance:** a replica can reconstruct the evidence trail supporting identity bindings, certificate use, endorsements, and key lifecycle interpretation from immutable log history.
+- **Replay robustness:** trust-relevant events are interpreted against historical log state rather than mutable external conditions, reducing the opportunity to reinterpret evidence under a different trust state.
+- **Offline-capable verification:** replicas can evaluate trust without requiring continuous connectivity to external services.
 
-### **Layer-1: Channels (Secure Distribution Layer)**
+These properties are achieved through the normative requirements specified in the remainder of this document.
 
-Layer-1 Channels provide authenticated, append-only distribution of Artipoint Records among participants. Channels **enforce cryptographic consequences** derived from Layer-3 trust evaluation but do not themselves define, evaluate, or provide trust.
+## **5.7 Summary (Informative)**
 
-Their trust boundary:
-
-- assumes authenticated membership,
-- validates signatures and declared key purposes,
-- enforces confidentiality and selective visibility.
-
-Channels consume cryptographic consequences provisioned by Layer-3 without interpreting identity semantics, endorsements, or governance meaning.
-
-### **Layer-0: ALSP (Log Synchronization Protocol)**
-
-ALSP provides authenticated replication, divergence detection, and convergence of channel logs. It does **not** evaluate identity provenance, certificate semantics, or trust state.
-
-This separation ensures that trust remains **local, composable, and durable**, without requiring a global ledger or centralized authority.
-
-## **5.3 Relationship to External PKI and Identity Systems (Informative)**
-
-This subsection is informational. Normative requirements for endorsements and external integration are defined in Sections 7 and 8.
-
-ASCP can operate entirely without external trust infrastructure. When present, external systems **strengthen provenance** through immutable endorsements rather than imposing real-time dependencies.
-
-### **Public or Enterprise PKI**
-
-PKI-issued detached signatures (e.g., JWS with x5c chains) may endorse:
-
-- the RootCA Artipoint (repository-level anchoring), or
-- individual Certificate Artipoints (cross-organizational identity).
-
-ASCP does not rely on PKI revocation or certificate validity at verification time; PKI endorsements provide **point-in-time evidence** recorded in the log.
-
-### **OpenID Connect (OIDC)**
-
-OIDC providers may supply third-party identity assertions bound to participant certificates via Identity Claim Bundles (ICBs). These appear as endorsements that bind a certificate fingerprint to an external account identifier.
-
-### **Decentralized Identifiers (DIDs)**
-
-DID controllers may issue JWS endorsements binding a DID to a certificate fingerprint. ASCP does not embed DID documents; it treats them as external, mechanism-specific evidence.
-
-### **Time-Stamping Authorities (TSAs)**
-
-RFC 3161 Time-Stamp Tokens provide independent temporal attestation that specific cryptographic material existed at or before a given time.
-
-ASCP does **not** merge or reconcile external trust graphs. All external evidence is captured as **immutable endorsements** attached to Artipoints, enabling independent log-time interpretation by verifiers.
-
-## **5.4 Merkle Trees as Layer-0 Optimization**
-
-ASCP Channels do **not** rely on Merkle consistency proofs or global transparency logs for trust or authorship semantics. However, ALSP implementations MAY use Merkle trees, hash summaries, or incremental hash chains to:
-
-- accelerate replica convergence,
-- detect divergence among authenticated peers,
-- optimize synchronization performance.
-
-These mechanisms:
-
-- operate strictly **below** the Channel trust boundary,
-- MUST NOT be interpreted as providing trust, identity, or authorship semantics,
-- MUST NOT replace or modify the log-anchored trust model.
-
-Their role is purely performance-oriented. All security-relevant trust decisions remain grounded in **signed Artipoint Records** and Layer-3 evaluation.
-
-## **5.5 Transparency Guarantees and Replay Resistance**
-
-Although ASCP does not implement global transparency logs, its architecture provides strong security guarantees.
-
-### **1. Verifiable authorship history**
-
-Because every **Artipoint Record** is individually signed and immutably recorded, verifiers can reconstruct:
-
-- which identity authored each statement,
-- which certificate was active at that time,
-- the provenance of endorsements and trust anchors.
-
-### **2. Replay resistance**
-
-Replay attacks are mitigated through:
-
-- explicit certificate purpose declarations (Section 7.2),
-- immutable authorship timestamps,
-- nonce-bound identity bootstrap flows (Section 9),
-- historical validation using log-time trust.
-
-Events cannot be reinterpreted under a different trust state.
-
-### **3. Consistent trust evaluation**
-
-Independent replicas evaluating the same log contents will reach the same trust conclusions because all evidence is:
-
-- included in the log,
-- verifiable offline,
-- bound to fixed certificate fingerprints,
-- interpreted against historical state rather than mutable policy.
-
-### **4. Optional external proofs without dependency**
-
-PKI and TSA endorsements provide strong third-party evidence, but ASCP correctness does **not** depend on their continued availability. Once recorded, they become part of the immutable provenance chain.
-
-## **5.6 Summary**
-
-ASCP’s trust architecture replaces online validation and mutable authority with **durable, replayable trust grounded in immutable history**. By anchoring identity, authorship, and cryptographic state in signed Artipoint Records and enforcing strict layer boundaries, ASCP enables deterministic, autonomous trust evaluation across replicas and over time.
+ASCP’s trust architecture replaces online validation and mutable authority with **durable, replayable trust grounded in immutable history**. This document defines the Layer-3 constructs and deterministic evaluation rules that produce replica-local trust conclusions from Channel log evidence, while preserving strict separation from Channel codec behavior (Layer-1) and log synchronization (Layer-0).
 
 # **6. ASCP Identity Model Overview**
 
 This section provides a **conceptual overview** of the ASCP identity model. It explains how identities relate to certificates, cryptographic keys, and trust anchors, and why ASCP represents these elements as immutable, log-anchored Artipoints.
 
-This section is **informational**. It establishes the mental model required to interpret the **normative Security Construct Artipoints** defined in Section 7 and related lifecycle mechanisms defined later in this document.
+This section is **informational**. It establishes the mental model required to interpret the **normative** Trust and Identity constructs defined in Section 7 and related lifecycle mechanisms defined later in this document.
 
 ## **6.1 Identity as an Addressing Construct**
 
@@ -425,7 +403,7 @@ A Security Construct Artipoint that publishes a public key and declares its inte
 
 ### **Trust Anchors (RootCA)**
 
-A distinguished Certificate Artipoint introduced during bootstrap that anchors repository-level trust. The RootCA provides a stable reference point for onboarding verification and optional cross-instance trust relationships.
+A distinguished Certificate Artipoint introduced during bootstrap that anchors Replica-level trust. The RootCA provides a stable reference point for onboarding verification and optional cross-instance trust relationships.
 
 ### **Endorsements and Attestations**
 
@@ -437,6 +415,17 @@ This separation enables:
 - parallel certificates bound to a single identity,
 - independent evaluation of external evidence, and
 - deterministic reconstruction of historical trust decisions.
+
+### **6.2.1 Where Trust and Identity Material Lives (Quick Mapping)**
+
+To reduce ambiguity about “where a verifier should look” for specific classes of trust and identity information, the following table summarizes the primary Layer-3 constructs and what each is responsible for carrying.
+
+| **Construct**             | **Role in the model**                                                            | **Primary contents / bindings**                                                                                                            | **How other constructs reference it**                                                                                                                   |
+| ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Identity Artipoint**    | Durable addressing reference for a participant (human/agent/system)              | **No key material.** Indicates active key bindings by referencing one or more Certificate Artipoints via `certificate::kid`.               | Referenced as the **Author** of Artipoint Records; referenced by Keyframes via `envelope::<recipient>` attribute naming (recipient identity UUID).      |
+| **Certificate Artipoint** | Publishes operational cryptography and cryptographic intent                      | **JWK public key** (payload), declared `purpose::*`, optional `endorsement::*`, optional `recovery_envelope`.                              | Referenced by Identity Artipoints (`certificate::kid`); referenced by JOSE headers (e.g., `kid`) when used for signing or key agreement.                |
+| **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | Carries per-recipient **Channel Key Envelopes (CKEs)** as `envelope::<recipient-identity-uuid> := "<JWE>"` attributes (one per recipient). | Referenced by Channels (e.g., via `keyframe::kid`, as defined elsewhere); evaluated at Layer-3 to provision cryptographic consequences to lower layers. |
+| **RootCA Artipoint**      | Instance trust anchor                                                            | Distinguished certificate-like Security Construct that anchors certificate acceptance and onboarding provenance for the ASCP instance.     | Introduced via bootstrap history; used as the trust root for instance-level verification and optional external anchoring evidence.                      |
 
 ## **6.3 Why Artipoint-Based Identities**
 
@@ -472,7 +461,7 @@ ASCP employs a simple certificate lifecycle grounded in immutable history. The f
 
 1. **Key generation:** A participant generates a cryptographic keypair locally or in secure hardware.
 2. **Certificate publication:** The public key is published as a Certificate Artipoint, optionally including purpose declarations, recovery material, and endorsements.
-3. **Identity binding:** The Identity Artipoint references the active certificate via certificate::kid, establishing a verifiable binding.
+3. **Identity binding:** The Identity Artipoint references the active certificate via `certificate::kid`, establishing a verifiable binding.
 4. **Rotation:** When a key is replaced, a new Certificate Artipoint is published and the identity’s binding is updated. Historical signatures remain valid because verification uses log-time trust.
 5. **Recovery (optional):** If recovery material is present, a participant may restore access to a private key without exposing it to ASCP services.
 6. **External anchoring (optional):** Endorsements from PKI, OIDC, DID, or TSA systems may be added at any time to strengthen provenance.
@@ -481,33 +470,29 @@ These steps are **illustrative**, not procedural mandates.
 
 ## **6.5 Common Implementation Model (Informative)**
 
-A common—but not universal—implementation model in ASCP deployments uses **privacy-first, locally generated keys**.
+A common—but not universal—deployment model uses **locally generated keys** under participant control.
 
-For this illustrative model:
+In this model, each participant generates a keypair, publishes the public key in a (typically self-signed) Certificate Artipoint, and uses the corresponding private key to produce signature evidence on authored payloads. Because certificate bindings and related evidence are committed to immutable log history, historical signatures can be evaluated using **log-time** state without requiring online revocation services.
 
-- Each participant generates and controls their own cryptographic keypair.
-- The private key is used to sign authored Artipoints.
-- The public key is published in a self-signed Certificate Artipoint to establish provenance.
-- Certificates remain permanently verifiable in the log, allowing historical signatures to be validated without revocation infrastructure.
+Implementations typically store private keys using platform-appropriate secure storage. Key storage and device protection mechanisms are deployment-specific and out of scope for this specification.
 
-Typical storage patterns include:
+Deployments MAY additionally introduce stronger anchoring by having participant certificates endorsed or signed under a RootCA policy. Other deployments MAY rely on self-signing plus external endorsements. This specification supports both patterns.
 
-- **Desktop / mobile clients**: OS keychains or secure enclaves
-- **Browser clients**: WebCrypto APIs with secure storage
-- **Autonomous agents**: TPMs, HSMs, or protected file systems
-
-Some deployments additionally bind participant certificates into the repository trust chain by having them endorsed or signed by the RootCA. Others rely solely on self-signing and external endorsements. ASCP supports both patterns without requiring a single prescribed model.
+Additional informational context regarding deployment models and their relationship to the ASCP trust model is provided in Appendix B.
 
 ## **6.6 Relationship to Normative Sections**
 
-This section defines **what identities are** in ASCP and how they relate conceptually to certificates and trust anchors.
+This section provides a **conceptual overview** of ASCP identities, certificates, and trust anchors, including their architectural rationale, lifecycle concepts, and relationship to log-anchored trust. Section 6 establishes the conceptual foundation necessary for understanding the normative requirements defined in subsequent sections.
 
-The **normative structure, validation rules, and lifecycle constraints** for Identity Artipoints, Certificate Artipoints, RootCA Artipoints, endorsements, and recovery mechanisms are defined in:
+The **normative structure, validation rules, and lifecycle constraints** for Identity Artipoints, Certificate Artipoints, RootCA Artipoints, endorsements, and recovery mechanisms are specified in:
 
 - **Section 7** — Security Construct Artipoints
 - **Section 8** — Security Construct Attributes
 - **Section 9** — Identity Claim Bundles
+- **Section 10** — Keyframe Rotation and Cryptographic Continuity
 - **Section 11** — Key Escrow and Recovery Strategy
+- **Section 12** — Channel Key Envelopes
+- **Section 13** — Provenance of the ASCP RootCA
 
 # 7. Security Construct Artipoints
 
@@ -567,6 +552,20 @@ These attributes are informational only.
 
 Identity Artipoints bind active signing keys by updating `certificate::kid`. Historical bindings remain valid for log-time verification.
 
+#### Proof of Possession for Third-Party Published Certificates
+
+If a Certificate Artipoint is authored by an identity other than the Identity Artipoint that binds to it via `certificate::kid`, then verifiers **MUST NOT** treat that certificate binding as valid unless the binding Identity demonstrates **Proof of Possession (PoP)** of the corresponding private key at **log-time**.
+
+A binding Identity minimally demonstrates PoP by authoring at least one **PoP Assertion** that:
+
+1. is an **Artipoint annotation expression** targeting the Certificate Artipoint (i.e., an annotation *onto* that Certificate Artipoint), and
+2. is signed using the private key corresponding to the Certificate Artipoint’s published JWK (e.g., via the JOSE `kid` / JWK thumbprint profile), and
+3. unambiguously binds the signing act to that specific Certificate Artipoint (the annotation target reference satisfies this requirement; implementations MAY additionally include an explicit `kid` / thumbprint reference for defense-in-depth).
+
+Verifiers **MUST** treat the `certificate::kid` binding as effective only from the log position at which a valid PoP Assertion exists (i.e., the binding is **pending** until PoP is observed).
+
+ASCP instance policy **MAY** require stronger PoP, including but not limited to: (a) a self-signed assertion over the certificate thumbprint, or (b) PoP as part of an **Identity Claim Bundle (ICB)**.
+
 ## 7.2 Certificate Artipoint (Normative)
 
 ### 7.2.1 Definition and Purpose
@@ -592,6 +591,10 @@ Certificates are the canonical source of public keys used for:
 - **type**: MUST be `"certificate"`
 - **label**: MAY be empty
 - **payload**: MUST contain a valid JWK (RFC 7517)
+
+The `author` of a Certificate Artipoint MUST be the UUID of the RootCA or another Identity Artipoint with traceable provenance back to the RootCA.
+
+If a Certificate Artipoint is authored by an identity other than the Identity Artipoint that binds to it via certificate::kid, verifiers MUST apply the Proof of Possession (PoP) requirements in **Section 7.1.6** before treating that binding as valid.
 
 ### 7.2.4 Purpose Semantics
 
@@ -688,11 +691,13 @@ Verifiers MUST ensure that Keyframe Artipoints are evaluated according to the li
 
 # **8. Security Construct Attributes**
 
-This section defines **normative attribute families** that extend the semantic meaning of **Security Construct Artipoints** defined in Section 7. Attributes are **immutable, additive, and non-destructive**: they attach additional semantic information to an Artipoint without mutating or invalidating its original meaning.
+This section defines normative attribute families that extend the semantic meaning of Security Construct Artipoints defined in Section 7. Attributes are immutable, additive, and non-destructive: they attach additional semantic information to an Artipoint without mutating or invalidating its original meaning.
 
-All attributes defined in this section are evaluated at **Layer-3** using **log-anchored trust**. Attributes **MUST NOT** introduce governance semantics, authorization policy, or lifecycle state unless explicitly stated. Lifecycle and procedural semantics are defined elsewhere in this specification.
+All attributes defined herein are evaluated at Layer-3 and expressed using the Layer-2 grammar. This section provides normative definitions for attribute names, value encodings, and schemas. Construction, decoding, and validation procedures for Recovery Envelopes and Channel Key Envelopes are specified in Sections 11 and 12, respectively.
 
-This section defines **five attribute families**:
+This specification defines Layer-0 and Layer-1 mechanisms only where necessary to ensure interoperable generation and decoding of Layer-3 security material.
+
+The following attribute families are defined:
 
 1. `endorsement::*`
 2. `purpose::*`
@@ -824,11 +829,13 @@ Each purpose attribute is expressed as:
 | purpose::auth         | Session authentication                | ALSP and channel authentication |
 | purpose::keyAgreement | Key agreement and encryption          | Keyframe and recovery envelopes |
 
-### **8.2.3 Validation Rules (Normative)**
+## **8.2.3 Validation Rules (Normative)**
 
 A key **MUST NOT** be used for any cryptographic operation unless the corresponding purpose attribute is present and references the correct thumbprint.
 
-Channels **MUST rely exclusively** on purpose attributes and **MUST NOT** infer intent from identity metadata or governance attributes.
+Channel Codec operations (Layer-1 signing/encryption) **MUST rely exclusively** on purpose attributes of the active **Certificate Artipoint(s)** selected by Layer-3 trust evaluation, and **MUST NOT** infer cryptographic intent from identity metadata, governance attributes, labels, or other non-purpose fields.
+
+Layer-1 MUST NOT interpret Keyframe or Certificate semantics directly; it MUST consume only the cryptographic consequences provisioned by Layer-3 evaluation (e.g., selected keys, recipient sets, and epoch state).
 
 ## **8.3 Envelope Attribute Family**
 
@@ -839,10 +846,14 @@ Envelope attributes carry **encrypted cryptographic material** associated with *
 Envelope attributes are expressed as:
 
 ```json
-envelope::<recipient> := "<JWE>"
+envelope::<recipient> := "<JWE compact serialization>"
 ```
 
-where the value of the attribute must be JOSE JWE in compact serialization form. The JWE payload is encrypted for intended recipient using the recipients current public identity key additionally pointed to by the JWE `kid` header field.
+where the value of the attribute MUST be a JOSE JWE in compact serialization form as specified in Section 12.
+
+The JWE payload MUST be encrypted for the intended recipient using the recipient’s active **Certificate Artipoint** public key that is authorized for key agreement (i.e., purpose::keyAgreement is present and valid under Layer-3 trust evaluation).
+
+The JWE kid header field MUST identify the specific recipient Certificate Artipoint key being targeted (e.g., by certificate thumbprint or certificate identifier as defined for purpose::keyAgreement).
 
 ### **8.3.2 Channel Key Envelope (CKE) Schema (Normative)**
 
@@ -864,46 +875,17 @@ This schema defines the initial reference envelope format; future versions MAY i
 - `type`: Identifies this CKE structure
 - `version`: Version of this envelope and key bundle
 - `aes_key_jwk`: JWK object containing the channel encryption key
-- `auth_key_jwk`: JWK object containing the channel authentication key
+- `auth_key_jwk`: JWK object containing the CAK private key
 - `created`: Timestamp when this envelope was created
 - `valid_from`: Start time for when this key should be used (optional). When specified, this field is informational only and MUST NOT be used to determine Keyframe activation; activation semantics are defined exclusively by articulated state as specified in Section 10.
 - `replaces`: References the UUID of a prior Keyframe being superseded by this envelope (optional). This field aids provenance tracing but is informational only and MUST NOT be interpreted as defining rotation order, activation, or lifecycle behavior.
 - `rotation_interval_days`: Recommended rotation interval in days (optional)
 
-Each key in the envelope (`aes_key_jwk` and `auth_key_jwk`) is a standard **JOSE JWK flattened JSON object**, representing the symmetric key and the private channel access key, respectively.
+Each key in the envelope (`aes_key_jwk` and `auth_key_jwk`) is a JWK containing the channel symmetric encryption key and the Channel Access Key (CAK) private key, respectively.
 
 Layer-3 provisions extracted key material to lower layers. Lower layers **MUST NOT** parse or interpret this structure directly.
 
-### **8.3.3 JOSE Wrapping Requirements**
-
-Example protected header:
-
-#### Example JWE protected header wrapping Channel-Key-Envelope:
-
-```json
-{
-  "alg": "ECDH-ES+A256KW",
-  "enc": "A256GCM",
-  "typ": "ascp+cke",
-  "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440003"
-}
-```
-
-#### Example JWE envelope in compact serialization:
-
-```asciidoc
-<header>..<iv>.<ciphertext>.<tag>
-```
-
-### **8.3.4 Validation Rules**
-
-Recipients MUST:
-
-1. Verify the JWE using their private key
-2. Confirm the recipient certificate declares purpose::keyAgreement
-3. Preserve envelope immutability
-
-Lifecycle semantics are defined in Section 10.
+Key material lifecycle semantics are defined in Section 10 while full JOSE JWE encoding and validation details are specified in Section 12.
 
 ## **8.4 recovery\_envelope Attribute**
 
@@ -913,7 +895,7 @@ The recovery\_envelope attribute enables secure recovery of a certificate’s pr
 
 ### **8.4.2 Schema (Normative)**
 
-The value of the recovery\_envelope attributes is a JSON structure as follows:
+The value of the `recovery_envelope` attribute is a JSON structure as follows:
 
 ```json
 {
@@ -930,8 +912,8 @@ The value of the recovery\_envelope attributes is a JSON structure as follows:
 
 - `type` — Identifies this as a recovery envelope
 - `version` — Schema version for forward compatibility
-- `recovery_cert` — Reference to the recovery public key (Key B) used for outer encryption. See section 11.
-- `user_key_jwe` — The value string holds the  `user-key-envelope` per section 11 which is the double-encrypted identity private key written in JWE compact serialization form.
+- `recovery_cert` — Reference to the recovery public key (Key B) used for outer encryption. See Section 11.
+- `user_key_jwe` — The value string holds the  `user-key-envelope` per Section 11 which is the double-encrypted identity private key written in JWE compact serialization form.
 - `protection` — Array indicating the protection factors required for decryption
 - `rotation_id` — Human-readable identifier for tracking key rotations
 - `recovery_purpose` (optional) — Intended use case for this recovery envelope
@@ -951,7 +933,7 @@ This family is intentionally extensible. At present, only one attribute is defin
 
 The `certificate::kid` attribute declares the key identifier associated with a Certificate Artipoint.
 
-Its semantics are modeled directly after JOSE `kid` values and are interpreted consistently with **ASCP Channels §6.4**.
+Its semantics are modeled directly after JOSE `kid` values and are interpreted consistently with **ASCP Channels §6.4**. This cross-reference is strictly for interoperability of JOSE header `kid` values across ASCP documents; it does not delegate any Trust & Identity evaluation semantics, key generation, or key-wrapping behavior to Layer-1.
 
 ### 8.5.3 Semantics
 
@@ -965,9 +947,35 @@ The `certificate::kid` value:
 
 Verifiers MUST resolve `certificate::kid` deterministically against historical log state.
 
-## **8.6 Example Attribute Annotations (Informative)**
+## **8.6 Key Usage Evaluation Summary (Normative)**
 
-### **8.6.1 PKI Endorsement of Certificate Fingerprint**
+This section defines attribute families used to evaluate whether a given Certificate Artipoint is acceptable for a specific cryptographic use at a given **log-time**. Implementations MUST evaluate key usage deterministically from log evidence plus explicitly configured local policy inputs.
+
+Given:
+
+- `cert_kid`: the UUID of a candidate Certificate Artipoint
+- `required_purpose`: one of `purpose::assert`, `purpose::auth`, `purpose::keyAgreement`, etc.
+- `t`: a log-time instant (i.e., evaluation point within an append-only history)
+- `policy`: replica-local trust policy (including optional endorsement requirements)
+
+A verifier MUST evaluate key usage as follows:
+
+1. **Verify certificate validity at log-time**
+   - Resolve `cert_kid` to a Certificate Artipoint present in the Coordination Log at or before `t`.
+   - Apply any lifecycle constraints relevant to certificate applicability at `t` (e.g., non-retroactivity, supersession handling, or instance policy constraints defined elsewhere in this document).
+   - If the certificate is not applicable at `t`, the verifier MUST reject it for the candidate use.
+2. **Verify purpose match**
+   - The Certificate Artipoint MUST declare `required_purpose` as a `purpose::*` attribute.
+   - If `required_purpose` is not declared, the verifier MUST reject the certificate for that use.
+3. **Optionally evaluate endorsement strength**
+   - If `policy` requires endorsements for `required_purpose`, the verifier MUST evaluate endorsement presence and validity at `t` (including any external attestation verification procedures required by `policy`).
+   - If endorsement requirements are not met, the verifier MUST reject the certificate for that use.
+
+If all required checks succeed, the verifier MAY treat the certificate as an acceptable public key for `required_purpose` at log-time `t`.
+
+## **8.7 Example Attribute Annotations (Informative)**
+
+### **8.7.1 PKI Endorsement of Certificate Fingerprint**
 
 ```
 [ endorse-uuid, author-uuid, 2025-08-13T14:00:00Z,
@@ -985,7 +993,7 @@ Verifiers MUST resolve `certificate::kid` deterministically against historical l
 ];
 ```
 
-### **8.6.2 OIDC Identity Binding**
+### **8.7.2 OIDC Identity Binding**
 
 ```
 [ verify-uuid, author-uuid, 2025-08-08T14:30:25Z,
@@ -1001,7 +1009,7 @@ Verifiers MUST resolve `certificate::kid` deterministically against historical l
 ];
 ```
 
-### **8.6.3 DID-based Endorsement**
+### **8.7.3 DID-based Endorsement**
 
 ```
 [ did-endorse-uuid, author-uuid, 2025-08-20T10:00:00Z,
@@ -1017,7 +1025,7 @@ Verifiers MUST resolve `certificate::kid` deterministically against historical l
 ];
 ```
 
-### **8.6.4 TSA Time Attestation**
+### **8.7.4 TSA Time Attestation**
 
 ```
 [ tsa-uuid, author-uuid, 2025-08-13T14:02:00Z,
@@ -1033,13 +1041,11 @@ Verifiers MUST resolve `certificate::kid` deterministically against historical l
 ];
 ```
 
-# **9. Identity Claim Bundles (ICB)** 
+# **9. Identity Claim Bundles (ICB)**
 
-This section defines how ASCP participants—human users or autonomous agents—establish verifiable identity by combining (1) self-generated signing keys and (2) authentication by an external Identity Provider (IdP). The resulting **Identity Claim Bundle (ICB)** is a compact, portable JWS structure that provides durable, cryptographically self-contained evidence binding an ASCP public key to an externally authenticated identity.
+This section specifies **Identity Claim Bundles (ICB)**, which provide verifiable evidence binding an ASCP public key to an externally authenticated identity. An ICB combines: (1) a nonce-bound proof that the claimant controls the corresponding private key, and (2) an identity assertion issued by an external Identity Provider (IdP). The result is a compact, portable JWS object suitable for durable, log-anchored verification.
 
-The design is intentionally patterned after the architectural principles used by **WebAuthn attestation**: a *proof-of-possession* step tied to a caller-supplied nonce to establishe the authenticity of the key material, while a subsequent external attestation binds this key to a real-world identity. ASCP generalizes this pattern into a reusable, self-contained endorsement object suitable for persistent log-anchored verification.
-
-The ICB is the normative evidence used to construct **endorsement::oidc-icb** attributes on Certificate Artipoints (Section 8). Although OIDC will be the most common mechanism, the ICB design is IdP-agnostic and supports any JWT-based identity assertion that satisfies the normative requirements below.
+ICBs are used as normative evidence for constructing **endorsement::oidc-icb** attributes on Certificate Artipoints (Section 8). While OpenID Connect (OIDC) is expected to be a common mechanism, the ICB design is IdP-agnostic and may be used with any JWT-based identity assertion that satisfies the requirements in this section.
 
 ## **9.1 Design Assumptions (Informative)**
 
@@ -1283,11 +1289,11 @@ A non-OIDC IdP MUST still issue a JWT with:
 - A nonce claim equal to the pop\_hash.
 - Sufficient issuer metadata for trust evaluation.
 
-### **9.7.5 Token Acquisition**
+## **9.7.5 Token Acquisition**
 
-- When available, OIDC Authorization Code + PKCE MUST be used.
-- ID Tokens MUST NOT be transmitted via front-channel redirection.
-- Clients MUST prove possession of the PKCE code\_verifier.
+This specification does not define how external ID Tokens are acquired. It defines only how externally issued claims MAY be bound to ASCP identities and certificates via endorsement evidence.
+
+Deployments that use OIDC **SHOULD** use Authorization Code + PKCE and **SHOULD** avoid front-channel delivery of tokens; however, token acquisition and refresh mechanisms are out of scope for ASCP Trust & Identity and are specified by the relevant external identity provider and OIDC profiles.
 
 ## **9.8 Worked Example (Informative)**
 
@@ -1481,7 +1487,11 @@ This model ensures long-term auditability, stable cryptographic execution, and s
 
 # **11. Key Escrow and Recovery Strategy**
 
-ASCP provides a secure and auditable approach to private key recovery that builds on the log-anchored trust foundation. The strategy enables users to recover their **identity private key** without ever exposing it in plaintext to any third party, supporting device migration, key backup, and enterprise compliance scenarios. The mechanism is designed to accommodate both personal recovery workflows—where users control their own recovery credentials—and enterprise-managed recovery policies, but it is **not escrow by default**; recovery materials remain under the control of designated parties and are never accessible to ASCP infrastructure or log observers.
+ASCP provides a secure and auditable approach to private key recovery that builds on the log-anchored trust foundation. This mechanism enables users to recover their **identity private key** without ever exposing it in plaintext to any third party, supporting device migration, key backup, and enterprise compliance scenarios.
+
+The recovery strategy is designed to accommodate both personal recovery workflows—where users control their own recovery credentials—and enterprise-managed recovery policies. Recovery materials remain under the control of designated parties and are never accessible to ASCP infrastructure or log observers; the mechanism is **not escrow by default**.
+
+Key escrow and recovery is an **optional** capability. It does not affect trust evaluation of authorship except insofar as it enables key continuity across devices or recovery events.
 
 ## **11.1 Core Design Principles**
 
@@ -1520,7 +1530,7 @@ This double-encryption strategy ensures:
 
 ### **11.3.1 Recovery Envelope Construction**
 
-This procedure defines the normative steps for constructing a `recovery_envelope` attribute during identity bootstrap or key rotation. The resulting attribute structure is defined in Section 8.3.
+This procedure defines the normative steps for constructing a `recovery_envelope` attribute during identity bootstrap or key rotation. The resulting attribute structure is defined in Section 8.4.
 
 1. **Generate Identity Keypair (Key A)**
    - An implementation MUST generate an EC keypair (P-256 or P-384) to serve as the original identity signing key
@@ -1541,7 +1551,7 @@ This procedure defines the normative steps for constructing a `recovery_envelope
      - **Outer JWE**: Encrypt the inner JWE compact string using the recovery public key (Key B) with `alg: "ECDH-ES+A256KW"` and `enc: "A256GCM"`, producing a compact JWE string
    - The resulting outer JWE compact string IS the `user-key-envelope`
 5. **Construct recovery\_envelope Attribute**
-   - An implementation MUST construct a JSON object conforming to the `recovery_envelope` schema defined in Section 8.3
+   - An implementation MUST construct a JSON object conforming to the `recovery_envelope` schema defined in Section 8.4.
    - The `user_key_jwe` field MUST contain the `user-key-envelope` string from step 4
    - The `recovery_cert` field MUST reference the UUID of the Certificate Artipoint containing the recovery public key (Key B)
    - The `kdf_params` field SHOULD contain the salt and parameters used in step 3
@@ -1559,7 +1569,7 @@ This procedure defines the normative steps for recovering an identity private ke
    - An implementation MUST locate the user's Certificate Artipoint containing the identity public key (Key A)
    - The implementation MUST retrieve the `recovery_envelope` attribute attached to that Certificate Artipoint
 2. **Extract recovery\_envelope Structure**
-   - An implementation MUST parse the `recovery_envelope` attribute value as JSON conforming to the schema defined in Section 8.3
+   - An implementation MUST parse the `recovery_envelope` attribute value as JSON conforming to the schema defined in Section 8.4.
    - The implementation MUST extract the `user_key_jwe` field value (the `user-key-envelope` string)
    - The implementation MUST extract the `recovery_cert` field value (UUID of the recovery Certificate Artipoint) which MUST be confirmed to already include the attribute `purpose::keyAgreement`.
    - The implementation SHOULD extract the `kdf_params` field for password derivation
@@ -1601,9 +1611,197 @@ This procedure defines the normative steps for recovering an identity private ke
 
 ASCP supports secure, privacy-preserving key recovery by leveraging layered encryption, log-anchored publication, and optional recovery keypairs. This ensures that users can regain access to their identity keys without trusting any intermediary, while maintaining the protocol's cryptographic integrity and auditability.
 
-# **12. Provenance of the ASCP RootCA**
+# **12. Channel Key Envelopes (CKE)**
 
-This section defines the full provenance chain for the **ASCP Root Certificate Authority (RootCA)**, including:
+This section defines the normative construction, encoding, and decoding rules for **Channel Key Envelopes (CKEs)**.
+
+A Channel Key Envelope is the mechanism by which **Keyframe Artipoints** distribute per-recipient wrapped key material, including:
+
+- the Channel symmetric encryption key used for payload confidentiality, and
+- the Channel Access Key (CAK) private key used for Layer-0 channel access proofs.
+
+CKEs are **Layer-3 constructs**:
+
+- they are generated and interpreted exclusively by Layer-3 Trust & Identity evaluation,
+- they are represented using Layer-2 grammar as `envelope::*` attributes,
+- and they are carried opaquely by Layer-1 as part of the Articulation Sequence / Channel Envelope codec path.
+
+## **12.1 Scope and Non-Goals**
+
+This section specifies:
+
+- how a CKE plaintext is constructed (schema and required fields),
+- how that plaintext is wrapped using **JWE Compact Serialization**,
+- the required JOSE protected header profile for CKEs,
+- permitted algorithms, and
+- recipient-side decoding, validation, and provisioning.
+
+This section does **not** specify:
+
+- how Layer-1 encodes/decodes Channel Envelopes for Artipoint Records,
+- how ALSP synchronizes or authenticates replication sessions,
+- Keyframe activation/rotation semantics (see Section 10),
+- authorization / membership semantics (see Governance).
+
+## **12.2 CKE Placement and Addressing**
+
+A CKE is carried as the value of an `envelope::<recipient>` attribute attached to a **Keyframe Artipoint**.
+
+- The attribute name suffix `<recipient>` MUST be the UUID of the intended recipient’s **Identity Artipoint**.
+- The attribute value MUST be a **JWE Compact Serialization** string containing a decryptable plaintext conforming to the schema in Section 8.3.2.
+
+The recipient key used for JWE encryption is selected via the JWE protected header `kid`, which MUST identify the recipient’s **Certificate Artipoint** key authorized for `purpose::keyAgreement`.
+
+## **12.3 Plaintext Schema (Normative)**
+
+The decrypted plaintext of a Channel Key Envelope MUST be a UTF-8 encoded JSON object conforming to the **Channel Key Envelope (CKE) Schema** defined in Section 8.3.2.
+
+For clarity, the required semantic fields are:
+
+- `type` and `version` — schema identification
+- `aes_key_jwk` — a JWK representing the Channel symmetric encryption key
+- `auth_key_jwk` — a JWK representing the Channel Access Key (CAK) *private* key
+- `created` — creation timestamp
+
+Any additional fields (e.g., `valid_from`, `replaces`, `rotation_interval_days`) are informational and MUST NOT be used to determine Keyframe activation or lifecycle semantics, which are defined exclusively by articulated state (Section 10).
+
+## **12.4 JWE Wrapping and JOSE Header Profile (Normative)**
+
+CKEs MUST be encrypted using **JWE Compact Serialization**.
+
+A conforming CKE JWE MUST contain exactly five base64url segments:
+
+```asciidoc
+BASE64URL(ProtectedHeader) .
+BASE64URL(EncryptedKey) .
+BASE64URL(IV) .
+BASE64URL(Ciphertext) .
+BASE64URL(Tag)
+```
+
+The BASE64URL(EncryptedKey) segment handling is algorithm-dependent:
+
+- If `alg` is `ECDH-ES+A256KW`, the EncryptedKey segment **MUST be present and MUST NOT be empty** (it carries the CEK wrapped under the ECDH-derived KEK).
+- If `alg` is `ECDH-ES`, the EncryptedKey segment **MUST be present and MUST be empty** (the CEK is derived directly; no wrapped CEK is transported).
+
+### **12.4.1 Protected Header Requirements**
+
+The JWE Protected Header for a CKE MUST be valid JSON and MUST include:
+
+- `alg` — key management / key agreement algorithm
+- `enc` — content encryption algorithm
+- `kid` — identifies the recipient Certificate Artipoint key
+- `typ` — media type identifier for ASCP CKE envelopes
+
+The header MUST satisfy:
+
+- `typ` MUST be `"ascp+cke"`.
+- `kid` MUST be the exact `certificate::kid` value of the recipient’s Certificate Artipoint whose public key is used for the JWE operation. The `kid` value MUST conform to the JOSE `kid` encoding profile defined in **ASCP Channels §6.4**.
+- The referenced Certificate Artipoint MUST declare purpose::keyAgreement and MUST be valid under Layer-3 trust evaluation for the relevant log-time.
+
+The header MAY include:
+
+- `cty` — implementations MAY set "application/json".
+
+### **12.4.2 Algorithm Requirements**
+
+Implementations MUST NOT rely on runtime negotiation. Interoperability requires a fixed permitted algorithm set.
+
+**Content Encryption (enc)**
+
+- Implementations MUST support: A256GCM
+- A CKE specifying any other enc MUST be rejected.
+
+**Key Management / Agreement (alg)**
+
+- Implementations MUST support: ECDH-ES+A256KW
+- Implementations MAY support: ECDH-ES
+
+A CKE specifying an unsupported alg MUST be rejected.
+
+## **12.5 CKE Construction Procedure (Normative)**
+
+To construct a CKE for a given Keyframe and recipient identity:
+
+1. **Select the recipient Certificate**
+   - Resolve the recipient Identity Artipoint.
+   - Select a recipient Certificate Artipoint bound to that identity that declares purpose::keyAgreement.
+   - Determine the Certificate identifier to place in kid.
+2. **Construct the CKE plaintext**
+   - Build the JSON object per Section 8.3.2.
+   - aes\_key\_jwk MUST represent the symmetric key material required by the Keyframe’s payload cipher requirements.
+   - auth\_key\_jwk MUST represent the CAK private key material required by the Keyframe’s channel access algorithm.
+3. **Encrypt as JWE compact**
+   - Encode the plaintext JSON as UTF-8 bytes.
+   - Produce a JWE Compact Serialization object using the recipient’s selected Certificate public key, with a Protected Header satisfying Section 12.4.
+4. **Attach to the Keyframe Artipoint**
+   - Add the attribute envelope::\<recipient-identity-uuid> := "\<JWE-compact-string>" to the Keyframe Artipoint.
+
+The resulting Keyframe Artipoint, once articulated as an Artipoint Record, provides log-anchored, replayable distribution of recipient-specific key material.
+
+## **12.6 Recipient Decoding and Validation (Normative)**
+
+Upon encountering a Keyframe with `envelope::<recipient>` attributes, a recipient implementation MUST:
+
+1. **Select the correct envelope**
+   - Identify the **envelope::\<recipient-identity-uuid>** attribute matching the recipient’s Identity Artipoint UUID.
+2. **Parse the JWE compact serialization**
+   - Confirm it has exactly five segments.
+   - Base64url-decode the Protected Header and confirm it is valid JSON.
+   - Confirm the header includes `alg`, `enc`, `kid`, and `typ`.
+   - Confirm `typ == "ascp+cke"`.
+   - Confirm `enc` and `alg` are permitted by Section 12.4.2.
+   - Enforce `EncryptedKey` segment rules:
+     - If `alg == "ECDH-ES+A256KW"`, the `EncryptedKey` segment MUST NOT be empty.
+     - If `alg == "ECDH-ES"`, the `EncryptedKey` segment MUST be empty.
+     - Otherwise, reject.
+3. **Resolve and validate the recipient certificate**
+   - Resolve kid to the referenced Certificate Artipoint.
+   - Confirm the Certificate Artipoint is bound to the recipient Identity Artipoint at the relevant log-time.
+   - Confirm the certificate declares purpose::keyAgreement.
+   - If any of these checks fail, the recipient MUST reject the envelope.
+4. **Decrypt**
+   - Use the recipient’s private key corresponding to the kid Certificate Artipoint to decrypt the JWE.
+   - If authenticated decryption fails, the recipient MUST reject the envelope.
+5. **Validate plaintext schema**
+   - Parse the decrypted plaintext as JSON.
+   - Confirm it conforms to the schema in Section 8.3.2.
+   - Reject if required fields are absent or malformed.
+6. **Provision cryptographic consequences**
+   - Extract aes\_key\_jwk and provision the symmetric key material to Layer-1 for message confidentiality and decryption for the Keyframe epoch.
+   - Extract auth\_key\_jwk and provision the CAK private key material to Layer-0 for channel access proofs (as required by the Channel access algorithm).
+   - Provisioning MUST be treated as pure data output of Layer-3 evaluation (see Section 10.7).
+
+## **12.7 Security Considerations (Informative)**
+
+- **Confidentiality**: CKEs are encrypted per-recipient; observers lacking the recipient private key cannot recover channel secrets from the log.
+- **Integrity**: JWE authenticated encryption provides integrity for the CKE plaintext; the enclosing Keyframe Artipoint Record signature provides log-anchored provenance.
+- **Non-retroactivity**: Rotation or membership changes do not rewrite historical CKEs; historical decryptability follows Section 10 continuity rules.
+- **Key compromise**: If a recipient key agreement private key is compromised, CKEs addressed to that key may be compromised; this motivates recipient certificate rotation and re-issuance of envelopes as needed.
+
+## **12.8 Example (Informative)**
+
+Example Protected Header:
+
+```json
+{
+  "alg": "ECDH-ES+A256KW",
+  "enc": "A256GCM",
+  "typ": "ascp+cke",
+  "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440003"
+}
+```
+
+Example attribute placement on a Keyframe Artipoint:
+
+```json
+envelope::550e8400-e29b-41d4-a716-446655440010 := "<jwe-compact-string>"
+
+```
+
+# **13. Provenance of the ASCP RootCA**
+
+The **RootCA Artipoint** is the distinguished trust anchor for an ASCP instance. This specification defines the semantic role of the RootCA Artipoint and the evidence that verifiers MAY use to establish confidence in it including:
 
 - Internal self-signing and articulation
 - Optional anchoring to a Public or Enterprise PKI certificate
@@ -1616,83 +1814,83 @@ The goal is to ensure that **any verifier, at any time in the future**, can:
 3. See its relationship to a trusted PKI at the time of anchoring.
 4. Validate the integrity of this provenance against immutable and independent records.
 
-## **12.1 RootCA Generation and Self-Signing**
+## **13.1 RootCA Generation and Self-Signing**
 
-1. **Generate RootCA Key Pair**
-   - Algorithm: ECDSA P-384 (default) or equivalent.
-   - Created in a secure environment by the ASCP repository operator.
-   - Private key remains under sole control of the repository owner organization.
-2. **Create RootCA Self-Signed Certificate**
-   - Contains the public key.
-   - Acts as the trust anchor for all ASCP participants and components in the repository.
-3. **Embed in Bootstrap Artipoint**
-   - The RootCA public key and self-signed certificate are embedded in the **first immutable Artipoint** of the repository’s @Bootstrap channel.
-   - This Artipoint is cryptographically signed by the RootCA private key.
+- An ASCP instance MUST have exactly one active RootCA trust anchor at any given time for the purpose of certificate chain acceptance.
+- The associated algorithm SHOULD be ECDSA P-384 or better security level.
+- The keys SHOULD be created in a secure environment by the ASCP instance operator.
+- The RootCA trust anchor MUST be represented as a **RootCA Artipoint** (a distinguished Certificate Artipoint) whose public key and thumbprint are immutable once articulated.
+- Verifiers MUST treat acceptance of the RootCA as a trust decision rooted in immutable evidence (log-anchored trust), not as a mutable online lookup.
 
-## **12.2 Optional Anchoring to a Public or Enterprise PKI**
+## **13.2 Optional Anchoring to a Public or Enterprise PKI**
 
-To provide **portable, externally verifiable trust**, the RootCA can be endorsed by a PKI certificate from:
+Deployments MAY publish additional evidence binding the RootCA public key to external trust systems (e.g., a detached signature using an external PKI identity, transparency log inclusion, or other third-party attestations). Such evidence MAY be referenced by endorsement attributes or auxiliary artifacts, but does not change the internal semantics of the RootCA Artipoint.
 
-- **Public PKI**: e.g., Let’s Encrypt, DigiCert.
-- **Enterprise PKI**: e.g., corporate CA.
+This specification defines only the *evidence semantics and validation rules*. The *transport and placement* of RootCA provenance material (e.g., which channel(s) carry it, how it is discovered, or where it is located within bootstrap history) is defined in the companion **ASCP Bootstrap and Channel Discovery** specification.
 
-**Process:**
+### **Evidence Format (Informational)**
 
-1. Obtain a valid TLS/identity certificate from the chosen PKI.
-2. Using the PKI certificate's private key, create a **detached signature** over the RootCA public key or self-signed certificate.
-3. Capture the **full validated certificate chain** for the PKI certificate at the time of signing.
-4. Embed both the detached signature and certificate chain in the same bootstrap Artipoint alongside the RootCA.
+A typical PKI anchoring evidence set consists of:
 
-**Result:**
+1. A valid PKI-issued certificate for the anchoring identity (e.g., TLS/identity certificate).
+2. A **detached signature** produced using the PKI certificate’s private key over the RootCA public key material (or a canonical encoding / thumbprint thereof).
+3. The **validated certificate chain** for the PKI-issued certificate at the time of signing.
 
-Any verifier can:
+### **Verifier Semantics (Normative)**
 
-- Validate the PKI certificate chain against trusted PKI roots.
-- Verify the detached signature over the rootCA key.
-- Confirm that the RootCA was endorsed by the PKI identity at the recorded point in time.
+If PKI anchoring evidence is present, a verifier:
 
-## **12.3 Optional Time-Stamping Authority (TSA) Signature**
+- **MUST** validate the PKI certificate chain against its configured PKI trust roots under replica-local policy.
+- **MUST** verify the detached signature over the RootCA key material.
+- **MUST** treat successful validation as *additional provenance evidence* and **MUST NOT** treat it as altering the RootCA Artipoint’s semantic role as the instance trust anchor.
 
-To provide **independent temporal attestation**, the bootstrap Artipoint can include an RFC 3161-compliant TSA token:
+## **13.3 Optional Time-Stamping Authority (TSA) Signature**
 
-**Process:**
+To provide independent temporal attestation, deployments MAY include an RFC 3161-compliant Time-Stamp Token (TST) covering a hash of the RootCA provenance payload.
 
-1. Create a hash of the RootCA provenance payload (including the PKI signature and certificate chain if present).
-2. Submit this hash to a trusted Time-Stamping Authority.
-3. Receive a signed **Time-Stamp Token (TST)** from the TSA, which:
-   - Proves the payload existed at or before the TSA’s timestamp.
-   - Is signed by the TSA’s own PKI-trusted certificate.
-4. Embed the TST in the bootstrap Artipoint.
+This specification defines only the *evidence semantics and validation rules*. The *transport and placement* of TSA evidence is defined in the companion **ASCP Bootstrap and Channel Discovery** specification.
 
-**Result:**
+### **Evidence Format (Informational)**
 
-- Verifiers gain third-party assurance of when the provenance payload was created.
-- Even if the ASCP repository’s own time records are disputed, the TSA attestation stands as independent proof.
+A typical TSA evidence set consists of:
 
-## **12.4 Provenance Chain Validation Steps for a Verifier**
+1. A hash computed over a canonical RootCA provenance payload (including PKI anchoring evidence if present).
+2. An RFC 3161 **Time-Stamp Token (TST)** issued by a TSA, asserting the hash existed at or before the TSA timestamp.
 
-When a verifier examines a repository’s bootstrap channel, they:
+### **Verifier Semantics (Normative)**
 
-1. **Extract the RootCA certificate** from the first Artipoint.
-2. **Verify RootCA self-signature** (internal trust anchor).
-3. If present, **validate PKI anchor**:
-   - Check certificate chain validity (at time of signing).
-   - Verify detached signature over RootCA key.
-4. If present, **validate TSA attestation**:
-   - Verify TSA token signature against TSA public key.
-   - Confirm timestamp matches repository creation timeframe.
-5. **Confirm immutability**:
-   - Ensure bootstrap Artipoint is intact in all replicas.
-   - Validate signatures back to RootCA.
+If a TSA token is present, a verifier:
 
-## **12.5 Key Points**
+- **MUST** verify the TST signature using the TSA’s certificate chain under replica-local policy.
+- **MUST** verify that the TST covers the expected hash of the provenance payload.
+- **MUST** treat successful validation as independent temporal evidence and **MUST NOT** treat it as altering the RootCA Artipoint’s semantic role as the instance trust anchor.
 
-- The provenance is **permanently preserved** in the immutable bootstrap channel.
-- Even if the PKI certificate later expires or is revoked, verifiers can confirm it was valid when the repository was anchored.
+## **13.4 Provenance Evidence Validation Steps for a Verifier**
+
+The procedures by which a verifier *discovers* the RootCA Artipoint and any associated provenance material (e.g., bootstrap channels, ordering conventions, or discovery heuristics) are defined in the companion **ASCP Bootstrap and Channel Discovery** specification.
+
+Given a RootCA Artipoint and any associated provenance evidence objects discovered by those procedures, a verifier evaluates provenance as follows:
+
+1. **Verify RootCA self-consistency**
+   - Confirm the RootCA Artipoint is well-formed as a distinguished Certificate Artipoint.
+   - Confirm the RootCA key material (or canonical thumbprint thereof) matches the expected immutable value derived from the RootCA Artipoint.
+2. **Validate optional PKI anchoring evidence (if present)**
+   - Validate the PKI certificate chain under replica-local policy.
+   - Verify the detached signature over the RootCA key material.
+3. **Validate optional TSA attestation (if present)**
+   - Verify the TSA token signature under replica-local policy.
+   - Confirm the token covers the expected hash of the provenance payload.
+4. **Confirm log-anchored immutability**
+   - Ensure that all evaluated provenance evidence objects are immutable, replayable, and bound to Coordination Log history such that independent replicas can reach the same conclusions at log-time, subject only to explicitly configured replica-local policy inputs.
+
+## **13.5 Key Points**
+
+- The provenance is **permanently preserved** as immutable log-anchored evidence discoverable via the bootstrap and discovery procedures.
+- Even if the PKI certificate later expires or is revoked, verifiers can confirm it was valid when the ASCP instance was anchored.
 - Re-anchoring is possible at any later date to provide renewed PKI endorsements without replacing the RootCA.
 - Optional TSA signatures and/or publication in a transparency log provide **independent temporal proof** for maximum audit assurance.
 
-# 13. Overall Summary
+# 14. Overall Summary
 
 ASCP's log-anchored trust architecture solves the fundamental challenges of distributed identity by anchoring all trust decisions in immutable log entries rather than real-time validation. This provides durable identity, complete cryptographic provenance, and autonomous operation without external dependencies.
 
