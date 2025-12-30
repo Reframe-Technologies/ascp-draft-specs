@@ -4,325 +4,400 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.52 — Informational (Pre-RFC Working Draft)  
+Version: 0.53 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
-# **1. Status of This Document**
+## **1. Status of This Document**
 
-This document is part of the ASCP specification suite and defines Layer 0 of the protocol stack: ALSP (ASCP LogSync Protocol), the transport-agnostic synchronization layer that ensures deterministic convergence of append-only logs across distributed replicas. It is published at this time to gather community feedback on the synchronization semantics, Lamport clock ordering, authentication mechanisms, and transport binding specifications.
+This document is part of the ASCP specification suite and specifies the **ASCP LogSync Protocol (ALSP)**, the **Layer-0** replication protocol for synchronizing **Channel Logs** between ASCP replicas. ALSP defines message formats, replication procedures, and validation requirements used to exchange and converge on an append-only log of **Artipoint Records**, where each Artipoint Record consists of **Layer-0 replication metadata** and an opaque **Layer-1 Channel Envelope** payload.
 
-This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Implementations based on this document should be considered **experimental**.
+This document is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is published solely for early review and experimentation. Implementations based on this document are **experimental**.
 
-The key words “MUST”, “MUST NOT”, “SHOULD”, “SHOULD NOT”, and “MAY”, when used in this document, are to be interpreted as described in RFC 2119 and RFC 8174. Their use here is intended to convey the authors’ expectations for future interoperability profiles; the normative requirements are provisional and subject to change.
+The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in BCP 14 (RFC 2119 and RFC 8174) when, and only when, they appear in all capitals. Requirements stated using these keywords are **provisional** and intended to convey the authors’ current interoperability expectations; they are subject to change as the specification matures.
 
-Feedback from implementers, protocol designers, distributed systems researchers, and security reviewers is explicitly requested to guide further development toward a future Internet-Draft.
+Feedback from implementers, protocol designers, distributed systems researchers, and security reviewers is requested to guide further development toward a future Internet-Draft.
 
-# **2. Abstract**
+## **2. Abstract**
 
-The ASCP LogSync Protocol (ALSP) specifies the Layer 0 transport and replication mechanism of the Agents Shared Cognition Protocol (ASCP). ALSP defines a transport-agnostic protocol for synchronizing append-only Channel Logs that contain immutable, semantically opaque Layer 1 message envelopes. These envelopes encapsulate signed and optionally encrypted Layer 2 articulation sequences, the structured content of the ASCP cognition model. ALSP ensures deterministic, convergent ordering of these messages across replicas using Lamport clocks and a stable global tie-breaking rule.
+The ASCP LogSync Protocol (ALSP) specifies **Layer-0** transport and replication procedures for the Agents Shared Cognition Protocol (ASCP). ALSP synchronizes append-only **Channel Logs** across replicas. Each log entry is an immutable, semantically opaque **Artipoint Record** that binds **Layer-0 synchronization metadata** (e.g., identifiers and ordering fields) to a **Layer-1 Channel Envelope** (a JOSE serialization) carried without semantic interpretation.
 
-This document defines the ALSP message formats, authentication and authorization procedures, replica behavior, and transport bindings necessary for reliable log replication in centralized, partially connected, and fully distributed environments. It normatively specifies the deterministic CBOR envelope and Dot-Preserving Binary (DPB) encoding used to transport Layer 1 JOSE compact serialization without semantic interpretation, as well as mechanisms for pull- and push-based synchronization, replay protection, and Channel Access Key–based authorization.
-
-Together, these mechanisms provide interoperable and fault-tolerant synchronization of ASCP Channel Logs while preserving the immutability, ordering guarantees, and cryptographic integrity required by higher layers of the ASCP protocol stack.
+ALSP defines message formats, authentication and replication-admission procedures, replica behavior, and transport bindings for reliable log replication in centralized, partially connected, and fully distributed environments. It normatively defines a deterministic **CBOR** message envelope and **Dot-Preserving Binary (DPB)** encoding for conveying Layer-1 JOSE compact serialization opaquely, and specifies pull- and push-based synchronization mechanisms, replay protection, and deterministic convergence using **Lamport-clock ordering** with a stable global tie-break rule.
 
 # **3. Introduction**
 
-The ASCP LogSync Protocol (ALSP) defines the Layer 0 transport and replication layer of the Agents Shared Cognition Protocol (ASCP). ALSP provides a transport-agnostic mechanism for synchronizing append-only Channel Logs containing immutable, semantically opaque Layer 1 message envelopes. These envelopes encapsulate Layer 2 articulation sequences but are treated by ALSP as uninterpreted binary payloads. The purpose of ALSP is to ensure that all authorized replicas converge on a bit-identical, canonically ordered view of each Channel Log regardless of network topology or connectivity conditions.
+The ASCP LogSync Protocol (ALSP) specifies the **Layer-0** replication substrate for the Agents Shared Cognition Protocol (ASCP). ALSP defines a transport-agnostic mechanism for synchronizing append-only **Channel Logs** between ASCP replicas.
 
-ALSP operates beneath all semantic interpretation, above the physical transport, and forms the foundation upon which the higher layers of ASCP construct structured shared cognition, secure authorship, policy enforcement, and collaboration semantics. This document defines the behavior, guarantees, and on-wire formats required for interoperable ALSP implementations.
+A Channel Log is a sequence of immutable **Artipoint Records**. For the purposes of this specification, an Artipoint Record consists of: (1) **Layer-0 synchronization metadata** required for identification, ordering, and deduplication; and (2) an opaque **Layer-1 Channel Envelope** payload (a JOSE serialization) produced by the Layer-1 channel encoding process. ALSP does not inspect, interpret, or transform the Layer-1 payload, nor any protected Layer-2 content that may be encapsulated by it.
+
+The purpose of ALSP is to enable replicas that are admitted to synchronize a given Channel Log to **exchange**, **validate**, **deduplicate**, and **order** Artipoint Records such that they converge on a **bit-identical, canonically ordered** view of that log. This convergence property MUST hold independent of deployment topology (centralized, peer-to-peer, or hybrid) and under intermittent connectivity.
+
+ALSP operates above the physical transport and below all semantic interpretation. It specifies behaviors, guarantees, and on-wire formats required for interoperable implementations, while leaving meaning, governance, and application policy to higher layers of the ASCP protocol stack.
 
 ## **3.1 Motivations Behind ALSP Design**
 
-ALSP is motivated by the need for a deterministic, secure, and transport-independent replication substrate for ASCP’s distributed cognition model. Channels in ASCP represent persistent, append-only streams of articulated meaning; their correct operation depends on the ability of replicas to converge reliably even in environments with intermittent connectivity, partial replication, or multiple writers.
+ALSP is motivated by the need for a deterministic, secure, and transport-independent replication substrate for ASCP Channel Logs.
 
-Several design goals guided the creation of ALSP:
+ALSP is designed to satisfy the following objectives:
 
-ALSP provides **deterministic convergence** across replicas through a combination of Lamport clocks and globally stable tie-breaking rules. It supports **local-first, eventually consistent operation**, allowing replicas to operate offline and later reconcile logs without conflict. It adopts a **semantically opaque content model**: Layer 0 is not permitted to inspect, reorder, or interpret Layer 1 or Layer 2 payloads, ensuring that all semantics remain at higher layers. ALSP also enforces **strong authentication and authorization**, ensuring only valid identities and channel members may participate in replication. Finally, ALSP is **agnostic to deployment topology**, supporting centralized, peer-to-peer, and hybrid configurations with equal fidelity.
+- **Deterministic convergence:** ALSP defines a canonical ordering of Artipoint Records using Lamport clocks and a stable global tie-break rule, enabling replicas to independently compute the same order from the same set of records.
+- **Local-first, eventually consistent operation:** ALSP supports disconnected operation and later reconciliation by synchronizing missing records and converging deterministically without requiring a single always-online coordinator.
+- **Semantically opaque payload model:** Layer-0 implementations MUST NOT inspect, interpret, or transform Layer-1 Channel Envelopes, nor any protected Layer-2 payloads they may encapsulate. ALSP replicates the Layer-1 payload as opaque bytes and relies only on Layer-0-visible metadata necessary for synchronization and validation.
+- **Cryptographic integrity and replay resistance:** ALSP requires integrity protection and replay protection for ALSP messages and for any artifacts used in replication admission, enabling replicas to reject malformed, forged, or replayed protocol exchanges.
+- **Topology agnosticism:** ALSP is intended to operate in centralized, partially connected, and fully distributed deployments without changes to its core replication, ordering, and convergence rules.
 
-This combination of determinism, minimalism, and robust security provides a stable substrate for the higher layers of ASCP to express meaning, authorship, governance, and encrypted content without embedding transport concerns in those layers.
+These properties provide a stable substrate upon which higher ASCP layers can define representation, interpretation, and enforcement without embedding transport or replication concerns into those layers.
 
 ## **3.2 Position of ALSP in the ASCP Layer Model**
 
-ASCP is defined as a four-layer protocol stack. ALSP occupies **Layer 0**, directly above the physical transport and below all semantic layers. Its role is to replicate and order Layer 1 message envelopes, not to interpret them.
+ASCP is defined as a layered protocol suite with strict responsibility boundaries. ALSP occupies **Layer-0**, directly above the physical transport and below all semantic layers. Its role is to replicate and order **Artipoint Records** and to convey the embedded Layer-1 Channel Envelope payload opaquely.
 
-- **Layer 0 — ALSP (This Specification):** Synchronizes append-only Channel Logs, enforces deterministic ordering, transports JOSE-formatted Layer 1 envelopes efficiently using DPB and deterministic CBOR, and manages replica-level authentication and channel-level authorization.
-- **Layer 1 — Message Security Layer:** Defines the JOSE-based signatures and optional encryptions that protect the integrity, authorship, and confidentiality of Layer 2 articulations. ALSP treats all Layer 1 content as opaque.
-- **Layer 2 — Articulation Layer:** Defines the structured representation of meaning (articulations) and the relationships forming the ASCP knowledge graph. Layer 0 has no access to or awareness of these structures.
-- **Layer 3 — Application Layer:** Hosts agents, clients, and collaborative processes that interpret ASCP state and produce new articulated content.
+- **Layer-0 Replication Substrate — ALSP (This Specification):** Defines synchronization of append-only Channel Logs; specifies canonical ordering and convergence rules; defines on-wire protocol messages and transport bindings; and provides protocol-level authentication, integrity checks, replay protection, and replication-admission proof verification.
+- **Layer-1 Cryptographic Realization:** Produces and consumes **Layer-1 Channel Envelopes** using cryptographic protection (e.g., signing and optional encryption), and verifies the protected representation it carries.
+- **Layer-2 Artipoint Grammar:** Defines the syntactic representation of articulated coordination (e.g., Artipoint expressions and structural constraints). Layer-0 does not parse or depend on Layer-2 structures.
+- **Layer-3 Semantic Evaluation:** Defines how meaning, authority, governance state, and application-specific views are derived from articulated history over time. Layer-3 provisions channels and credentials and determines what enforcement or consequences follow from the log.
 
-This strict layering ensures that ALSP concerns itself solely with the reliable distribution and ordering of messages, while all semantic interpretation and policy enforcement occurs above Layer 0.
+This separation ensures that ALSP is confined to **replication, ordering, and protocol-level validation**, while representation semantics (Layer-2) and interpretive/governance semantics (Layer-3) occur strictly above Layer-0.
 
 ## **3.3 Scope of This Specification**
 
-This document specifies the full behavioral and technical requirements for ALSP. It includes:
+This document specifies the requirements for interoperable ALSP implementations, including:
 
-- The deterministic ordering model and Lamport-based logical clock semantics
+- The canonical ordering model and Lamport-clock semantics
 - The append-only Channel Log replication model
-- Replica responsibilities for deduplication, insertion, and convergence
-- Authentication, authorization, and replay-protection mechanisms
-- The synchronization modes (pull and push) and negotiation procedures
-- The WebSocket-over-TLS transport binding and on-wire message structure
-- Deterministic CBOR encoding, DPB encoding rules, and ALSP envelope format
+- Replica responsibilities for validation, deduplication, insertion, and convergence
+- Protocol authentication, replication-admission proof verification, and replay-protection mechanisms
+- Synchronization modes (pull and push) and negotiation procedures
+- Transport bindings and on-wire message structures
+- Deterministic CBOR encoding, DPB encoding rules, and the ALSP message envelope format
 - Error signaling, connection handling, and resilience expectations
-
-The specification defines all normative requirements for interoperability among independently developed ALSP implementations.
 
 ## **3.4 Out of Scope**
 
-Several components essential to complete ASCP interoperability are defined in other documents and are explicitly out of scope for ALSP. These include:
+The following are explicitly out of scope for ALSP and are defined by other ASCP specifications or by applications:
 
-- **Semantic interpretation of messages:** ALSP does not inspect or understand Layer 1 JOSE envelopes or the Layer 2 articulations they protect.
-- **Identity and trust semantics:** ALSP depends on identity certificates, claims bundles, and binding rules defined in the *ASCP Trust and Identity Architecture* specification.
-- **Channel creation, governance, and membership:** Channel manifests, access-control policies, and Channel Access Key lifecycle rules are defined in the *ASCP Channels* and *ASCP Governance and Access Control* specifications.
-- **Articulation grammar and structured cognition model:** The structure and semantics of articulated meaning are defined in the *ASCP Artipoint Grammar* and related Layer 2 specifications.
-- **Peer discovery, routing, and topology management:** ALSP assumes an established connection between replicas and does not define overlay networks or discovery protocols.
+- **Semantic interpretation of payloads:** ALSP does not inspect or interpret Layer-1 Channel Envelopes or any protected Layer-2 content.
+- **Identity and trust semantics:** ALSP may validate cryptographic material and protocol artifacts used for admission, but the meaning of identity claims, trust relationships, and the rules determining which replicas are admitted to synchronize a given Channel Log are defined outside Layer-0.
+- **Channel definition, governance, and membership semantics:** Channel manifests, governance rules, membership policy, and key lifecycle semantics are not defined by ALSP. ALSP may require proofs or identifiers to admit synchronization, but does not define their higher-level meaning or enforcement consequences.
+- **Artipoint grammar and structured cognition model:** The structure, interpretation, and validation rules for articulated representations are defined at Layer-2 and above.
+- **Peer discovery, routing, and topology management:** ALSP assumes an established connection between replicas and does not define discovery protocols, overlay routing, or network coordination.
 
-By limiting ALSP to synchronization, ordering, and replica-level security, the specification maintains a narrow, stable contract between the transport layer and the semantic layers above it.
+By limiting ALSP to synchronization, deterministic ordering, and protocol-level validation, this specification defines a narrow, stable contract between the replication substrate and the higher semantic layers.
 
 # **4. Terminology**
 
-This section defines terms used normatively throughout this specification. Terms not defined here carry their customary meaning within the ASCP architecture.
+This section defines terms used throughout this specification. Where applicable, terms are intended to align with the **ASCP Terminology Primer**. In the event of conflict, the definitions in this document control for **ALSP (Layer-0)** behavior.
 
-### **4.1 ALSP (ASCP LogSync Protocol)**
+## **4.1 ASCP Layers**
 
-The Layer 0 protocol of the ASCP stack responsible for transport-agnostic replication of append-only Channel Logs using deterministic ordering.
+**Layer-0 (Replication Substrate)**
 
-### **4.2 Articulation**
+The protocol layer responsible for durable replication, deduplication, and deterministic ordering of **Artipoint Records** in append-only Channel Logs. In ASCP, Layer-0 is specified by ALSP.
 
-A Layer 2 semantic unit representing structured shared cognition. Articulations are conveyed to Layer 0 as opaque JOSE JWS/JWE compact sequences encapsulated within Layer 1 message envelopes.
+**Layer-1 (Cryptographic Realization)**
 
-### **4.3 ASCP (Agents Shared Cognition Protocol)**
+The protocol layer responsible for producing and consuming **Layer-1 Channel Envelopes** (e.g., JOSE objects providing signing and optional encryption) and for verifying cryptographic protections on those envelopes.
 
-A four-layer protocol suite enabling persistent, structured collaboration among humans and agents. ALSP defines Layer 0 of this stack.
+**Layer-2 (Artipoint Grammar / Syntax)**
 
-### **4.4 Bootstrap Key Package (BKP)**
+The protocol layer that defines the syntactic form of articulated content. Layer-0 does not parse, interpret, or depend on Layer-2 syntax.
 
-A JWE-encoded, bootstrap-scoped package delivered out-of-band via the `boot_keys_jwe` field in the ALSP hello message, used to convey bootstrap-scoped key material required by higher layers to enable decryptability of the encrypted @references channel for deterministic discovery during join bootstrap.
+**Layer-3 (Semantic Evaluation)**
 
-### **4.5 Bootstrap Log**
+The protocol layer that defines interpretation of articulated history into meaning, authority, governance state, and application views. Layer-0 does not evaluate Layer-3 semantics.
 
-A minimal, append-only log used to establish the initial trust context for an ASCP organizational instance. The bootstrap log anchors the organizational trust root (RootCA) and provides the information required to locate the authoritative channel discovery registry.
+## **4.2 Nodes, Replicas, Peers, Sessions**
 
-The bootstrap log **does not contain cryptographic keys**, channel membership data, or authorization state, and **does not function as a channel discovery registry**.  
-All trust evaluation, discovery, and authorization semantics beyond initial anchoring are derived from validated history in subsequent channels under normal ASCP rules.
+**Node**
 
-### **4.6 Canonical Order**
+An instance of an ASCP implementation that may store Channel Logs and participate in ALSP exchanges.
 
-The total ordering over Channel Log entries defined as the tuple **(lamport\_time, message\_id)**, sorted first by Lamport clock value and then by the lexicographic ordering of the 16-byte message identifier.
+**Replica**
 
-### **4.7 Challenge Flow**
+A Node acting in the role of storing and synchronizing one or more Channel Logs using ALSP.
 
-A server-side handshake path triggered when the receiving replica cannot fully validate the client's identity using cached or known materials and therefore sends an auth\_challenge requesting additional identity data. Challenge Flow describes server behavior independent of the client's credential mode.
+**Peer**
 
-### **4.8 Channel**
+The remote Node participating in an ALSP session with a local Node.
 
-A uniquely identified, append-only stream of Layer 1 message envelopes. Channels define the unit of distribution and authorization within ASCP.
+**Session**
 
-### **4.9 Channel Access Key (CAK)**
+A mutually authenticated communication context established between two Peers for the purpose of exchanging ALSP messages. A Session begins upon completion of the ALSP authentication handshake and persists until closed, terminated, or expired.
 
-An Ed25519 key pair used to authenticate access to a Channel at Layer 0. The public key is distributed in the Channel Manifest; the private key is held by authorized participants to produce Channel Access Proofs.
+**node\_id**
 
-### **4.10 Channel Log**
+A universally unique identifier for a Node participating in ALSP synchronization.
 
-A replica's ordered sequence of Layer 1 message envelopes for a specific Channel. The log is append-only and synchronized across replicas using ALSP.
+**session\_nonce**
 
-### **4.11 Channel Manifest**
+A per-session, randomly generated 128-bit nonce created independently by each endpoint. During authentication, each endpoint includes its own session\_nonce in the JOSE protected header nonce field. After authentication completes, each endpoint includes the peer’s session\_nonce in the nonce field. This binds ALSP messages to a specific authenticated Session and provides replay resistance across Sessions.
 
-Channel metadata distributed via the bootstrap process, including Channel identifiers, access-control configuration, and the CAK public key.
+## **4.3 Logs, Channels, Envelopes, and Records**
 
-### **4.12 Digest Hash Exchange**
+**Channel**
 
-A Channel Log consistency check in which replicas compare a SHA-256 digest of message identifiers in canonical order to detect divergence.
+A uniquely identified unit of distribution. The concrete replication substrate of a Channel is its Channel Log. Channel governance, membership semantics, and higher-layer meaning are defined above Layer-0.
 
-### **4.13 Direct Mode**
+**Channel Log**
 
-A client credential-supply mode in which the initiating replica includes all identity materials necessary for validation in its initial auth\_request. Direct Mode describes how the client packages credentials and does not imply anything about the server's validation flow.
+An append-only log maintained for a specific Channel and replicated across Replicas using ALSP. A Channel Log contains an ordered sequence of Artipoint Records.
 
-### **4.14 Dot-Preserving Binary (DPB)**
+**Artipoint Record**
 
-A reversible binary encoding that transforms JOSE compact serialization into a more efficient on-wire representation by decoding Base64url segments while preserving literal dot separators. Used by Layer 0 to transport Layer 1 payloads without semantic interpretation.
+A single immutable log entry replicated by ALSP. For the purposes of this specification, an Artipoint Record consists of (1) Layer-0 synchronization metadata required for identification, ordering, and deduplication, and (2) an opaque Layer-1 Channel Envelope payload carried without semantic interpretation.
 
-### **4.15 Hello Message**
+**Layer-1 Channel Envelope**
 
-The message exchanged after authentication to negotiate session parameters, exchange lamport\_max values, advertise capabilities, and confirm mutual authorization before synchronization.
+A Layer-1 produced cryptographic container (e.g., JOSE serialization) that encapsulates and protects Layer-2 content. ALSP transports the Layer-1 Channel Envelope as opaque bytes, except where this specification requires inspection of specific JOSE header fields for protocol-level authentication or replication-admission verification.
 
-### **4.16 Identity Key**
+**message\_id**
 
-The long-term cryptographic key pair representing a participant (human or agent) within ASCP. Represented as a JWK and bound to an identity via signed claim bundles defined outside this specification.
+A 16-byte identifier associated with an Artipoint Record for idempotence, deduplication, and canonical ordering. The construction and uniqueness requirements for message\_id are specified by this document.
 
-### **4.17 Immediate Flow**
+**payload**
 
-A server-side handshake path in which the receiving replica can validate the client's auth\_requestimmediately based on locally available trust material, allowing it to respond directly with hello without issuing an auth\_challenge.
+The on-wire byte sequence that carries a Layer-1 Channel Envelope within an ALSP message. When DPB is used, payload is the DPB encoding of the JOSE compact serialization.
 
-### **4.18 JWK (JSON Web Key)**
+## **4.4 Ordering and Convergence**
 
-A JOSE structure used to encode public and symmetric keys, including Identity Keys, Bootstrap channel keys, and Channel Access Keys.
+**Lamport Clock**
 
-### **4.19 JWS (JSON Web Signature)**
+A monotonically increasing logical timestamp used to provide deterministic ordering across distributed Replicas.
 
-The JOSE signature format used to authenticate all ALSP messages and to carry Channel Access Proofs.
+**lamport\_time**
 
-### **4.20 JWT (JSON Web Token)**
+The Lamport Clock value associated with an Artipoint Record for ordering purposes.
 
-The JOSE token format used within ASCP for identity claims and trust establishment. JWT content is not interpreted by ALSP.
+**lamport\_max**
 
-### **4.21 JOSE (JavaScript Object Signing and Encryption)**
+The highest Lamport Clock value known to a Replica at the time a message is sent.
 
-A family of standards (JWS, JWE, JWK) used by ASCP for signatures, encryption, and key representation. ALSP is aware only of compact serialization encoding and does not interpret JOSE semantics.
+**Canonical Order**
 
-### **4.22 kid (Key Identifier)**
+The total ordering over Artipoint Records defined as the tuple (lamport\_time, message\_id), sorted by ascending lamport\_time and then by lexicographic ordering of the 16-byte message\_id.
 
-A structured identifier of the form ascp:\<type>:\<uuid> referencing key material obtained through the bootstrap process. Used in JWS and JWE protected headers.
+**Deduplication**
 
-### **4.23 Lamport Clock**
+The process of ensuring that a given Artipoint Record (as identified by message\_id and any additional identity rules defined by this specification) is applied at most once to a Channel Log view.
 
-A monotonically increasing logical timestamp used by ALSP to provide deterministic ordering across distributed replicas.
+**Deterministic Convergence**
 
-### **4.24 lamport\_max**
+The property that Replicas possessing the same set of valid Artipoint Records compute the same Canonical Order and therefore the same Channel Log view.
 
-The highest Lamport clock value known to a replica at the time a message is sent. Propagated during sync to maintain logical time coherence across replicas.
+## **4.5 Replication Admission and Proof Artifacts**
 
-### **4.25 log\_digest**
+**Replication Admission**
 
-A SHA-256 digest of the sequence of message identifiers in canonical order, used for Channel Log consistency checks.
+A Layer-0 decision to accept synchronization of a specific Channel Log with a Peer for a given Session, based on protocol authentication and proof verification defined by this specification. Replication Admission is distinct from higher-layer membership meaning or governance legitimacy.
 
-### **4.26 message\_id**
+**Channel Access Key (CAK)**
 
-A 16-byte universally unique identifier (UUID) assigned by ALSP to each Layer 1 message envelope for idempotence and ordering.
+An Ed25519 key pair used to construct proofs required for Replication Admission to a Channel Log at Layer-0. The public key is distributed via higher-layer provisioning mechanisms; the private key is held by entities able to produce Channel Access Proofs.
 
-### **4.27 node\_id**
+**Channel Access Proof (CAP)**
 
-A universally unique identifier for a replica participating in ALSP synchronization.
+A proof object (carried as a JOSE object as specified by this document) demonstrating possession of the CAK private key (or equivalent authorization material as defined by provisioning rules) for the purpose of Replication Admission. Layer-0 verifies the proof but does not assign semantic meaning beyond admission to synchronize.
 
-### **4.28 payload**
+**Identity Key**
 
-The DPB-encoded JOSE compact serialization of a Layer 1 JWS/JWE message. ALSP treats payloads as opaque byte sequences.
+A long-term cryptographic key pair used to authenticate ALSP protocol messages at the node/identity level. Identity semantics and binding rules are defined outside this specification; ALSP validates only the cryptographic properties required for protocol authentication.
 
-### **4.29 Provisioned Mode**
+**Challenge Flow**
 
-A client credential-supply mode in which the initiating replica includes only minimal identity references in its initial auth\_request, supplying full credentials only if requested via auth\_challenge. Provisioned Mode concerns client behavior, not server response.
+A server-side authentication path in which the receiving Replica cannot fully validate the initiating Replica’s materials using locally available state and therefore requests additional data via an auth\_challenge.
 
-### **4.30 Pull Sync**
+**Immediate Flow**
 
-A synchronization mode in which replicas request Channel Log updates via sync\_request messages.
+A server-side authentication path in which the receiving Replica can validate the initiating Replica’s materials immediately and responds without issuing an auth\_challenge.
 
-### **4.31 Push Sync**
+**Direct Mode**
 
-A synchronization mode in which replicas automatically deliver new Channel Log entries via sync\_update messages after an initial synchronization.
+A client packaging mode in which the initiating Replica includes all authentication materials required for validation in its initial auth\_request. This describes client behavior and does not constrain server validation policy.
 
-### **4.32 Replica**
+**Provisioned Mode**
 
-An authorized node storing and synchronizing one or more Channel Logs.
+A client packaging mode in which the initiating Replica includes only minimal references in its initial auth\_request, supplying additional materials only if requested via auth\_challenge. This describes client behavior and does not constrain server validation policy.
 
-### **4.33 Session**
+## **4.6 Encodings and Cryptographic Containers**
 
-A mutually authenticated communication context established between two ALSP replicas for the duration of message exchange. A session begins with the ALSP authentication handshake, binds all subsequent messages through session-specific nonces and signature rules, and persists until closed, terminated, or expired.
+**CBOR (Deterministic CBOR)**
 
-### **4.34 session\_nonce**
+Concise Binary Object Representation, used with deterministic encoding rules as specified by this document for canonical on-wire representation.
 
-A per-session, randomly generated 128-bit nonce created independently by each endpoint. During authentication, each replica includes its own `session_nonce` in the JWS protected header's `nonce` field. After authentication completes, each replica includes the peer's `session_nonce` in the `nonce` field instead. This cross-use of session nonces binds messages to a specific authenticated session and prevents replay attacks across connections.
+**Dot-Preserving Binary (DPB)**
 
-### **4.35 sync\_request**
+A reversible binary encoding that transforms JOSE compact serialization into a more efficient on-wire representation by decoding Base64url segments while preserving literal dot separators.
 
-An ALSP message used by a replica to request Channel Log entries or verify log state.
+**JOSE**
 
-### **4.36 sync\_response**
+The family of standards for signing and encryption objects (e.g., JWS, JWE, JWK, JWT). ALSP treats Layer-1 JOSE payloads as opaque except where this document requires parsing specific JOSE header fields for protocol authentication or Replication Admission verification.
 
-An ALSP message containing Channel Log entries provided in response to a sync\_request.
+**JWS**
 
-### **4.37 sync\_update**
+JSON Web Signature, used to authenticate ALSP messages and to carry proof objects (e.g., CAP) where specified.
 
-An ALSP message used in push mode to deliver newly appended Channel Log entries without an explicit request.
+**JWE**
+
+JSON Web Encryption, used where specified to convey encrypted objects (e.g., bootstrap packages) that ALSP transports opaquely.
+
+**JWK**
+
+JSON Web Key, a structure used to encode keys referenced or carried by protocol messages.
+
+**JWT**
+
+JSON Web Token, used within ASCP for claims and bundles. JWT content is not interpreted by ALSP beyond any cryptographic validation explicitly required by this document.
+
+**kid (Key Identifier)**
+
+A structured key identifier used in JOSE protected headers to reference key material provisioned out-of-band or via higher layers.
+
+## **4.7 ALSP Message Types and Sync Modes**
+
+**Hello Message (hello)**
+
+A post-authentication message used to negotiate session parameters, exchange lamport maxima, advertise capabilities, and establish readiness to synchronize.
+
+**Pull Sync**
+
+A synchronization mode in which a Replica requests Channel Log updates via sync\_request messages.
+
+**Push Sync**
+
+A synchronization mode in which Replicas deliver newly appended Artipoint Records via sync\_update messages after initial synchronization.
+
+**sync\_request**
+
+An ALSP message used to request Artipoint Records and/or verify Channel Log state.
+
+**sync\_response**
+
+An ALSP message containing Artipoint Records and/or state information provided in response to a sync\_request.
+
+**sync\_update**
+
+An ALSP message used in Push Sync mode to deliver newly appended Artipoint Records without an explicit request.
+
+**Digest Hash Exchange**
+
+A Channel Log consistency check in which Replicas compare digests over the sequence of message identifiers in Canonical Order to detect divergence.
+
+**log\_digest**
+
+A SHA-256 digest computed over the sequence of message identifiers in Canonical Order, used for Channel Log consistency checks.
+
+## **4.8 Bootstrap Terms**
+
+**Bootstrap Log**
+
+A minimal append-only log used to anchor initial trust material and discovery pointers for an ASCP administrative domain. ALSP may replicate or reference bootstrap artifacts as specified, but does not interpret governance or policy semantics derived from them.
+
+**Bootstrap Key Package (BKP)**
+
+A JWE-encoded bootstrap-scoped package conveyed out-of-band or during bootstrap (e.g., via boot\_keys\_jwe) that carries key material required by higher layers. ALSP transports BKP opaquely and does not interpret its contents.
 
 # **5. Architectural Overview**
 
-## **5.1 Layer Separation and Security Model**
+This section describes how ALSP (Layer-0) fits into the ASCP protocol suite and the security boundary it enforces. Normative protocol requirements are specified in subsequent sections unless explicitly stated otherwise.
 
-A critical architectural principle underlies ALSP: **everything from Layer 1 is treated as completely semantically opaque to Layer 0**. ALSP knows nothing about the contents, structure, or meaning of Layer 1 payloads. While Layer 0 understands that these payloads use JOSE compact serialization format (enabling the DPB transport optimization), it remains semantically agnostic to the protected content within these structures. As such, it treats them purely as base64url payloads that need secure, identical replication across authorized replicas.
+## **5.1 Layer Separation and Security Boundary**
 
-This separation serves distinct security purposes across layers:
+ALSP is defined by a strict **semantic opacity** constraint:
 
-**Layer 0 (ALSP) Security**: Protects the integrity of the replication transport itself:
+- Layer-0 implementations **MUST** treat the **Layer-1 Channel Envelope** component of an Artipoint Record as **opaque bytes**.
+- Layer-0 implementations **MUST** apply only those encodings and envelope rules defined by this specification (e.g., DPB and deterministic CBOR) and **MUST NOT** interpret, transform, or depend on Layer-1 or Layer-2 semantics in order to replicate a Channel Log.
 
-- **Authenticate peers** (who is allowed to sync)
-- **Authorize channel access** (which logs can this peer replicate)
-- **Ensure identical replication** (same payload bytes in same order across all replicas)
-- **Prevent tampering/replay** at the transport layer
+This separation establishes a security boundary between replication and interpretation. In particular, ALSP’s security responsibilities are limited to those required to authenticate peers, admit replication, and ensure deterministic convergence over accepted records.
 
-**Layer 1 (ASCP Message Layer) Security**: Protects the meaning and content of articulation statements through JWS signatures, JWE encryption, keyframes, and certificate chains. While Layer 0 understands the JOSE compact serialization format for transport optimization, it remains semantically agnostic to the protected content within these structures.
+### **5.1.1 Layer-0 (ALSP) Security Responsibilities**
 
-This architectural separation means Layer 0 ALSP operates as a **secure replication and synchronization mechanism** that can efficiently encode and transmit Layer 1's JOSE-formatted messages while Layer 1 handles all semantic security.
+Layer-0 is responsible for the following security properties:
 
-**Note on Transport Security:**  
-While ALSP is commonly deployed over TLS-secured transports, TLS authentication provides only baseline network-level security (e.g., confidentiality in transit and resistance to opportunistic MITM attacks). TLS **does not establish ASCP identity, instance trust, or authorization semantics**. All ASCP-relevant authentication, session binding, and trust anchoring occur within ALSP and higher layers, not at the transport layer.
+- **Peer authentication:** Establish a Session with a specific Peer and bind ALSP messages to that Session (e.g., by enforcing session\_nonce usage as defined by this specification).
+- **Message integrity and replay resistance:** Detect and reject forged, tampered, or replayed ALSP messages using the cryptographic protections and freshness mechanisms defined herein.
+- **Replication admission:** Verify protocol artifacts required to admit synchronization for a given channel\_id (e.g., verifying a Channel Access Proof (CAP) for the referenced Channel Log), and reject synchronization attempts that do not satisfy admission requirements.
+- **Deterministic convergence:** Given the same set of accepted Artipoint Records, ensure that all conforming implementations compute the same **Canonical Order** and therefore the same Channel Log view.
 
-The two security models are complementary, not redundant: Layer 0 ensures that Layer 1's cryptographically secured articulation statements reach all authorized replicas with identical content and ordering, while Layer 1 ensures that the meaning and content itself remains cryptographically protected regardless of transport encoding optimizations.
+### **5.1.2 Layer-1 and Above Security Responsibilities**
 
-### **Note on Transparency Systems**
+Layers above Layer-0 are responsible for:
 
-ALSP’s security model is intentionally limited to authenticated transport, deterministic ordering, and integrity of replicated logs. Unlike Certificate Transparency (CT) or other Verifiable Data Structure (VDS) architectures, ALSP does not require globally comparable Merkle trees nor an untrusted log operator. Trust derives from authorship signatures at Layer 1 and scoped channel authorization, not from public auditability.
+- **Confidentiality and content integrity of the Layer-1 payload:** Creating and validating the Layer-1 Channel Envelope (e.g., signatures and optional encryption), including any protected Layer-2 representation it encapsulates.
+- **Meaning, governance, and policy semantics:** Determining membership meaning, authority, governance state, and any application-visible consequences derived from the Channel Log.
 
-**Future revisions of this specification** *may* introduce Merkle-based summary structures solely to assist with replica-convergence checks (See Section 9.9), but such mechanisms would serve as transport-level optimizations rather than trust anchors and would not alter any Layer-1 or Layer-2 semantics.
+### **5.1.3 Transport Security (Informative)**
+
+ALSP is commonly deployed over TLS-protected transports. TLS can provide confidentiality-in-transit and resistance to network-path interference. However, TLS alone does not establish ASCP identity semantics, replication admission, or governance legitimacy for Channel Logs. Those ASCP-relevant properties are established by ALSP Session authentication and replication-admission verification as defined by this specification.
+
+### **5.1.4 Transparency Systems (Informative)**
+
+ALSP is not a public transparency system. Unlike Certificate Transparency and other verifiable-data-structure (VDS) designs, ALSP does not assume an untrusted global log operator, and it does not require globally comparable Merkle tree commitments as a trust anchor. Trust in ASCP derives from (a) the cryptographic properties of **Layer-1 Channel Envelopes carried within Artipoint Records**, and (b) scoped replication admission.
+
+Future revisions of this specification may define Merkle-based summary structures strictly as **Layer-0 convergence aids** (e.g., compact divergence detection), without altering Layer-1/Layer-2 semantics or introducing a new global transparency trust model.
 
 ## **5.2 Relationship to Channels and Higher ASCP Layers**
 
-Building on this separation principle, ASCP operates as a four-layer protocol stack with ALSP serving as Layer 0:
+ALSP operates at the Layer boundary described in Section 3.2:
 
-**Layer 0 (ALSP Transport Layer)**: Handles channel log synchronization, ordering, and distribution across replicas. This layer is transport-agnostic and provides deterministic convergence using Lamport clocks, ensuring all authorized replicas eventually hold identical, canonically ordered logs per channel. Layer 0 supports selective replication—nodes only replicate channels they are authorized to participate in or monitor.
+- A **Channel** is the unit of distribution whose concrete substrate is a **Channel Log**.
+- A **Channel Log** is an append-only sequence of **Artipoint Records**.
+- Each Artipoint Record includes Layer-0 synchronization metadata and an opaque Layer-1 Channel Envelope payload.
 
-**Layer 1 (ASCP Message Layer)**: Contains the actual articulation content—signed, optionally encrypted articulation statements that represent structured shared cognition. Layer 1 sends individual articulation sequences down to Layer 0 for storage and distribution as semantically opaque payloads. ALSP understands these payloads use JOSE compact serialization format, enabling transport encoding optimizations through DPB, while delegating all semantic interpretation of the protected content to higher application layers.
+ALSP synchronizes a Channel Log by exchanging Artipoint Records (or components sufficient to reconstruct them) and applying the Layer-0 validation, deduplication, and ordering rules defined by this specification. ALSP does not define what a Channel “means,” what authority any record carries, nor how Channel governance evolves; it specifies only the mechanisms by which admitted replicas exchange and converge on an identical log substrate.
 
-## **5.3 Channel Model and Distribution Semantics (Non-Normative)**
+## **5.3 Channel Model and Distribution Semantics**
 
-Channels serve as the fundamental unit of both layers:
+This subsection is **informative** and intended to assist implementers in reasoning about deployment and dataflow.
 
-- **Channel ID**: A universally unique identifier for associated Channel which also defines the scope of both distribution and access
-- **Channel Log**: A linear causal sequence of Layer 1 messages, maintained per channel with universally deterministic Layer 0 ordering across all Channels and replicas.
-- **Multicast Distribution**: Channels act as secure multicast groups rather than logical partitions—authorized members receive all messages for their accessible channels
+- **channel\_id:** Identifies the Channel Log being synchronized and the scope of replication-admission verification.
+- **Channel Log:** An append-only log of Artipoint Records. ALSP’s only log-level processing is validation, deduplication, and insertion into Canonical Order.
+- **Distribution:** Replicas may synchronize Channel Logs using centralized, peer-to-peer, or hybrid topologies. Topology affects liveness (i.e., which peers can exchange with which others, and how quickly records propagate) but does not change ALSP’s validation rules, ordering rules, or convergence properties.
 
-During synchronization, Layer 0 transmits received messages up to Layer 1 in clear causal order but not necessarily exact time order. The Layer 1 timestamp can be used for semantic indication of actual message order within the accuracy of each node's wall clock time.
+ALSP operates on a per-channel basis. Any cross-channel projections, global timelines, or graph construction are Layer-3 concerns and are not specified by ALSP.
 
-This architecture enables ALSP to synchronize structured articulation content while remaining semantically agnostic, with each channel log transmitted independently but merged into a universally consistent timeline at the application layer.
+## **5.4 Consistency and Convergence Guarantees**
 
-## **5.4 Consistency Guarantees**
+ALSP provides deterministic convergence and eventual consistency, conditional on communication and replication admission:
 
-ALSP guarantees **eventual consistency** across authorized replicas through a hierarchical model of immutability and deterministic ordering.
+- **Append-only constraint:** A conforming implementation **MUST NOT** delete, overwrite, or mutate an accepted Artipoint Record.
+- **Idempotence via** **message\_id:** ALSP defines deduplication rules such that repeated delivery of an Artipoint Record (e.g., retries, receipt from multiple peers) does not alter the resulting Channel Log view.
+- **Canonical ordering:** ALSP defines a total order over accepted Artipoint Records (Lamport time with a stable tie-break rule) such that replicas independently compute the same order from the same set of accepted records.
+- **Topology independence:** Convergence is invariant across centralized, partially connected, and peer-to-peer deployments. Only propagation dynamics differ.
 
-**At the articulation statement level**, each articulation is globally unique and immutable with verifiable authorship and timestamps. The protocol prevents duplication or mutation once messages are replicated, ensuring message integrity across the network.
+Non-goals at Layer-0 include:
 
-**At the log level**, each channel maintains an append-only stream where deletions and overwrites are prohibited. Messages are stored and transmitted in canonical lamport clock order using the message\_id for tie-breaking the order, providing deterministic sequencing within each channel and also globaly across logs.
+- Guaranteed delivery or service-level availability (ALSP defines synchronization mechanisms, not a global delivery guarantee).
+- Semantic conflict resolution, governance enforcement, or determination of “truth” beyond convergence on an identical replicated log.
 
-**For cross-channel coordination**, while messages are transported per-channel, all valid messages received by a client are merged into a single global timeline. This unified timeline serves as the foundation for DAG construction and user-facing coordination history, where channel membership determines visibility rather than creating logical isolation between channels.
+# **6. Artipoint Record Handling**
 
-This consistency model enables multi-writer safety without conflicts, full offline write and sync capabilities are replayable, globally deterministic views for every participant in the network.
+## **6.1 Encapsulation of Layer-1 Channel Envelopes**
 
-# **6. Articulation Payload Handling (Layer 1 Encapsulation)**
+This section specifies how **Layer-1 Channel Envelopes** are carried within **Artipoint Records** as opaque byte sequences. A Layer-1 Channel Envelope is a JOSE serialization produced by Layer-1 and MAY encapsulate protected **Layer-2 Articulation Sequences**. ALSP (Layer-0) transports the Layer-1 Channel Envelope without semantic interpretation.
 
-## **6.1 Semantically Opaque Treatment of Layer 1**
-
-This section defines how the opaque JOSE compact serialized encodings of Articulation Sequences are represented in the wire protocol and provides normative guidance for local channel log storage as well. Layer 1 articulation sequences arrive at Layer 0 as JOSE compact serialized strings, encoded into DPB (Dot Preserving Binary) encoded payloads, which are then wrapped in a CBOR-encoded Layer 0 envelope containing ordering and identity metadata. Each channel log is usually maintained locally as a sorted list of these wrapped messages, with the same basic format typically used both on the wire and in local storage.
-
-Layer-0 does **not** interpret payloads.
+A conforming Layer-0 implementation **MUST NOT** inspect, parse, or interpret Layer-1 Channel Envelopes or any protected Layer-2 content they may encapsulate, except where this specification explicitly requires examination of specific JOSE header fields for protocol authentication or replication-admission verification.
 
 ## **6.2 DPB Encoding Overview**
 
-JOSE compact serialization represents JWS and JWE tokens as sequences of Base64url-encoded segments separated by ASCII dot characters (0x2E). To optimize transport efficiency while maintaining perfect reversibility, ALSP introduces the **ASCP Dot Preserving Binary (DPB)** format for encoding Layer 1 JOSE payloads.
+JOSE compact serialization represents JWS and JWE tokens as sequences of Base64url-encoded segments separated by ASCII dot characters (0x2E). To reduce on-wire overhead while preserving exact reversibility, ALSP defines **Dot-Preserving Binary (DPB)** encoding for transporting Layer-1 Channel Envelopes expressed in JOSE compact serialization form.
 
-DPB transforms JOSE compact serialization into a more compact binary representation by converting Base64url segments to raw binary while preserving structural dot separators. This eliminates Base64url overhead while maintaining bidirectional conversion and exact semantic boundaries.
+DPB encodes a JOSE compact serialization by decoding each Base64url segment to raw bytes while preserving the literal dot separators as structural delimiters. This removes Base64url expansion while preserving a bijective mapping to the original compact form and maintaining exact segment boundaries.
 
-The complete normative specification of DPB encoding rules, ULEB128 length encoding, and reversibility requirements is provided in Section 7.
+The normative DPB encoding rules, including ULEB128 length encoding and reversibility requirements, are specified in Section 7.
 
 ## **6.3 Deterministic CBOR Layer-0 Wrapper**
 
-This section defines the **binary** Layer-0 wrapper used to store and carry semantically opaque Layer-1 articulation sequences over ALSP. The wrapper is encoded with **CBOR** (IETF RFC 8949) using **deterministic CBOR** rules. Layer-1 payloads are **opaque bytes** containing the JOSE compact serialization encoded via **Dot-Preserving Binary (DPB)**. Layer-0 does **not** interpret payloads.
+This section specifies the deterministic CBOR wrapper used by ALSP to represent a single **Artipoint Record** for storage and replication. The wrapper binds Layer-0 identity and ordering fields to an opaque **Layer-1 Channel Envelope payload**, which MAY be carried as DPB-encoded bytes as specified by this document.
 
-> Channel identifiers and other ALSP sync metadata are conveyed by the surrounding ALSP messages and **do not** appear in this wrapper.
+The channel\_id and other synchronization context are conveyed by the surrounding ALSP messages and are not required to appear in the per-record wrapper unless explicitly specified elsewhere.
 
 ### **Data Model (Single Entry)**
 
-A Layer-0 entry wraps exactly one Layer-1 payload together with ordering and identity metadata.
+A Layer-0 entry represents exactly one **Artipoint Record**. Each Artipoint Record includes:
+
+- Layer-0 identity and ordering metadata; and
+- an opaque payload containing the **Layer-1 Channel Envelope** in DPB format.
 
 ### **CDDL (normative)**
 
@@ -331,10 +406,11 @@ A Layer-0 entry wraps exactly one Layer-1 payload together with ordering and ide
 L0-Entry = {
   0: lamport-time,       ; uint / uint64
   1: bstr .size 16,      ; message_id (UUID, raw 16 bytes per RFC 4122)
-  2: bstr                ; payload (DPB bytes; Layer-1 opaque)
+  2: bstr                ; Channel Envelope payload as opaque DPB bytes
 }
 
 lamport-time = uint      ; producers/consumers MUST support up to 64-bit
+
 ```
 
 #### **Field Semantics**
@@ -414,9 +490,11 @@ The detailed specifications for how this ordering works—including clock advanc
 
 # **7. Dot-Preserving Binary (DPB) Format**
 
-Layer 0 must transport Layer 1 JOSE payloads efficiently without interpreting their cryptographic content. The Dot-Preserving Binary (DPB) format eliminates the 33% Base64url encoding overhead present in JOSE compact serialization while maintaining perfect reversibility to the original format, ensuring that Layer 1 can parse and validate signatures over the exact byte sequences that were signed.
+Layer-0 must transport **Layer-1 Channel Envelopes** encoded as JOSE compact serialization efficiently, while preserving byte-for-byte fidelity so implementations can validate signatures over the exact byte sequences that were signed.
 
-**ALSP implementations MUST support DPB encoding and decoding.** Layer 1 payloads transmitted over ALSP MUST be DPB-encoded; non-DPB encodings are non-conformant and SHOULD be rejected.
+**ALSP implementations MUST support DPB encoding and decoding.** When an Artipoint Record is conveyed in an ALSP message, the **Layer-1 Channel Envelope payload** field **MUST** be encoded using DPB as specified in this document.
+
+Other encodings for the Layer-1 Channel Envelope payload are **non-conformant**.
 
 ## **7.1 Encoding Rules**
 
@@ -488,7 +566,7 @@ Message-level authentication allows recipients to detect message tampering, spoo
 
 Session-level authentication establishes a mutually authenticated, replay-safe cryptographic session between two replicas. It enables privileged ALSP operations such as log synchronization, bootstrap artifact exchange, and channel interaction.
 
-Session-level authentication is **session-oriented**, not trust-authoritative. A successfully authenticated session guarantees cryptographic continuity with a peer for the lifetime of the session, but does not by itself establish ASCP instance membership, authorization, or governance legitimacy.
+Session-level authentication is **session-oriented**, not trust- or policy-oriented: it establishes cryptographic continuity with a peer for the lifetime of the session, but does not assert ASCP instance membership, **replication-admission semantics** for any specific Channel Log, or governance legitimacy.
 
 #### 8.1.2.1 Session Authentication Semantics
 
@@ -532,15 +610,15 @@ This ALSP replay protection model is intentionally **progressive** across the se
   - All messages are cryptographically bound to the authenticated session.
   - Replay across connections becomes impossible within the ALSP threat model.
 
-Replay exposure is limited exclusively to the pre-authentication phase, during which ALSP prohibits log access, bootstrap retrieval, and all authorization-sensitive operations.
+Replay exposure is limited exclusively to the pre-authentication phase; no synchronization, bootstrap retrieval, or **replication-admission-sensitive** operations are permitted during this phase.
 
 ## **8.2. Goals and Requirements**
 
 The ALSP session authentication process establishes a secure, replay-protected, and identity-bound communication context between replicas before any synchronization activity begins. The following goals and requirements apply to all ALSP sessions.
 
-**Identity Verification:**
+**Peer Authentication (Layer-0):**
 
-Each peer MUST validate the identity of the other using signed credentials anchored in the ASCP Trust & Identity architecture. ALSP does not define identity semantics but requires that the resulting key material be verified before a session transitions to the AUTHENTICATED state.
+Each peer MUST validate that the remote endpoint controls the **Identity Key** asserted by the presented authentication materials, as evaluated under local trust policy anchored in the ASCP Trust & Identity architecture. ALSP does not interpret the *meaning* of identity claims (e.g., human/agent role, organizational standing, permissions); it requires only that the peer’s authentication key material and associated proofs are verified prior to entering the AUTHENTICATED state.
 
 **Freshness and Replay Protection:**
 
@@ -599,7 +677,7 @@ In both flows:
   - log synchronization,
   - bootstrap artifact retrieval,
   - channel discovery, or
-  - authorization checks.
+  - replication-admission checks.
 
 This invariant ensures that ALSP never exposes log material or bootstrap state prior to establishing a mutually authenticated, replay-safe session.
 
@@ -672,9 +750,9 @@ If a peer has not yet sent its `hello` upon receiving the peer’s `hello`, it M
 
 Both peers have:
 
-- validated the peer’s `identity`
-- validated the peer’s `session_nonce`
-- ensured freshness and replay protection
+- validated the peer’s **authentication key material** and associated proofs under local trust policy
+- validated the peer’s `session_nonce` and established dual-nonce session binding
+- validated `timestamp` freshness and rejected stale/replayed authentication messages
 - exchanged `hello` messages
 
 At this point, the session is fully authenticated.
@@ -852,17 +930,17 @@ After termination, peers MAY immediately establish a new session by initiating a
 
 This strict session model avoids ambiguity across reconnects, enforces replay protection, and ensures that each authenticated session represents a fresh, well-defined security context.
 
-## **8.10 Channel Access Authorization**
+## **8.10 Channel Replication Admission**
 
-Session authentication (described in this section) establishes the identity and trustworthiness of a peer replica. However, session authentication does **not** grant access to any specific Channel Logs.
+Session authentication (Section 8) establishes **who** the peer is at Layer-0 and binds subsequent ALSP messages to that authenticated session. Session authentication **does not** by itself admit replication of any specific Channel Log.
 
-Channel access is controlled through **Channel Access Keys (CAKs)**, which operate as a separate authorization layer on top of the authenticated session. A replica with a valid authenticated session must still provide a valid Channel Access Proof—a JWS signature created with the Channel Access Key—to synchronize a specific channel.
+Replication admission to a specific Channel Log is performed using a **Channel Access Proof (CAP)** derived from the corresponding **Channel Access Key (CAK)** and verified by the receiving replica under the channel’s published CAK public key.
 
 This separation ensures that:
 
-1. Session authentication validates **who** the peer is,
-2. Channel Access Proofs validate **what** the peer may access, and
-3. The two authorization mechanisms remain independent and composable.
+1. Session authentication validates **who** is on the connection (at the Layer-0 protocol level),
+2. CAP verification validates **whether the peer is admitted to synchronize a specific Channel Log**, and
+3. The two mechanisms remain independent and composable.
 
 The complete specification for Channel Access Keys and Channel Access Proofs is provided in Section 11.
 
@@ -983,17 +1061,15 @@ Once inserted, message ordering is immutable.
 
 ## **9.7 Rationale (Non-Normative)**
 
-Wall‑clock timestamps are unsuitable for canonical ordering due to drift, skew, and offline operation. Lamport clocks provide deterministic ordering without requiring synchronized clocks.
+Wall-clock timestamps are unsuitable for canonical ordering due to clock drift, skew, and offline operation. Lamport clocks provide deterministic ordering without requiring synchronized clocks.
 
-Vector clocks offer explicit causality detection but introduce significant metadata overhead. ASCP already expresses causality at Layer 2 through DAG references, so ALSP does not require vector‑clock semantics.
+Vector clocks offer explicit causality detection but introduce significant metadata overhead and coordination complexity. ASCP already expresses semantic relationships through Layer-2 Artipoint Expression references and derived semantic structures, so ALSP does not require vector-clock semantics.
 
-Lamport clocks provide the right balance: deterministic global ordering with minimal state and excellent behavior under concurrency.
+Lamport clocks provide the right balance: deterministic total ordering (within a Channel Log) with minimal state and excellent behavior under concurrency.
 
-## 9.8 Additional Notes (Non‑Normative)
+Lamport ordering provides **transport-level sequencing only**. Semantic causality and meaning relationships are derived at Layer-3 (Semantic Evaluation) from articulated history via Layer-2 references and derived semantic structures, not from Lamport values. Applications are expected to use articulation-level DAG edges (and other Layer-3 semantic evaluation rules), not Lamport values, to determine semantic causality or meaning relationships.
 
-Lamport ordering provides **transport‑level sequencing only**. Semantic ordering—such as authorship precedence or DAG traversal—is defined entirely at Layer 2. Applications MUST use articulation‑level DAG edges, not Lamport values, to determine semantic causality or meaning relationships.
-
-## **9.9 Merkle-Based Replica Validation (Future)**
+## **9.8 Merkle-Based Replica Validation (Future)**
 
 ALSP’s deterministic Lamport ordering model ensures that any two replicas with the same set of messages will converge to identical Channel Logs without requiring auxiliary data structures. However, certain deployments may benefit from more efficient mechanisms for detecting localized divergence during synchronization.
 
@@ -1007,15 +1083,15 @@ Any incorporation of Merkle summaries would therefore be **purely a Layer-0 opti
 
 # **10. ALSP Protocol Messages**
 
-This section defines the complete **Layer-0 ALSP message model**, including the binary envelope format, JSON message header conventions, and how channel log entries are batched for synchronization. All ALSP messages are integrity-protected by JWS as defined in Section 6 and Section 7. Transport bindings (for example, WebSocket) carry these envelopes as opaque binary units (see Section 14).
+This section defines the complete **Layer-0 ALSP message model** and on-wire encodings used to exchange **Layer-0 Artipoint Records** as opaque binary units (see Section 14). All ALSP messages are integrity-protected by JWS as defined in Section 6 and Section 7. Transport bindings (for example, WebSocket) carry these messages as opaque binary units (see Section 14).
 
-## **10.1 Message Envelope Structure**
+## **10.1 ALSP Message Encoding**
 
 This section specifies the on‑wire encoding for ALSP messages. It defines a compact CBOR envelope that batches Layer‑0 entries while carrying a flexible message header as a JSON blob. The CBOR envelope serves as the JWS payload and is integrity-protected by a JWS signature that signs the entire CBOR byte sequence verbatim.
 
-- **Envelope:** The ALSP envelope is encoded as **deterministic CBOR**.
-- **Header:** `alsp_msg_header` is a **CBOR byte string** whose contents are **UTF‑8 JSON**. The CBOR layer treats it as opaque.
-- **Payload:** `alsp_msg_payload` is an optional **CBOR array** of Layer‑0 entries for efficient batching.
+- **Message:** The ALSP message is encoded as **deterministic CBOR**.
+- **Header:** `alsp_msg_header` is a **CBOR byte string** whose contents are **UTF-8 JSON**. The CBOR layer treats it as opaque.
+- **Payload:** `alsp_msg_payload` is an optional **CBOR array** of Layer-0 entries for efficient batching.
 
 This design yields a compact, canonical, and extensible envelope while preserving maximum flexibility for header fields.
 
@@ -1574,16 +1650,16 @@ When a message is rejected due to timestamp violation, the receiver MUST send an
 Use the standard ALSP error message. For more guidance please reference to Section 16 on Error handling.
 
 - `invalid_auth`: Bad signature, unknown kid, or cert mismatch.
-- `unauthorized`: Token or CAK proof rejected.
+- `unauthorized`: Replication admission failed (token invalid/expired, or CAP missing/invalid).
 - `stale_timestamp`: Outside allowed skew window.
 - `protocol_violation`: Wrong typ/nonce usage or message order.
 - `re-auth-required`: Force a full restart of the auth sequence.
 
-# **11. Channel Access Authorization**
+# **11. Channel Replication Admission**
 
-This section defines the authorization mechanism by which a client proves it is permitted to synchronize a specific ASCP Channel Log. Channel access authorization is distinct from session authentication. Session authentication (Section 8) establishes *who* the peer is; channel authorization establishes *what* that peer may access.
+This section defines the **replication admission** mechanism by which a replica proves it is admitted to synchronize a specific Channel Log. Session authentication (Section 8) establishes **who** the peer is at Layer-0; replication admission establishes **which Channel Logs** that peer is permitted to synchronize. Any claims about human membership, organizational roles, or application-level meaning are out of scope for Layer-0.
 
-Channel access is enforced through a **Channel Access Key (CAK)**—a per-channel Ed25519 keypair defined at channel creation time. A client that wishes to replicate a channel protected by a CAK MUST present a valid **Channel Access Proof** (CAP). The CAP is a JWS object signed using the CAK private key and verified using the corresponding public key distributed through the ASCP bootstrap process.
+Replication admission is enforced through a **Channel Access Key (CAK)** and **Channel Access Proof (CAP)** verification, using the channel’s corresponding CAK public key distributed through the ASCP bootstrap process.
 
 If a channel is configured with a CAK, the server MUST verify a CAP before providing any replication content for that channel.
 
@@ -1591,17 +1667,17 @@ Non-normative note: This authorization mechanism permits Layer 0 to validate acc
 
 ALSP permits a replica to synchronize a channel log **without possessing the keys required to decrypt or interpret the channel’s payloads**. Possession of a valid CAK private key allows a replica to present a Channel Access Proof (CAP) and retrieve channel log entries, regardless of whether the replica can decrypt the encrypted payloads carried within those entries.
 
-Replicas that do not possess the corresponding payload decryption keys MUST treat replicated entries as opaque data. Authorization to replicate a channel MUST NOT be interpreted as authorization to access or interpret channel content.
+Replicas that do not possess the corresponding payload decryption keys MAY still be **admitted to synchronize** and store Channel Log entries; this MUST NOT be interpreted as permission to access or interpret protected channel content.
 
 ## **11.1 Channel Access Keys (CAKs)**
 
-A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned at channel creation time. Each channel has at most one active CAK at any moment. The CAK enables clients to prove authorization to access the channel’s log.
+A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per Channel that enables replicas to prove **admission to synchronize** the channel’s log. The CAK enables clients to prove authorization to access the channel’s log.
 
 ### **11.1.1 Key Structure and Distribution**
 
 - A CAK consists of:
   - **Public Key (pk):** Distributed via the ASCP bootstrap process.
-  - **Private Key (sk):** Distributed only to authorized channel participants via secure, out-of-band mechanisms.
+  - **Private Key (sk):** Distributed only to replicas (or operators) intended to be **admitted to synchronize** the channel log, via secure, out-of-band mechanisms.
 - The CAK public key:
   - **MUST** be referenced by a stable kid value of the form: `ascp:cak:<channel_uuid>`
   - **MUST** be present in the channel’s bootstrap manifest.
@@ -1609,7 +1685,7 @@ A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned at channel crea
 - The CAK private key:
   - **MUST** be kept confidential.
   - **MUST NOT** be transmitted within ALSP or other ASCP protocol layers.
-  - **MUST** be accessible only to participants authorized to access the channel log.
+  - **MUST** be accessible only to replicas (or operators) intended to be **admitted to synchronize** the channel log.
 
 ### **11.1.2 Rotation**
 
@@ -1684,7 +1760,7 @@ The CAP MUST be included in the credentials field of a sync\_request, e.g.:
 
 If the credentials field is present when a channel does *not* require a CAK, servers **MAY** ignore it.
 
-## **11.3 Server Verification Algorithm**
+### **11.3 Server Verification Algorithm**
 
 Upon receiving a sync\_request for a channel with an active CAK, the server **MUST** validate the CAP using the following procedure:
 
@@ -1693,22 +1769,19 @@ Upon receiving a sync\_request for a channel with an active CAK, the server **MU
    - alg is "EdDSA".
    - typ is "alsp+cak".
    - kid corresponds to a known CAK public key for the requested channel.
-3. **Resolve Public Key:** The kid value **MUST** be resolved using the current bootstrap manifest. Failure to resolve **MUST** result in an unauthorized error.
+3. **Resolve Public Key:** The kid value **MUST** be resolved using the current bootstrap manifest. Failure to resolve **MUST** result in an `unauthorized` error (replication admission failed).
 4. **Verify Signature:** The server **MUST** verify the JWS signature using the resolved CAK public key. Signature failures **MUST** result in invalid\_auth.
 5. **Validate Payload Fields:** The server **MUST** ensure:
-   - `channel_id` matches the sync\_request.channel\_id.
-   - `nonce` matches the expected client-side session nonce for this request.
-   - `timestamp` is within the server’s acceptable time window.
-6. **Authorize or Reject:**
-   - If all validations succeed, the server **MUST** authorize the channel sync.
-   - On failure, the server **MUST** reply with an ALSP error message with:
-     - error\_code: "unauthorized" or "invalid\_auth"
-     - disconnect: true if the failure invalidates the session
-     - (e.g., signature mismatch, malformed JWS)
+   - channel\_id matches sync\_request.channel\_id.
+   - nonce matches the expected session-bound nonce for this request.
+   - timestamp is within the server’s acceptable time window.
+6. **Admit or Reject:**
+   - If all validations succeed, the server **MUST** admit replication for that Channel Log within the current authenticated session and MAY proceed to service the request.
+   - Otherwise, the server **MUST** reject the request.
 
 ### **Non-Normative Notes**
 
-- This authorization scheme ensures that Layer 0 enforces channel access without knowledge of Layer-1 payload encryption.
+- This admission mechanism permits Layer-1 end-to-end confidentiality while enforcing strict Channel Log replication admission at Layer-0.
 - The use of a detached JWS avoids exposing CAK signatures to unnecessary contexts and maintains integrity across transports.
 - CAP nonce reuse or timestamp replay indicates potential attack activity and should be logged for diagnostic purposes.
 
@@ -1718,9 +1791,7 @@ This section defines how ALSP transports the `boot_keys_jwe` field during sessio
 
 A **Bootstrap Key Package (BKP)** is delivered during the ALSP `hello` exchange and is **not transmitted via ALSP channel logs**. The payload structure, semantics, trust interpretation, and lifecycle of the BKP are defined **exclusively** by the *ASCP Bootstrap Process* specification. ALSP treats the BKP as an **opaque, session-scoped JWE payload**.
 
-Bootstrap Key Packages **do not grant channel access**, **do not authorize replication**, and are **distinct from Channel Access Keys (CAKs)** defined in Section 11.
-
----
+Bootstrap Key Packages **do not grant channel content access** and **do not admit replication**; they are **distinct from Channel Access Keys (CAKs)** defined in Section 11.
 
 ## **12.1 Transport Semantics**
 
@@ -1780,7 +1851,7 @@ When handling `boot_keys_jwe`, ALSP implementations:
 
 - **MUST** return `protocol_violation` for malformed JWE structures.
 - **MUST** return `invalid_auth` when JWE decryption fails due to cryptographic errors.
-- **MUST NOT** use authorization-related error codes (e.g., `unauthorized`) to signal BKP handling failures.
+- **MUST NOT** use admission-related error codes (e.g., `unauthorized`) to signal BKP handling failures.
 
 Error responses **SHOULD NOT** disclose whether failures were caused by key absence, decryption failure, or payload corruption.
 
@@ -1813,7 +1884,7 @@ ascp:<type>:<uuid>
   - Used in JWS protected headers for peer authentication
   - Resolved from the bootstrap process certificate directory
   - Contains the public key corresponding to the `user_auth_cert` exchanged during hello
-- `ascp:cak:<uuid>` - References a Channel Access Key for channel authorization
+- `ascp:cak:<uuid>` - References a Channel Access Key for Channel Log replication admission
   - Used in JWS protected headers for channel access proofs
   - Resolved from the channel manifest obtained during bootstrap
   - Contains the Ed25519 public key for the specific channel
@@ -1829,7 +1900,7 @@ This approach maintains consistency with Layer 1's key referencing model while o
 
 ## **13.3 JWK Requirements**
 
-Unlike Layer 1 where keys are embedded in articulation statements, Layer 0 key material is distributed via the bootstrap process and stored in **JWK format** for consistency.
+Unlike **Layer-1 Channel Envelopes**—which may carry JOSE protected headers referencing cryptographic material associated with the envelope’s signing/encryption—Layer-0 relies on key material introduced via the ASCP bootstrap process and stored in **JWK format** for consistency.
 
 ### EC Public Key JWK Format:
 
@@ -1883,11 +1954,11 @@ While Layer 1 manages all key lifecycle operations (rotation, expiration, revoca
 
 **JWK Validation**: When resolving a key via `kid`, Layer 0 must verify that the `kid` field in the JWS header matches the `kid` field in the resolved JWK object to prevent key confusion attacks.
 
-**Active session handling during CAK rotation:** Active sessions may continue with their session-cached keys until natural termination, at which point fresh sessions will resolve updated keys. If a peer wishes to force revalidation of a rotated CAK, it can send a 're-auth-required' error message. After sending this error, push syncs should cease and further sync\_requests must be refused for the remainder of this session. Note that in pull mode, each sync\_request is individually authorized against current credentials, while push mode relies on session-cached authorization from the initial subscription.
+**Active session handling during CAK rotation:** Active sessions MUST NOT rely on session-cached replication-admission state from an earlier CAP verification; each CAP MUST be verified against currently resolved CAK material as specified in Section 11.
 
 ## **13.5 Relationship to Bootstrap Artifacts (Informative)**
 
-Layer 0 relies on key material that is introduced via the ASCP Bootstrap Process and referenced by stable `kid` values. From the perspective of ALSP, these materials function as **immutable inputs** for signature verification and authorization checks during the lifetime of an authenticated session.
+Layer 0 relies on key material introduced via the ASCP bootstrap process to perform deterministic signature verification and **replication-admission checks** during the lifetime of an authenticated session.
 
 ALSP:
 
@@ -1919,7 +1990,7 @@ ALSP implementations:
 
 - **MUST NOT** attempt to resolve, validate, or interpret `ascp:bkp:*` identifiers
 - **MUST NOT** treat such identifiers as UUID-addressable keys
-- **MUST NOT** apply authorization, trust evaluation, or key lookup semantics to them
+- **MUST NOT** apply replication-admission policy, trust evaluation, or key lookup semantics to them.
 
 From the ALSP perspective, `ascp:bkp:*` identifiers may appear only as opaque values within encrypted payloads processed by higher layers. Their structure, indexing rules, lifecycle, and semantics are entirely outside the scope of this specification.
 
@@ -2001,7 +2072,7 @@ This section provides implementation guidance for establishing WebSocket connect
 
 ### **Message Framing**
 
-Each WebSocket binary message MUST contain exactly one ALSP Frame as defined in Section 10.4.3. WebSocket fragmentation is handled by the transport layer and is transparent to ALSP.
+Each WebSocket binary message MUST contain exactly one ALSP Frame. Fragmentation and reassembly are handled by the **underlying WebSocket/TCP stack** and are transparent to ALSP.
 
 # **15. Node Topology and Deployment Models**
 
@@ -2070,7 +2141,7 @@ Channel Sync States are maintained per peer connection for nodes that handle mul
 
 #### **State Transition Rules:**
 
-1. A channel enters **Pull Sync** when a sync\_request is received and authorized
+1. A channel enters **Pull Sync** when a sync\_request is received and replication admission is satisfied (i.e., required CAP verification succeeds)
 2. A channel transitions to **Push Sync** when:
    - The initial sync\_request has been completely fulfilled (more = false in final sync\_response)
    - Both peers negotiated push\_enabled = true during hello
@@ -2097,7 +2168,7 @@ Topology does not affect any protocol guarantees.
 
 # **16. Error Handling**
 
-ALSP defines a structured error message used to signal protocol violations, authentication failures, authorization problems, and capability mismatches between replicas. Error messages are carried in the standard ALSP envelope and follow the same JWS signing and nonce-binding rules as all other ALSP messages.
+ALSP defines a structured error message used to signal protocol and synchronization failures, including invalid message authentication, malformed requests, and **replication-admission** failures. Error messages are carried in the standard ALSP message encoding and follow the same JWS signing and nonce-binding rules as all other ALSP messages.
 
 **Transport-Level Failures:**
 
@@ -2155,7 +2226,7 @@ Transport-level failures (e.g., WebSocket disconnects, TLS alerts, timeouts) are
 | Description          | Force Disconnect?                                      | Notes                                                                                          |
 | -------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | invalid\_auth        | YES                                                    | Certificate does not match claimed identity or is untrusted.                                   |
-| unauthorized         | NO unless it appears to be a DoS attack                | Replica is not permitted to access the requested channel.                                      |
+| unauthorized         | NO unless it appears to be a DoS attack                | The peer is not admitted to synchronize the requested channel                                  |
 | hash\_mismatch       | NO unless it appears to be a DoS attack                | A validation SHA-256 hash mismatch has occurred and this implies log divergence.               |
 | stale\_timestamp     | NO unless it appears to be a DoS attack                | The message was rejected due to the timestamp being out-of -range. Replay attack is suspected. |
 | protocol\_violation  | YES                                                    | Message structure or sequence violated ALSP semantics.                                         |
@@ -2183,7 +2254,7 @@ Replicas MUST validate that all required fields are present and correctly typed 
 **Failure Detection:**
 
 - Transport-level failures (WebSocket disconnect, timeout)
-- Protocol-level failures (invalid JWS, authorization expired)
+- Protocol-level failures (invalid JWS, replication admission expired/invalid)
 
 **Fallback Behavior:**
 
@@ -2287,15 +2358,15 @@ While divergence is expected to be rare, these tools ensure that detection and r
 
 ## **18.1 Deduplication**
 
-Upon receiving messages, replicas MUST deduplicate based on message\_id before inserting into local logs.
+Upon receiving **Layer-0 entries** (e.g., in `sync_response` or `sync_update`), replicas MUST deduplicate based on `message_id` before inserting into local Channel Logs.
 
-If a message with the same message\_id already exists in the local log, it MUST NOT be reinserted or affect the Lamport counter. However, the replica MUST still process any lamport\_max values from the sync message envelope for counter synchronization.
+If a message with the same message\_id already exists in the local log, it MUST NOT be reinserted or affect the Lamport counter. However, the replica MUST still process any lamport\_max values from the **ALSP message header** for counter synchronization.
 
 This ensures idempotent sync and prevents duplication during retries, reconnects, or when receiving the same message from multiple peers.
 
 ## **18.2 Channel Message Scope**
 
-All messages included in a single sync\_response or sync\_update MUST belong to the same channel\_id as declared in the message envelope.
+All **Layer-0 entries** included in a single `sync_response` or `sync_update` MUST belong to the same `channel_id` as declared in the **ALSP message header**.
 
 Messages from different channels MUST NOT be intermixed in the same ALSP sync message. Implementations MUST send separate sync messages for each channel, even when responding to multiple concurrent sync requests.
 
@@ -2322,7 +2393,7 @@ Replicas SHOULD persist their current Lamport counter value to stable storage pe
 Upon restart, replicas MUST initialize their counter to the maximum of:
 
 - The persisted counter value
-- The highest Lamport value across all locally stored messages
+- The highest Lamport value across all locally stored **Channel Log entries**
 - Any previously received lamport\_max value from peers (if preserved)
 
 **Startup Sync Optimization**: To maximize wall-clock time ordering quality, replicas SHOULD attempt to sync with at least one peer and process any received `lamport_max` values before encoding new local articulations into the Layer 0 channel logs. This ensures that new messages receive Lamport values that are temporally consistent with current network activity rather than artificially low values that would cause them to appear out of chronological sequence in the global timeline.
@@ -2341,7 +2412,7 @@ ALSP aims to provide:
 - **Integrity and non-malleability** — tampered messages are rejected before processing.
 - **Replay resistance** — stale timestamps, reused nonces, or duplicate message identifiers are rejected.
 - **Deterministic ordering** — adversaries cannot induce divergent log orderings.
-- **Authorized replication** — only replicas with valid Channel Access Keys may replicate logs.
+- **Admitted replication** — only replicas able to satisfy Channel Log replication admission (e.g., valid CAP under the channel’s active CAK) may replicate logs.
 - **Divergence detection** — digest mismatches allow detection of tampering or implementation faults.
 
 These form the minimum required security properties at Layer-0; confidentiality and authorship claims are handled by higher layers.
@@ -2359,7 +2430,7 @@ Further formal threat modeling will be incorporated in future drafts following R
 
 ## **19.3 Interaction With Higher Layers**
 
-Because ALSP transports semantically opaque Layer-1 envelopes:
+Because ALSP transports semantically opaque **Layer-1 Channel Envelopes** as payloads within Artipoint Records:
 
 - Confidentiality is provided by **Layer-1 JWE encryption**, not ALSP.
 - Authorship and governance semantics are provided by **Layer-2 articulation signatures**.
@@ -2439,7 +2510,7 @@ BASE64URL({
 
 The complete JWS compact serialization (`header.payload.signature`) is sent over the WebSocket in DPB format.
 
-This representation applies equally to sync\_update messages. The `alsp_msg_payload` field is only present for messages that carry articulation data. Note that payloads in the message array are treated as opaque binary by ALSP and interpreted only at Layer 1.
+This representation applies equally to sync\_update messages. The `alsp_msg_payload` field is only present for messages that carry articulation data. Note that payloads in the message array are treated as opaque binary by ALSP and interpreted only at Layer-1.
 
 ## **21.2 Example Session Flow**
 

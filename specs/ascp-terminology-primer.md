@@ -2,7 +2,7 @@
 
 **Terminology and Architectural Layering Reference**
 
-Version: 0.62 — Informational  
+Version: 0.63 — Informational  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -84,7 +84,7 @@ An Articulation Sequence is not a semantic object in its own right and does not 
 
 A **Channel** is a Distribution Construct defined **semantically at Layer-3**. A Channel defines the intended audience for articulated context, the semantic trust domain under which interpretation occurs, and the scope within which articulation is shared. A Channel is **not** a transport, encryption scheme, or encoding format.
 
-Its semantics are *realized* by Layer-1 through cryptographic *encoding* of Articulation Sequences into Artipoint Records.
+Channels operate as semantically scoped containers for articulation. A Channel’s semantics are realized at Layer-1 by encoding **Articulation Sequences** into **Channel Envelopes** suitable for persistence and distribution. When a Channel Envelope is persisted in a Channel Log (together with any log-associated metadata required for storage and replication), it forms an **Artipoint Record**.
 
 The distinction between Channel semantics and their mechanical realization is central to ASCP's architecture.
 
@@ -95,9 +95,9 @@ While a **Channel** is defined semantically at Layer-3, its semantics are *reali
 - the **Channel Encoder**
 - the **Channel Decoder**
 
-The **Channel Encoder** accepts a validated Articulation Sequence and, using parameters derived from the Channel’s semantic definition, produces a channel-admissible Artipoint Record. This process may include cryptographic signing, encryption, and the application of visibility or admission constraints.
+The **Channel Encoder** accepts a validated Articulation Sequence and, using parameters derived from the Channel’s semantic definition, produces a Channel Envelope. This process includes cryptographic signing, optional encryption, and the application of visibility or admission constraints implied by the Encoder provisioning.
 
-The **Channel Decoder** accepts a received Artipoint Record from a Channel Log, verifies its admissibility and authenticity, and decodes it back into an Articulation Sequence suitable for semantic interpretation at Layer-3.
+The **Channel Decoder** accepts a received Channel Envelope extracted from a Layer-0 Channel Log Artipoint Record, verifies its admissibility and authenticity, and decodes it back into an Articulation Sequence suitable for semantic interpretation at Layer-3.
 
 Together, the Channel Encoder and Channel Decoder are informally referred to as the **Channel Codec**. The term *Codec* is used here in its classical communications sense (encoder/decoder pair) and **does not** imply audio, video, or media compression semantics. In ASCP, a Channel Codec operates over **Articulation Sequences**, not media streams.
 
@@ -105,11 +105,21 @@ Critically, the Channel Encoder and Decoder are **parameterized by Channel seman
 
 ## **3.7 Artipoint Record**
 
-An **Artipoint Record** is the durable, cryptographically secured materialization of an Articulation Sequence within an ASCP Channel Log.
+An **Artipoint Record** is the durable log entry created when a Layer-1 **Channel Envelope** is appended to an ASCP **Channel Log**. The Artipoint Record is the unit of persistence and replication for ASCP Channels.
 
-An Artipoint Record encapsulates a serialized Articulation Sequence within a **Channel Envelope**, applies cryptographic signing to establish authorship integrity, and may apply encryption to enforce visibility scope.
+An Artipoint Record consists of:
 
-Once appended to a **Channel Log**, an Artipoint Record is immutable and addressable. While the articulation act has passed, the resulting record serves as the durable carrier of the Artipoints introduced or affected by that act.
+- **Layer-0 synchronization metadata**, including fields required for replication and convergence (e.g., message\_id, Lamport time), and
+- A Layer-1 **Channel Envelope**, which:
+  - **MUST** apply cryptographic signing to establish verifiable authorship integrity, and
+  - **MAY** apply encryption to enforce visibility scope, and
+  - carries as its payload the Layer-2 serialized **Articulation Sequence**.
+
+The **Channel Envelope** (including its payload) constitutes the cryptographically protected portion of the Artipoint Record. Layer-0 metadata **MAY** be cryptographically bound to the Channel Envelope (e.g., via protected headers or associated authenticated data); when such binding is used, implementations **SHOULD** specify which metadata fields are covered.
+
+Once appended to a Channel Log, an Artipoint Record is immutable. Artipoint Records are addressable within a Channel by message\_id and, where applicable, by a compound identifier such as (channel\_id, message\_id).
+
+While the articulation act itself is temporal, the Artipoint Record serves as its durable carrier: it persists the Articulation Sequence and thereby the Artipoints introduced or referenced by that act.
 
 ## **3.8 Channel Log**
 
@@ -333,17 +343,16 @@ The following errors are explicitly avoided by the ASCP layering model:
 
 ## **Table 2: Layering Terminology Table**
 
-| **Layer** | **Concept**                 | **Architectural Role**                                    | **ASCP-Specific Artifact(s)**                  |
-| --------- | --------------------------- | --------------------------------------------------------- | ---------------------------------------------- |
-| 3         | Semantic Construct          | Meaning and interpretation                                | Artipoints                                     |
-| 3         | Coordination Construct      | First-class coordination semantics                        | Spaces, Streams, Piles, Channels, Identity     |
-| 3         | Derived Semantic Structure  | Interpreted state derived from articulated history        | DAGs, membership sets, governance outcomes     |
-| 2         | Representation              | Canonical syntactic form                                  | Artipoint Expressions, Articulation Statements |
-| 2         | Grammar Validation          | Structural correctness                                    | ABNF grammar                                   |
-| 1         | Channel Encoding / Decoding | Cryptographic realization of Channel semantics            | Artipoint Records                              |
-| 1         | Visibility Enforcement      | Confidentiality and admission                             | Channel envelopes                              |
-| 0         | Log Synchronization         | Durable, ordered replication                              | Channel Logs                                   |
-| Meta      | Coordination Log            | Architectural abstraction of durable articulation history | Realized via Channel Logs                      |
+| **Layer** | **Concept**                 | **Architectural Role**                             | **ASCP-Specific Artifact(s)**                  |
+| --------- | --------------------------- | -------------------------------------------------- | ---------------------------------------------- |
+| 3         | Semantic Construct          | Meaning and interpretation                         | Artipoints                                     |
+| 3         | Coordination Construct      | First-class coordination semantics                 | Spaces, Streams, Piles, Channels, Identity     |
+| 3         | Derived Semantic Structure  | Interpreted state derived from articulated history | DAGs, membership sets, governance outcomes     |
+| 2         | Representation              | Canonical syntactic form                           | Artipoint Expressions, Articulation Statements |
+| 2         | Grammar Validation          | Structural correctness                             | ABNF grammar                                   |
+| 1         | Channel Encoding / Decoding | Cryptographic realization of Channel semantics     | Channel Envelope                               |
+| 1         | Visibility Enforcement      | Confidentiality and admission                      | Channel Envelope                               |
+| 0         | Log Synchronization         | Durable, ordered replication                       | Channel Logs of Artipoint Records              |
 
 ## **Table 3: Coordination Log vs. Channel Log**
 

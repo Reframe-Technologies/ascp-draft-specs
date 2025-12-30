@@ -105,11 +105,7 @@ At Layer-1, the Articulation Sequence is treated as an **opaque cleartext payloa
 
 ## **4.4 Artipoint Record**
 
-An **Artipoint Record** is the durable, cryptographically secured materialization of an Articulation Sequence produced by the Channel Encoder and appended to a Channel Log.
-
-An Artipoint Record is defined strictly as the persisted form of a Channel Envelope once appended to a Channel Log.
-
-The terms “Channel Envelope” and “Artipoint Record” refer to the same object at different stages of its lifecycle: pre-append (Envelope) and post-append (Record).
+An **Artipoint Record** is the durable form of a Layer-1 **Channel Envelope** once it has been persisted in a **Channel Log**, along with any log-associated metadata required by the log for storage and replication. Layer-1 specifies only the **Channel Envelope** format and its cryptographic processing (signing and optional encryption); it does not define the Channel Log’s entry format, ordering, or synchronization metadata.
 
 ## **4.5 Replica**
 
