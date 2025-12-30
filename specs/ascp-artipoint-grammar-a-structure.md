@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.69 — Informational (Pre-RFC Working Draft)  
+Version: 0.70 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -191,11 +191,11 @@ An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribu
 
 ## **5.4 Statement Author**
 
-An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All **Articulation Statements** in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1. The author field contains a **uuidReference** that points to an **Identity Artipoint**—an immutable record containing the author's attributes including handles, decentralized identifiers (DIDs), email addresses, and cryptographic key material.
+An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All **Articulation Statements** in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1. The author field contains a **uuidReference** that points to an **Identity Artipoint**—a Security Construct Artipoint that declares the existence of a participant whether human, agent, or system component.
 
 This design ensures that authorship becomes an integral part of the immutable DAG of cognition itself: statements are always authored, and authors are themselves first-class Artipoints with persistent, verifiable identities.
 
-The author field **MUST** contain a UUID reference to a valid Identity Artipoint. The grammar requires that author contains a UUID referencing an Identity Artipoint. Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field, maintaining clean separation between identity and identification methods.
+The author field **MUST** contain a UUID reference to a valid Identity Artipoint. Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field, maintaining clean separation between identity and identification methods.
 
 More generally, the Artipoint Grammar expresses **what is being articulated**, not **who is permitted to articulate**, **who must receive it**, or **how it is enforced**.
 
