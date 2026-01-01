@@ -346,6 +346,21 @@ ALSP operates at the Layer boundary described in Section 3.2:
 
 ALSP synchronizes a Channel Log by exchanging Artipoint Records (or components sufficient to reconstruct them) and applying the Layer-0 validation, deduplication, and ordering rules defined by this specification. ALSP does not define what a Channel “means,” what authority any record carries, nor how Channel governance evolves; it specifies only the mechanisms by which admitted replicas exchange and converge on an identical log substrate.
 
+### **5.2.1 Channel Log Ownership and Layer-0 Responsibility (Normative)**
+
+Within the ASCP protocol stack, **Layer-0 (ALSP) is the authoritative protocol layer for Channel Logs as replicated data structures**.
+
+Specifically:
+
+- Layer-0 **MUST** govern the admissibility, ordering, deduplication, and replication of Artipoint Records within a Channel Log.
+- Once accepted by Layer-0, an Artipoint Record **MUST NOT** be modified, reordered, or removed.
+- Layer-0 **MUST** ensure deterministic convergence such that any two replicas possessing the same set of accepted Artipoint Records compute an identical Channel Log in Canonical Order.
+
+Layer-0 authority over Channel Logs is **structural and protocol-scoped only**.  
+Layer-0 **MUST NOT** interpret the semantic meaning, governance implications, authorship intent, or application-level consequences of any Artipoint Record.
+
+Semantic interpretation, authority evaluation, governance enforcement, and lifecycle meaning are defined exclusively by higher layers (Layer-2 and Layer-3) and are explicitly out of scope for ALSP.
+
 ## **5.3 Channel Model and Distribution Semantics**
 
 This subsection is **informative** and intended to assist implementers in reasoning about deployment and dataflow.
@@ -483,7 +498,7 @@ ALSP's ordering architecture centers on a **logical clock mechanism** - a partic
 
 This ordering mechanism is fundamental to Layer 0's core responsibility: ensuring that all replicas of a Channel Log converge to identical Artipoint Record sequences, regardless of network conditions, arrival order, or the timing of synchronization events. The architecture supports offline operation, concurrent authorship, and partial replication while maintaining causal consistency.
 
-The detailed specifications for how this ordering works—including clock advancement rules, insertion algorithms, and tie-breaking procedures—are provided in Section 8.
+The detailed specifications for how this ordering works—including clock advancement rules, insertion algorithms, and tie-breaking procedures—are provided in Section 9.
 
 # **7. Dot-Preserving Binary (DPB) Format**
 
@@ -522,92 +537,15 @@ For example, the value 1 encodes as a single byte 0x01, while 128 requires two b
 
 Please see Section 21.3 for a fully worked example of DPD encoding.
 
-# **8. ALSP Session Model**
+# **8. Session Establishment and Lifecycle**
 
-This section defines how two ALSP replicas establish a mutually authenticated session, how session-scoped nonces bind subsequent messages to that session, and how the system transitions from the authentication handshake to steady-state synchronization. All requirements in this section are normative unless explicitly marked non-normative.
+This section defines the ALSP session establishment and lifecycle. It specifies how two ALSP replicas authenticate one another, how session-scoped nonces bind subsequent protocol messages to an authenticated session, and how session state transitions gate the progression from initial contact to steady-state replica synchronization operations.
 
-A *session* is defined in Section 4.
+This section also defines the security boundary enforced by an authenticated session, including replay protection, privilege gating, and failure handling. Session authentication is a prerequisite for all replication activity but does not, by itself, authorize participation in any Channel.
 
-ALSP uses a two-layer authentication model:
+All requirements in this section are normative unless explicitly marked non-normative.
 
-1. **Session authentication** — performed once per connection to establish peer identity and freshness before any Channel Log synchronization begins.
-2. **Message-level authentication** — applied to every ALSP message via JWS signatures, binding each message to the authenticated session using dual session nonces and preventing replay across connections.
-
-Session authentication itself is carried out using ALSP messages that are cryptographically authenticated. After the handshake completes, message-level authentication transitions into its post-authentication mode, ensuring all subsequent messages are explicitly tied to the negotiated session.
-
-## 8.1 Authentication Layers
-
-ALSP defines two distinct but complementary layers of authentication: **message-level authentication** and **session-level authentication**. Message-level authentication ensures the authenticity and integrity of individual protocol messages, while session-level authentication establishes cryptographic continuity, replay resistance, and privileged operation eligibility across a bounded interaction between two replicas.
-
-Session-level authentication builds upon message-level authentication and does not replace it. Both layers are required for correct and secure ALSP operation.
-
-### 8.1.1 Message-Level Authentication
-
-Message-level authentication applies to **all ALSP messages**, independent of session state. It provides per-message cryptographic authenticity, integrity protection, and freshness validation.
-
-Message-level authentication uses JWS signatures to provide per-message integrity and authenticity.
-
-The nonce usage rules are defined exclusively in Section 8.1.2.2 and apply identically to all message types, including authentication messages, sync messages, and operational updates.
-
-Message-level authentication validates that:
-
-1. the JWS signature was created by the sender’s private key;
-2. the protected header includes the correct nonce per Section 8.1.2.2;
-3. the message is fresh according to timestamp and replay-detection rules.
-
-Message-level authentication allows recipients to detect message tampering, spoofing, and stale replays. Prior to session binding, replay may be detectable but not cryptographically impossible; no privileged operations are permitted during this phase.
-
-### 8.1.2 Session-Level Authentication
-
-Session-level authentication establishes a mutually authenticated, replay-safe cryptographic session between two replicas. It enables privileged ALSP operations such as log synchronization, bootstrap artifact exchange, and channel interaction.
-
-Session-level authentication is **session-oriented**, not trust- or policy-oriented: it establishes cryptographic continuity with a peer for the lifetime of the session, but does not assert ASCP instance membership, **replication-admission semantics** for any specific Channel Log, or governance legitimacy.
-
-#### 8.1.2.1 Session Authentication Semantics
-
-Session authentication establishes **cryptographic continuity and replay-safe message authenticity** between two replicas for the lifetime of a single ALSP session. Each endpoint generates a 128-bit **session\_nonce** (defined in Section 4) that uniquely identifies the local half of the session.
-
-**ALSP session authentication is explicitly** ***session-oriented*****, not trust-authoritative.**  
-A successfully authenticated ALSP session guarantees only that messages originate from the same cryptographic peer for the duration of the session. It does **not** establish authoritative ASCP instance membership, RootCA legitimacy, governance approval, or long-term trust standing. Those determinations are made exclusively by higher layers after bootstrap artifacts are acquired and validated.
-
-Session authentication defines the boundary after which privileged protocol operations may occur and before which all interactions are constrained to non-privileged, message-authenticated exchanges.
-
-#### 8.1.2.2 Nonce Generation and Session Binding
-
-ALSP uses a single `nonce` field in the JWS protected header with the following rules:
-
-- **Before authentication completes**: Each replica MUST include its **own** `session_nonce` in the `nonce` field.
-- **After authentication completes**: Each replica MUST include the **peer's** `session_nonce` in the `nonce` field.
-
-This cross-use of nonces ensures that:
-
-1. Both endpoints prove possession of their `session_nonce` during the handshake,
-2. All post-authentication messages are bound to the authenticated peer and cannot be replayed across sessions, and
-3. Exactly one nonce value is present in the JWS protected header at any given time.
-
-The `session_nonce` field in the ALSP message body MUST always contain the sender's own nonce.
-
-Successful nonce exchange and validation cryptographically bind both peers to a shared session context and establish continuity across subsequent ALSP messages.
-
-#### 8.1.2.3 Progressive Replay Protection Model
-
-This ALSP replay protection model is intentionally **progressive** across the session establishment lifecycle:
-
-- **Pre-binding phase (initial** `auth_request`**)**
-  - Messages are signed and timestamped.
-  - Replays are detectable but not cryptographically impossible.
-  - No privileged operations are permitted.
-- **Challenge phase (when applicable)**
-  - The server introduces a fresh challenge nonce.
-  - Identity material becomes bound to server-provided freshness.
-- **Session-bound phase (post-**`hello` **exchange)**
-  - Each peer possesses the other’s `session_nonce`.
-  - All messages are cryptographically bound to the authenticated session.
-  - Replay across connections becomes impossible within the ALSP threat model.
-
-Replay exposure is limited exclusively to the pre-authentication phase; no synchronization, bootstrap retrieval, or **replication-admission-sensitive** operations are permitted during this phase.
-
-## **8.2. Goals and Requirements**
+## **8.1 Goals and Requirements**
 
 The ALSP session authentication process establishes a secure, replay-protected, and identity-bound communication context between replicas before any synchronization activity begins. The following goals and requirements apply to all ALSP sessions.
 
@@ -628,7 +566,7 @@ Both parties MUST complete the authentication handshake and confirm each other�
 Upon successful authentication, both peers MUST have exchanged and validated each other’s `session_nonce`. After this point:
 
 - Every ALSP message is cryptographically bound to the authenticated session.
-- Any replayed message **MUST** be rejected due to nonce mismatch.
+- Any replayed message **MUST** be rejected due to JWS header `nonce` mismatch or ALSP message `session_nonce` mismatch.
 - This property applies uniformly to all ALSP messages, including `sync_request`, `sync_response`, `sync_update`, and error messages.
 
 Within the ALSP threat model, replay after session binding is **cryptographically impossible**.
@@ -653,7 +591,7 @@ After the session is authenticated, all subsequent ALSP messages MUST be signed 
 
 These requirements ensure that ALSP does not rely on transport features for security, guarantees that all post-authentication messages are tightly bound to a specific session, and provides a clear separation between session establishment and ongoing log replication.
 
-## **8.3. Session Handshake Overview**
+## **8.2. Session Handshake Overview**
 
 The ALSP session handshake establishes mutual authentication between replicas and derives the session parameters that bind all subsequent messages. The handshake always begins with an `auth_request` sent by the initiating replica. The receiving replica then determines, based on its local trust material, whether the request can be validated immediately or whether additional information is required.
 
@@ -676,45 +614,123 @@ In both flows:
 
 This invariant ensures that ALSP never exposes log material or bootstrap state prior to establishing a mutually authenticated, replay-safe session.
 
-The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions into the AUTHENTICATED state (Section 8.4). After this transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.1.
+The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions into the AUTHENTICATED state (Section 8.4). After this transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.3.2.2.
 
 *Non-normative note:* The handshake design allows authentication to succeed even in asymmetric trust-discovery scenarios, such as when only one peer realizes a challenge is required or when caches differ across replicas.
 
-Narrative examples of both the Immediate Flow and Challenge Flow are provided in Appendix A (Informative).
+Narrative examples of both the Immediate Flow and Challenge Flow are provided in Appendix A.
+
+## **8.3 Authentication Scope and Binding Model**
+
+A *session*, as defined in Section 4, represents a bounded interaction between two ALSP replicas within which authenticated messages are exchanged and privileged operations may occur.
+
+ALSP employs two complementary scopes of authentication:
+
+1. **Message-level authentication**, which applies to every ALSP message and provides authenticity and integrity using JWS signatures.
+2. **Session-level authentication**, which is established once per connection and binds subsequent messages to a specific authenticated session, providing cryptographic continuity, replay resistance, and eligibility for privileged operations.
+
+Session-level authentication is realized through an authenticated handshake that establishes fresh, session-scoped nonces. After the handshake completes, message-level authentication operates in its post-authentication mode, binding each message to the negotiated session via these nonces and preventing replay across connections.
+
+Session-level authentication builds upon, but does not replace, message-level authentication. Both scopes are required for correct and secure ALSP operation.
+
+### 8.3.1 Message-Level Authentication
+
+Message-level authentication applies to **all ALSP messages**, independent of session state. It provides per-message cryptographic authenticity, integrity protection, and replay detection.
+
+Message-level authentication uses JWS signatures to authenticate each message and to protect the integrity of both the ALSP message body and the JWS protected header.
+
+Nonce usage rules are defined exclusively in Section 8.3.2.2 and apply uniformly to all ALSP message types, including authentication messages, synchronization messages, and operational updates.
+
+Message-level authentication validates that:
+
+1. the JWS signature was created using the sender identity's private key;
+2. the protected header includes the correct `nonce` value as specified in Section 8.3.2.2; and
+3. the message satisfies freshness and replay-detection requirements.
+
+Message-level authentication allows recipients to detect message tampering, spoofing, and stale replays. Prior to session binding, replay may be detectable but not cryptographically impossible; no privileged operations are permitted during this phase.
+
+### 8.3.2 Session-Level Authentication
+
+Session-level authentication establishes a mutually authenticated, replay-safe cryptographic session between two replicas. It enables privileged ALSP operations such as log synchronization, bootstrap artifact exchange, and channel interaction.
+
+Session-level authentication is **session-oriented**, not trust- or policy-oriented. It establishes cryptographic continuity with a peer for the lifetime of a single session, but does **not** assert ASCP instance membership, Channel Log replication-admission authority, governance legitimacy, or long-term trust standing. Those determinations are made exclusively by higher layers after bootstrap artifacts are acquired and validated.
+
+#### 8.3.2.1 Session Authentication Semantics
+
+Each endpoint generates a 128-bit `session_nonce` (defined in Section 4) that uniquely identifies its local half of the session. The session\_nonce provides the cryptographic binding material used to establish session-specific authentication and prevent replay across sessions.
+
+Session authentication defines the boundary after which privileged protocol operations may occur and before which all interactions are constrained to non-privileged, message-authenticated exchanges.
+
+#### 8.3.2.2 Nonce Generation and Session Binding
+
+ALSP uses a single `nonce` field in the JWS protected header with the following rules:
+
+- **Before authentication completes**: Each replica MUST include its **own** `session_nonce` in the `nonce` field.
+- **After authentication completes**: Each replica MUST include the **peer's** `session_nonce` in the `nonce` field.
+
+This cross-use of nonces ensures that:
+
+1. exactly one `nonce` value is present in the JWS protected header at any given time;
+2. each endpoint first binds its own `session_nonce` to its identity private key by signing messages that include its own nonce; and
+3. each endpoint subsequently proves real-time possession of its identity private key by signing messages that include the peer’s `session_nonce`, thereby creating session-specific authentication that prevents replay across sessions.
+
+The `session_nonce` field in the ALSP message body MUST always contain the sender’s own nonce.
+
+Successful nonce exchange and validation bind both peers to a shared session context and establish cryptographic continuity across subsequent ALSP messages.
+
+#### 8.3.2.3 Progressive Replay Protection Model
+
+ALSP’s replay protection semantics evolve as session establishment progresses, providing increasing cryptographic guarantees as additional session context is established. This ALSP replay protection model is intentionally **progressive** across the session establishment lifecycle:
+
+- **Pre-binding phase (initial** `auth_request`**)**
+  - Messages are signed and timestamped.
+  - Replays are detectable but not cryptographically impossible.
+  - No privileged operations are permitted.
+- **Challenge phase (when applicable)**
+  - The server introduces a fresh challenge nonce.
+  - Identity material becomes bound to server-provided freshness.
+- **Session-bound phase (post-**`hello` **exchange)**
+  - Each peer possesses the other’s `session_nonce`.
+  - All messages are cryptographically bound to the authenticated session.
+  - Replay across connections becomes impossible within the ALSP threat model.
+
+Replay exposure is limited exclusively to the pre-authentication phase; no synchronization, bootstrap retrieval, or **replication-admission-sensitive** operations are permitted during this phase.
 
 ## **8.4. Session States**
 
 Session authentication proceeds through a well-defined sequence of states. All transitions are normative unless explicitly marked otherwise.
 
 ```
-    +-------------+
-    | CONNECTING  |
-    +-------------+
-           |
-           | Send auth_request
-           v
-    +------------------------------+
-    |     AUTH_REQUEST_SENT        |
-    +------------------------------+
-       |                       |
-       | recv                  | recv
-       | auth_challenge        | hello
-       v                       v
-+--------------------+   +----------------------+
-| CHALLENGE_RECEIVED |   | HELLO_EXCHANGE       |
-+--------------------+   +----------------------+
-           |                  |
-           | send hello       | send hello (if not sent)
-           v                  v
-        +------------------------+
-        |   AUTHENTICATED        |
-        +------------------------+
+              +-------------+
+              | CONNECTING  |
+              +-------------+
+                     |
+                     | Send auth_request
+                     v
+    +-------------------------------------------+
+    |            AUTH_REQUEST_SENT              |
+    +-------------------------------------------+
+       |                  ^           |
+       | recv             |           | recv
+       | auth_challenge   |           | hello
+       v                  |           v
++--------------------+    |    +-----------------+
+| CHALLENGE_RECEIVED |    |    | HELLO_EXCHANGE  |
++--------------------+    |    +-----------------+
+           |              |           |
+       send updated  _ _ _|           | exchange exactly
+       auth_request                   | one hello each
+                                      |
+                                      v
+    +-------------------------------------------+
+    |              AUTHENTICATED                |
+    +-------------------------------------------+
                     |
                     | Session binding established
                     v
-        +------------------------+
-        |       SYNC_READY       |
-        +------------------------+
+    +------------------------------+
+    |          SYNC_READY          |
+    +------------------------------+
 ```
 
 ### **CONNECTING**
@@ -736,6 +752,8 @@ After sending this updated `auth_request`, the client transitions back into AUTH
 ### **HELLO\_EXCHANGE**
 
 The peer has received a valid `hello` from the other side.
+
+HELLO\_EXCHANGE is a transient coordination state used to ensure that exactly one `hello` message is exchanged by each peer before the session is considered authenticated.
 
 Both peers MUST send exactly one `hello` message per session.
 
@@ -760,17 +778,17 @@ Entering SYNC\_READY signals that:
 - message-level authentication operates in post-authentication mode
 - Channel Log synchronization messages MAY now be exchanged
 
+SYNC\_READY **MUST NOT** be entered until the session has reached AUTHENTICATED.
+
 ### **Error Conditions**
 
-If any of the following checks fail:
+If any of the following checks fail, the recipient MUST send an error with `disconnect: true` and MUST immediately terminate the connection:
 
 - JWS signature validation
 - timestamp freshness
 - nonce validation
 - credential validation
 - malformed authentication messages
-
-…the recipient MUST send an error with `disconnect: true` and immediately terminate the connection.
 
 *Non-normative note:* This strict failure behavior ensures that misconfigured clients, replay attempts, or injection attacks cannot pollute session state or reach log synchronization.
 
@@ -818,7 +836,7 @@ If the server determines that additional identity material is required, it **MUS
 - **MUST** include a key identifier referencing that identity key.
 - **MUST NOT** include the recovery certificate.
 
-Provisioned Mode allows clients without preexisting identity credentials to participate in ALSP Channels using identity materials issued securely during the session establishment.
+Provisioned Mode allows clients without preexisting identity credentials to participate in Session Authentication using identity materials issued securely during the session establishment.
 
 ### **8.5.3 Mode Determination (Server Behavior)**
 
@@ -865,34 +883,37 @@ Credential-supply mode selection is orthogonal to the handshake flow selection d
 
 Mode selection determines *what* identity material the client supplies; flow selection determines *how and when* that material is validated by the server.
 
-## 8.6 Transition to Authenticated Message Mode
+## 8.6 Transition to AUTHENTICATED State
 
-A replica enters authenticated message mode after both peers have exchanged valid `hello` messages and verified each other's `identity`, `session_nonce`, and `timestamp` freshness. At this point, the session transitions from pre-authentication to post-authentication message rules as defined in Section 8.1.1.
+A session enters the **AUTHENTICATED** state (as defined in Section 8.4) after both peers have exchanged valid `hello` messages and verified each other's `identity`, `session_nonce`, and `timestamp` freshness.
 
-### Transition point
+### Transition Requirements
 
-A peer MUST NOT consider the session authenticated until it has both:
+A peer MUST NOT consider the session to have entered AUTHENTICATED state until it has both:
 
 1. **sent** its own `hello`, and
 2. **received** a valid `hello` from the peer.
 
-Once both conditions are met, the session enters authenticated message mode and the nonce binding rules defined in Section 8.1.1 take effect.
+Once both conditions are met, the session transitions to AUTHENTICATED state and the nonce binding rules defined in Section 8.3.2.2 take effect.
 
-### Post-authentication requirements
+From AUTHENTICATED state, the session may subsequently transition to SYNC\_READY state when channel replication admission is established (Section 8.4).
 
-After authentication completes:
+### Post-Authentication Requirements
 
-1. All ALSP messages MUST follow the post-authentication nonce binding rules specified in Section 8.1.1.
-2. A replica MUST sign all messages using the identity key validated during the handshake.
-3. A receiver MUST reject any message whose `nonce` does not match the expected value for the current authentication state (Section 8.1.1).
-4. A receiver MUST reject any message signed with a different key than the key authenticated during the session.
+After the session enters AUTHENTICATED state, all ALSP messages MUST follow the post-authentication nonce binding rules specified in Section 8.3.2.2 under these rules:
+
+1. A replica MUST sign all messages using the identity key validated during the handshake.
+2. A receiver MUST reject any message whose `nonce` does not match the expected value for the current authentication state.
+3. A receiver MUST reject any message signed with a different key than the key authenticated during the session.
+
+These requirements apply to all messages sent in AUTHENTICATED and SYNC\_READY states.
 
 *Non-normative note:*  
-This transition model ensures that authentication is mutual and complete before any channel synchronization occurs, and that all subsequent messages carry cryptographic proof of session binding through the cross-nonce mechanism defined in Section 8.1.1.
+This transition model ensures that authentication is mutual and complete before any channel synchronization occurs, and that all subsequent messages carry cryptographic proof of session binding through the cross-nonce mechanism.
 
 ## **8.7. Session Lifecycle and Resilience**
 
-A session becomes active when both peers have exchanged valid hello messages and have entered the AUTHENTICATED state (Section 8.4). A session remains valid until explicitly terminated or invalidated due to error or freshness failure.
+A session becomes active when both peers have exchanged valid `hello` messages and have entered the AUTHENTICATED state (Section 8.4). A session remains valid until explicitly terminated or invalidated due to error or freshness failure.
 
 ### **8.7.1 Session Termination**
 
@@ -913,21 +934,21 @@ Any reconnection requires a full authentication handshake and new session nonces
 A replica MUST terminate the session if it detects any condition defined elsewhere in this specification as invalidating authentication, including:
 
 - invalid or stale timestamps (Section 10.4),
-- incorrect or unexpected session\_nonce usage (Sections 8.1 and 8.6),
-- signature validation failure (Sections 8.1 and 10.4), or
+- incorrect or unexpected session\_nonce usage (Section 8.3.2.2),
+- signature validation failure (Sections 8.3.1 and 10.4), or
 - malformed protected headers (Sections 10.1 and 10.4).
 
 ### **8.7.3 Session Reestablishment**
 
-After termination, peers MAY immediately establish a new session by initiating a new authentication handshake. New session\_nonces MUST be generated for each new session, even if the underlying transport is reused.
+After termination, peers MAY immediately establish a new session by initiating a new authentication handshake. New session\_nonces MUST be generated for each new session, even if the underlying transport allows reuse.
 
 *Non-normative note:*
 
 This strict session model avoids ambiguity across reconnects, enforces replay protection, and ensures that each authenticated session represents a fresh, well-defined security context.
 
-## **8.10 Channel Replication Admission**
+## **8.8 Replication Admission Overview (Non-Normative)**
 
-Session authentication (Section 8) establishes **who** the peer is at Layer-0 and binds subsequent ALSP messages to that authenticated session. Session authentication **does not** by itself admit replication of any specific Channel Log.
+Session authentication establishes **who** the peer is at Layer-0 and binds subsequent ALSP messages to that authenticated session. Session authentication **does not** by itself admit replication of any specific Channel Log.
 
 Replication admission to a specific Channel Log is performed using a **Channel Access Proof (CAP)** derived from the corresponding **Channel Access Key (CAK)** and verified by the receiving replica under the channel’s published CAK public key.
 
@@ -979,7 +1000,7 @@ A replica **MUST NOT** maintain separate Lamport counters per channel.
 
 ## **9.4 Lamport Max Propagation**
 
-Replicas advertise their current logical time using the lamport\_max field in all synchronization messages. This value represents the highest logical time known to the sender.
+Replicas advertise their current logical time using the `lamport_max` field in all synchronization messages. This value represents the highest logical time known to the sender.
 
 Upon receiving any ALSP message, a replica **MUST** update its local Lamport counter to:
 
@@ -989,7 +1010,7 @@ max(local_lamport,
     any_lamport_time_in_received_messages)
 ```
 
-lamport\_max values are **monotonic advisory hints**:
+`lamport_max` values are **monotonic advisory hints**:
 
 - A replica **MUST NOT** reduce its Lamport counter based on a received value.
 - A replica **MUST** advance its counter to at least the received `lamport_max`.
@@ -1052,7 +1073,7 @@ Idempotence is required:
 - Replicas MUST deduplicate by `message_id` per channel.
 - Duplicate messages MUST NOT affect Lamport counters.
 
-Once inserted, message ordering is immutable.
+Messages may only be inserted into the Channel Log at their canonical position. Deletion and reordering are not permitted.
 
 ## **9.7 Rationale (Non-Normative)**
 
@@ -1060,7 +1081,7 @@ Wall-clock timestamps are unsuitable for canonical ordering due to clock drift, 
 
 Vector clocks offer explicit causality detection but introduce significant metadata overhead and coordination complexity. ASCP already expresses semantic relationships through Layer-2 Artipoint Expression references and derived semantic structures, so ALSP does not require vector-clock semantics.
 
-Lamport clocks provide the right balance: deterministic total ordering (within a Channel Log) with minimal state and excellent behavior under concurrency.
+Lamport clocks provide the right balance: deterministic total ordering within a Channel Log with minimal state and excellent behavior under concurrency.
 
 Lamport ordering provides **transport-level sequencing only**. Semantic causality and meaning relationships are derived at Layer-3 (Semantic Evaluation) from articulated history via Layer-2 references and derived semantic structures, not from Lamport values. Applications are expected to use articulation-level DAG edges (and other Layer-3 semantic evaluation rules), not Lamport values, to determine semantic causality or meaning relationships.
 
@@ -1078,7 +1099,7 @@ Any incorporation of Merkle summaries would therefore be **purely a Layer-0 opti
 
 # **10. ALSP Protocol Messages**
 
-This section defines the complete **Layer-0 ALSP message model** and on-wire encodings used to exchange **Layer-0 Artipoint Records** as opaque binary units (see Section 14). All ALSP messages are integrity-protected by JWS as defined in Section 6 and Section 7. Transport bindings (for example, WebSocket) carry these messages as opaque binary units (see Section 14).
+This section defines the complete Layer-0 ALSP message model and on-wire encodings used to exchange Layer-0 Artipoint Records. All ALSP messages are integrity-protected by JWS as defined in Section 6 and Section 7. Transport bindings such as WebSocket carry these messages as opaque binary units, as specified in Section 14.
 
 ## **10.1 ALSP Message Encoding**
 
@@ -1117,7 +1138,7 @@ ALSP-Envelope = {
 
 These requirements ensure that all implementations produce comparable encodings for the same logical envelope, which is helpful for stable hashing, signatures, and comparison between implementations.
 
-### **alsp\_msg\_header (JSON-in-bytes)**
+### **Encoding the JSON alsp\_msg\_header**
 
 - JSON is embedded as a CBOR byte string (bstr) to ensure deterministic encoding and avoid whitespace or ordering variability per RFC 8785.
 - The value of `alsp_msg_header` **MUST** be a valid **UTF‑8** encoded **JSON** document (RFC 8259). I‑JSON (RFC 7493) is RECOMMENDED.
@@ -1179,13 +1200,13 @@ All multi-byte integers in CBOR use network byte order (big-endian) as per RFC 8
 
 ## **10.2 Authentication Messages**
 
-Authentication messages establish a mutually authenticated ALSP session prior to any Channel Log synchronization. Authentication semantics are defined in **Section 8**; this section defines the **message-specific JSON fields** that MUST appear in the alsp\_msg\_header for each authentication message type.
+Authentication messages establish a mutually authenticated ALSP session prior to any Channel Log synchronization. Authentication semantics are defined in **Section 8**; this section defines the **message-specific JSON fields** that MUST appear in the `alsp_msg_header` for each authentication message type.
 
 All authentication messages:
 
-- MUST use the ALSP Envelope format defined in Section 10.1.
-- MUST include a session\_nonce in the ALSP **message header** per Section 8.
-- MUST include a nonce field in the **JWS protected header** per Section 8.1.
+- MUST use the ALSP-Envelope format defined in Section 10.1.
+- MUST include a `session_nonce` in the ALSP **message header**.
+- MUST include a nonce field in the **JWS protected header** per Section 8.3.2.2.
 - MUST NOT include message header fields other than those explicitly defined in this section unless negotiated by future protocol extensions.
 - MUST reference identity and key material in accordance with **ASCP Trust & Identity Architecture.**
 
@@ -1222,12 +1243,12 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
   - **MUST** contain the time at which the message was generated.
-  - Receivers **MUST** apply freshness and replay checks as specified in the ALSP authentication section (Section 8.1).
+  - Receivers **MUST** apply freshness and replay checks as specified in the ALSP authentication section (Section 8.3).
 - **session\_nonce**
   - Type: string (UTF-8, fixed length as specified in Section 8)
   - **MUST** be present.
   - **MUST** be freshly generated for this session by the sender and MUST be the same in all messages of the session.
-  - **MUST** be used in the JWS protected headers according to the nonce rules defined in Section 8.1.
+  - **MUST** be used in the JWS protected headers according to the nonce rules defined in Section 8.3.2.2.
   - Receivers **MUST** treat this value as the sender’s session nonce for the entire session and **MUST** validate that it does not change in future messages.
 - **identity\_cert**
   - Type: string (JWS-encoded Certificate Artipoint)
@@ -1283,7 +1304,7 @@ The server **MUST** include its identity certificate in all `auth_challenge` mes
   - Type: string (UTF-8, fixed length as specified in Section 8)
   - **MUST** be present.
   - **MUST** be freshly generated by the challenger for this session.
-  - **MUST** be treated as the challenger’s session nonce and used for subsequent JWS nonce values according to the rules in Section 8.1.
+  - **MUST** be treated as the challenger’s session nonce and used for subsequent JWS nonce values according to the rules in Section 8.3.2.2.
   - This value serves as the challenge nonce for identity and key-binding proof, as defined in the Trust & Identity Architecture.
 - **client\_key\_env**
   - Type: string (JWE compact serialization of the user-key-envelope)
@@ -1307,7 +1328,9 @@ The server **MUST** include its identity certificate in all `auth_challenge` mes
 
 ### **10.2.3 Hello Message**
 
-The `hello` message completes mutual authentication and establishes the authenticated session between two ALSP replicas. Both client and server exchange `hello` messages to finalize authentication validation, transitioning the session to the AUTHENTICATED state as defined in Section 8.6.
+The `hello` message completes mutual authentication and establishes the authenticated session between two ALSP replicas. Both client and server exchange `hello` messages to finalize authentication validation, transitioning the session to the AUTHENTICATED state as defined in Section 8.4.
+
+A hello message MUST only be sent or processed during session establishment and MUST NOT be sent after the session has entered SYNC\_READY.
 
 The sender MUST include either the full identity certificate or a `kid` referencing a certificate already available to the receiver via bootstrap. A `kid` reference MUST NOT be used unless the receiver has previously obtained and validated the referenced certificate through out-of-band provisioning or prior credential exchange.
 
@@ -1343,7 +1366,7 @@ The sender MUST include either the full identity certificate or a `kid` referenc
   - Type: string (UTF-8)
   - **MUST** be present.
   - **MUST** equal the sender’s session nonce used during the authentication handshake (see Section 8).
-  - After both peers have exchanged hello messages, all subsequent ALSP messages **MUST** use the peer’s session\_nonce in the JWS protected header as specified in Section 8.1.
+  - After both peers have exchanged hello messages, all subsequent ALSP messages **MUST** use the peer’s session\_nonce in the JWS protected header as specified in Section 8.3.2.2.
 - **boot\_keys\_jwe**
   - Type: string (JWE compact serialization)
   - **MAY** be present.
@@ -1398,6 +1421,8 @@ The sender MUST include either the full identity certificate or a `kid` referenc
   - If the sender is rejecting or degrading capabilities for the session (for example, refusing push mode or indicating a constraint), it **SHOULD** set status\_message to describe the reason and **SHOULD** follow with an ALSP error message if the session cannot proceed.
 
 ## **10.3 Synchronization Phase**
+
+Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior to entering SYNC\_READY state defined in Section 8.4 MUST be treated as a `protocol_violation` error.
 
 ### **10.3.1 Sync Request Message**
 
@@ -1460,8 +1485,8 @@ The sender MUST include either the full identity certificate or a `kid` referenc
 - **log\_digest**
   - Type: string ("sha256:\<hex>")
   - **MAY** be present.
-  - When present, **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly before from\_lamport, in canonical log order. See Section 17 for detailed semantics.
-  - Receivers **MAY** use this digest for log health checking and divergence detection per Section 17.
+  - When present, **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly before from\_lamport, in canonical log order. See Section 17.1 for detailed semantics.
+  - Receivers **MAY** use this digest for log health checking and divergence detection per Section 17.1.
 
 ### **10.3.2 Sync Response**
 
@@ -1499,8 +1524,8 @@ The sender MUST include either the full identity certificate or a `kid` referenc
 - **log\_digest**
   - Type: string ("sha256:\<hex>")
   - **MUST** be present if the most recent triggering "sync\_request" message included its own log\_digest field.
-  - When present, **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17 for detailed semantics.
-  - Receivers **MAY** use this digest for log health checking and divergence detection per Section 17.
+  - When present, **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17.1 for detailed semantics.
+  - Receivers **MAY** use this digest for log health checking and divergence detection per Section 17.1.
 - **more**
   - Type: boolean
   - **MUST** be present.
@@ -1545,8 +1570,8 @@ The sender MUST include either the full identity certificate or a `kid` referenc
 - **log\_digest**
   - Type: string ("sha256:\<hex>")
   - **MUST** always be present
-  - **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17 for detailed semantics.
-  - Receivers **MUST** use this digest for log health checking and divergence detection per Section 17.
+  - **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17.1 for detailed semantics.
+  - Receivers **MUST** use this digest for log health checking and divergence detection per Section 17.1.
 
 ## **10.4 Message Authentication**
 
@@ -1560,7 +1585,7 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 
 #### **JWS Protected Header:**
 
-```clike
+```json
 {
   "alg": "ES256",                // Signing algorithm
   "kid": "ascp:cert:<uuid>",     // Identity or session key reference
@@ -1598,7 +1623,7 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 **nonce:**
 
 - **Type:** string (UTF-8)
-- **MUST** be present with contents as specified in Section 8.1
+- **MUST** be present with contents as specified in Section 8.3.2.2.
 - Receivers **MUST** reject any message whose protected header contains an unexpected nonce to ensures session binding, replay protection, and cross-session separation.
 
 ### **10.4.2 JWS Payload**
@@ -1609,7 +1634,7 @@ The ALSP Envelope (as defined in Section 10.1) serves as the JWS payload. The JW
 
 An ALSP frame MUST be constructed as a DPB-encoded JWS compact serialization (see Section 7 for DPB encoding), formatted as:
 
-```clike
+```asciidoc
 DPB( <JWSprotectedHeader>.<JWSpayload>.<JWSsignature> )
 ```
 
@@ -1698,6 +1723,8 @@ A **Channel Access Proof (CAP)** is a detached JWS object attached to a sync\_re
 
 A client **MUST** include a CAP via the `credentials` field of every sync\_request for any channel with an active CAK. A server **MUST** reject any request for such a channel that omits, corrupts, or invalidates its CAP.
 
+Replication admission verification (CAP validation) MUST only occur after the session has entered SYNC\_READY.
+
 ### **11.2.1 CAP Structure**
 
 A CAP uses JWS Compact Serialization:
@@ -1737,7 +1764,7 @@ The payload **MUST** be a JSON object containing:
 ```
 
 - `channel_id` **MUST** equal the channel\_id field of the associated sync\_request.
-- `nonce` **MUST** be as specified by Section 8.1 for authenticated sessions.
+- `nonce` **MUST** be as specified by Section 8.3.2.2 for authenticated sessions.
 - `timestamp` **MUST** follow RFC 3339 UTC format with mandatory ‘Z’ suffix.
 - Servers **MUST** reject CAPs with timestamps outside the configured validity window specified by Section 19.1 Replay Protection.
 
@@ -2155,9 +2182,9 @@ Replicas **MAY** maintain concurrent ALSP sessions with multiple remote endpoint
 
 Regardless of connectivity pattern:
 
-- Ordering semantics **MUST** follow Section 12.
+- Ordering semantics **MUST** follow Section 9.
 - Session establishment and authentication **MUST** follow Section 8 and Section 14.
-- Divergence detection and recovery **MUST** follow Section 17.
+- Divergence detection and recovery **MUST** follow Section 17.1.
 
 Topology does not affect any protocol guarantees.
 
@@ -2337,7 +2364,7 @@ If divergence is detected, implementations **SHOULD** attempt recovery using one
 
 ## **17.4 Merkle Tree Extensions (Non-Normative)**
 
-Future iterations of ALSP may define optional Merkle tree summaries per channel log to support more efficient divergence detection. Such structures would be used only for replica health and convergence validation and would not participate in the trust model defined at higher layers. This enables detection of localized divergence with minimal hash exchange. See Section 9.9.
+Future iterations of ALSP may define optional Merkle tree summaries per channel log to support more efficient divergence detection. Such structures would be used only for replica health and convergence validation and would not participate in the trust model defined at higher layers. This enables detection of localized divergence with minimal hash exchange. See Section 9.8.
 
 ## **17.5 Operational Best Practices (Informational)**
 
@@ -2394,6 +2421,30 @@ Upon restart, replicas MUST initialize their counter to the maximum of:
 **Startup Sync Optimization**: To maximize wall-clock time ordering quality, replicas SHOULD attempt to sync with at least one peer and process any received `lamport_max` values before encoding new local articulations into the Layer 0 channel logs. This ensures that new messages receive Lamport values that are temporally consistent with current network activity rather than artificially low values that would cause them to appear out of chronological sequence in the global timeline.
 
 This prevents counter regression and maintains the best possible wall clock sorted global ordering consistency across restarts.
+
+## **18.6 Channel Log Persistence and Implementation Flexibility**
+
+ALSP defines **protocol understanding and convergence semantics** for Channel Logs, but **does not prescribe how Channel Logs are stored, indexed, or physically persisted** by an implementation.
+
+Implementations MAY choose any internal strategy for Channel Log persistence, including but not limited to:
+
+- in-memory structures,
+- append-only files,
+- databases or key-value stores,
+- segmented or sharded storage layouts, or
+- derived indexes or caches.
+
+Any such strategy **MUST preserve the externally observable semantics defined by this specification**, including:
+
+- append-only behavior,
+- deterministic Canonical Order,
+- idempotent deduplication,
+- correct digest computation, and
+- convergence behavior during synchronization.
+
+Internal compaction, snapshotting, or optimization techniques are permitted **only if they are semantically equivalent** to replaying the full append-only Channel Log in Canonical Order.
+
+ALSP does not define operational policies for retention, garbage collection, or archival. Those concerns are implementation- and deployment-specific and MAY be governed by higher-layer policy or operator configuration.
 
 # **19. Security Considerations**
 
@@ -2612,7 +2663,33 @@ c7 89 7f 7e 8f 3a 4e b2 25 5f da 75 0b 2c c3 97
 
 ## **23.1 Normative References**
 
+The following specifications are **normatively required** for correct implementation of ALSP.
+
+- **RFC 2119 -** Bradner, S., *Key words for use in RFCs to Indicate Requirement Levels*, BCP 14, RFC 2119, March 1997.
+- **RFC 8174 -** Leiba, B., *Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words*, BCP 14, RFC 8174, May 2017.
+- **RFC 8949 -** Bormann, C. and P. Hoffman, *Concise Binary Object Representation (CBOR)*, RFC 8949, December 2020.
+- **RFC 7515 -** Jones, M., Bradley, J., and N. Sakimura, *JSON Web Signature (JWS)*, RFC 7515, May 2015.
+- **RFC 7516 -** Jones, M. and J. Hildebrand, *JSON Web Encryption (JWE)*, RFC 7516, May 2015.
+- **RFC 7517 -** Jones, M., *JSON Web Key (JWK)*, RFC 7517, May 2015.
+- **RFC 7519 -** Jones, M., Bradley, J., and N. Sakimura, *JSON Web Token (JWT)*, RFC 7519, May 2015.
+- **RFC 8785 -** Rundgren, A. and J. Jordan, *JSON Canonicalization Scheme (JCS)*, RFC 8785, June 2020.
+- **RFC 3339 -** Klyne, G. and C. Newman, *Date and Time on the Internet: Timestamps*, RFC 3339, July 2002.
+- **RFC 4122 -** Leach, P., Mealling, M., and R. Salz, *A Universally Unique Identifier (UUID) URN Namespace*, RFC 4122, July 2005.
+- **RFC 6455 -** Fette, I. and A. Melnikov, *The WebSocket Protocol*, RFC 6455, December 2011.
+- **RFC 8446 -** Rescorla, E., *The Transport Layer Security (TLS) Protocol Version 1.3*, RFC 8446, August 2018.
+
 ## **23.2 Informative References**
+
+The following documents provide **architectural background, motivation, or related work**, but are **not required** for conformance.
+
+- **Lamport, L. (1978) -** *Time, Clocks, and the Ordering of Events in a Distributed System*, Communications of the ACM, Vol. 21, No. 7. Foundational reference for Lamport clock semantics used in ALSP ordering.
+- **RFC 3552 -** Rescorla, E. and B. Korver, *Guidelines for Writing RFC Text on Security Considerations*, RFC 3552, July 2003.
+- **RFC 8032 -** Josefsson, S. and I. Liusvaara, *Edwards-Curve Digital Signature Algorithm (EdDSA)*, RFC 8032, January 2017.
+- **RFC 8259 -** Bray, T., *The JavaScript Object Notation (JSON) Data Interchange Format*, RFC 8259, December 2017.
+- **RFC 7493 -** Bray, T., *The I-JSON Message Format*, RFC 7493, March 2015.
+- **ASCP Terminology Primer -** Szczepanski, J., Reframe Technologies, Inc. Defines shared terms across the ASCP specification suite.
+- **ASCP Trust & Identity Architecture -** Szczepanski, J., Reframe Technologies, Inc., Work in progress. Defines identity material, claim bundles, bootstrap trust, and key semantics referenced by ALSP.
+- **ASCP Bootstrap Process Specification -** Szczepanski, J., Reframe Technologies, Inc., Work in progress.  Defines bootstrap artifacts, manifests, and key distribution referenced but not interpreted by ALSP.
 
 # **Appendix A — Authentication Flow Examples (Informative)**
 
