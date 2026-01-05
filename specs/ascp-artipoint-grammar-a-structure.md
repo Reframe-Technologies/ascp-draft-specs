@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.70 — Informational (Pre-RFC Working Draft)  
+Version: 0.71 — Informational (Pre-RFC Working Draft)  
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -19,7 +19,7 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 # **2. Abstract**
 
-This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). The grammar specifies the structure of **Artipoint Expressions**, expressed as immutable, timestamped, and author-attributed **Articulation Statements** that introduce and relate **Artipoints** within the ASCP coordination graph. This specification defines articulation patterns, operator semantics, payload formats, and the ABNF required for deterministic parsing and interoperability.
+This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). The grammar specifies the structure of **Artipoint Expressions**, expressed as immutable, timestamped, and author-attributed **Articulation Sequences** that introduce and relate **Artipoints** within the ASCP coordination graph. This specification defines articulation patterns, operator semantics, payload formats, and the ABNF required for deterministic parsing and interoperability.
 
 # **3. Introduction & Background**
 
@@ -52,7 +52,7 @@ Terminology in this document follows the definitions established in the **ASCP T
 
 # **4. Structural Model of the Grammar**
 
-The Artipoint Grammar defines a minimalist syntax for representing **acts of articulation** that introduce cognitive atoms—called Artipoints—as immutable, addressable statements. Multiple Articulation Statements form an **Articulation Sequence**, where each Artipoint is a semicolon-terminated line that captures a complete, atomic declaration of intent or structure.
+The Artipoint Grammar defines a minimalist syntax for representing **acts of articulation** that introduce cognitive atoms—called Artipoints—as immutable, addressable statements. One or more **Articulation Statements** form an **Articulation Sequence**, where each Articulation Statement is a semicolon-terminated line that captures a complete, atomic declaration of intent or structure.
 
 #### The Coordination DAG
 
@@ -92,13 +92,13 @@ Key design insight: **Artipoints capture cognitive structure, not dynamic conten
 
 When an Artipoint needs to incorporate evolving content—documents, databases, real-time streams—that mutable state lives externally and is referenced through URIs in the payload. This is the **"bookmark pattern"**: rather than embedding a 50-page research paper directly, you create a cognitive statement about it with a URI to the external document. The paper may be updated, moved, or versioned, but the cognitive decision—the structural relationship between paper and project—remains immutable and auditable within the DAG.
 
-The core unit follows this non-normative pattern:
+Within an Articulation Sequence, each Artipoint Expression follows this non-normative pattern:
 
 ```
-[uuid, author, timestamp, expression];
+[uuid, timestamp, articulation-pattern];
 ```
 
-Where the optional expression enables four fundamental articulation patterns: instantiation (creating new cognitive atoms), annotation (enriching existing ones), connection (linking atoms), and construction (creating and linking simultaneously).
+Where the `articulation-pattern` enables four fundamental types of articulation patterns: instantiation (creating new cognitive atoms), annotation (enriching existing ones), connection (linking atoms), and construction (creating and linking simultaneously).
 
 ## 4.2 **Expression of Coordination Relationships**
 
@@ -124,16 +124,16 @@ This design ensures that contextual meaning remains durable, auditable, and inte
 
 Because Artipoints capture the persistent cognitive substrate rather than dynamic content, each statement becomes a permanent, auditable decision point in the DAG. This design enables rich collaborative histories: an AI agent's relevance judgment, a human's organizational decision, or a team's dependency mapping all accumulate as an immutable record—even as the documents, data, and deliverables they reference continue to evolve externally.
 
-**Example**: When an AI agent discovers a relevant research paper, it doesn't embed the paper's text:
+**Fully formed Articulation Sequence Example**: The following example demonstrates a complete Articulation Sequence (as defined in Section 5.3) showing how an AI agent articulates a reference to a research paper rather than embedding the paper's text itself.
 
 ```clike
-[<uuid-of-this-articulation>,
-     <uuid-of-author-identity>,
-     2024-03-15T14:30:22.123Z,
- [ "bookmark",
-  "Attention Mechanisms in Transformer Models",  
-  uri:"https://arxiv.org/abs/2023.12345" ]
-] supports <relevant-stream-uuid>;
+{ 1234, 018e8c5a-3b2f-7890-abcd-ef1234567890,
+  [ 018e8c5a-4d12-7a3c-9f2e-8b7c6d5a4321, 2024-03-15T14:30:22.123Z,
+    [ "bookmark",
+    "Attention Mechanisms in Transformer Models",  
+    uri:"https://arxiv.org/abs/2023.12345" ]
+  ] supports <relevant-stream-uuid>;
+}
 ```
 
 This creates a permanent record: "this agent determined this paper was highly relevant to this project at this moment." The paper may be updated or moved, but the cognitive judgment—the structural relationship between paper and project stream—remains immutable and traceable.
@@ -154,25 +154,25 @@ The result is true **shared cognition**: not just exchanging messages or files, 
 
 ## **5.1 Artipoint Expression**
 
-The core normative grammatical representation of an Artipoint is as follows:
+The core normative grammatical representation of an Artipoint Expression is as follows:
 
 ```bnf
-artipoint = "[" uuid "," author "," timestamp "," expression "]"
+artipoint-expression = "[" uuid "," timestamp "," articulation-pattern "]"
+
 ```
 
 **Fields:**
 
 - **uuid**: RFC-4122 compliant universally unique identifier for this Artipoint
-- **author**: the UUID reference to the *identity* who is authoring this Artipoint. An author is always referencing a person or agentic identity. This must be the UUID of an Indentity Artipoint. See next section for details.
 - **timestamp**: This contains the RFC 3339 UTC timestamp for the time of articulation.
-- **expression**: One of four supported articulation patterns (see below)
+- **articulation-pattern**: One of four supported articulation patterns (see below)
 
 ## 5.2 Articulation Statement
 
 Each Artipoint is a single, semicolon-terminated line (called an `artipoint-statement` in the formal grammar):
 
 ```bnf
-articulation-statement = artipoint ";" [ end-of-line ]
+articulation-statement = artipoint-expression ";" [ end-of-line ]
 
 ```
 
@@ -180,30 +180,52 @@ The Articulation Statement forms a "Cognitive Atom"—an atomic **act of articul
 
 ## 5.3 Articulation Sequences
 
-One or more Articulation Statements are then logically form into an `articulation-sequence`:
+One or more Articulation Statements are then logically formed into an `articulation-sequence`:
 
 ```abnf
-articulation-sequence = 1*(artipoint-statement)
-
+articulation-sequence = "{" sequence-header ","
+                            1*(articulation-statement)
+                        "}"
 ```
 
-An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All **Articulation Statements** in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1.
+where the `sequence-header` is defined as:
 
-## **5.4 Statement Author**
+```clike
+sequence-header = seq-number "," author [ "," timestamp ]
+```
 
-An Articulation Sequence is passed from Layer-2 to Layer-1 Channels for distribution. All **Articulation Statements** in a sequence MUST share the same Author, whose credentials secure the sequence at Layer-1. The author field contains a **uuidReference** that points to an **Identity Artipoint**—a Security Construct Artipoint that declares the existence of a participant whether human, agent, or system component.
+The sequence header is an ordered tuple containing:
 
-This design ensures that authorship becomes an integral part of the immutable DAG of cognition itself: statements are always authored, and authors are themselves first-class Artipoints with persistent, verifiable identities.
+- **seq-number** — An unsigned 64-bit sequence number (see Section 5.3.1)
+- **author** — A UUID reference to an Identity Artipoint (see Section 5.3.2)
+- **timestamp** — An optional RFC 3339 UTC timestamp (see Section 5.3.3)
 
-The author field **MUST** contain a UUID reference to a valid Identity Artipoint. Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field, maintaining clean separation between identity and identification methods.
+All Articulation Statements within a sequence **MUST** share the same author. The sequence is passed from Layer-2 to Layer-1 Channels for distribution, where the author's credentials secure the sequence.
 
-More generally, the Artipoint Grammar expresses **what is being articulated**, not **who is permitted to articulate**, **who must receive it**, or **how it is enforced**.
+### **5.3.1 Sequence Number Semantics**
 
-The grammar captures **authorial intent and structural meaning** only. Questions of permission, authority, participation, and accountability are articulated separately as governance metadata and evaluated by higher protocol layers. Questions of delivery, visibility, and cryptographic access are handled exclusively by ASCP Channels.
+The `seq-number` field has the following normative requirements:
 
-This separation allows the grammar to remain minimal, deterministic, and universally interpretable, while supporting rich coordination semantics through composition rather than control logic.
+- **Scope:** The `seq-number` is scoped to the author. Each author maintains an independent sequence.
+- **Monotonicity:** For a given author, `seq-number` values **MUST** be strictly monotonically increasing across successive sequences.
+- **Gaps:** Gaps in the sequence are permitted. Non-consecutive values do not constitute a validation error.
+- **Ordering Semantics:** The `seq-number` **MUST NOT** be used to alter evaluation or replay order. Evaluation order is determined solely by Layer-0 log order as specified in Section 9.
+- **Data Type and Range:** The value **MUST** be an unsigned 64-bit integer in the range `0` to `18446744073709551615` (inclusive).
+- **Validation:** Values outside the specified range **MUST** cause Layer-2 grammar validation to fail.
 
-## **5.5 Statement Recipients (Informational)**
+### **5.3.2 Sequence Author**
+
+The author field **MUST** contain a UUID reference to a valid Identity Artipoint. An Identity Artipoint is a Security Construct Artipoint that declares the existence of a participant—whether human, agent, or system component—with persistent, verifiable identity. This design ensures that authorship becomes an integral part of the immutable DAG of cognition: sequences and their contained statements are always authored, and authors are themselves first-class Artipoints within the coordination graph.
+
+Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field.
+
+The Artipoint Grammar expresses **what is being articulated**, not **who is permitted to articulate**, **who must receive it**, or **how it is enforced**. The grammar captures authorial intent and structural meaning only. Questions of permission, authority, participation, and accountability are articulated separately as governance metadata and evaluated by higher protocol layers. Questions of delivery, visibility, and cryptographic access are handled exclusively by ASCP Channels. This separation allows the grammar to remain minimal, deterministic, and universally interpretable, while supporting rich coordination semantics through composition rather than control logic.
+
+### **5.3.3 Sequence Timestamp**
+
+The optional sequence timestamp represents the time of articulation sequence assembly and is advisory only. It provides a timestamp for the sequence distinct from the timestamps of individual Articulation Statements contained within.
+
+## **5.4 Statement Recipients (Informational)**
 
 The Artipoint Grammar defines the structure and semantics of Artipoints and Articulation Sequences, but it **does not encode explicit recipients** or perform any distribution or access-control function.
 
@@ -428,7 +450,9 @@ This section defines the **normative semantics** of each operator in the Artipoi
 
 ## 8.6 Detailed Description of each Operator
 
-Each operator described below follows the same invariant pattern: articulation extends the coordination DAG with new relationships, while any supersession or exclusion semantics are applied only during interpretation and only within explicitly shared scope.
+The operators described below appear within **Articulation Statements** as defined in Section 5. Each operator follows the same invariant pattern: articulation extends the coordination DAG with new relationships, while any supersession or exclusion semantics are applied only during interpretation and only within explicitly shared scope.
+
+For clarity, the examples in the subsections below show individual articulation statements. In practice, per the grammar defined in Section 5.1, all such statements appear within an enclosing `articulation-sequence` that includes a `sequence-header` as defined in Section 5.3.
 
 ### 8.6.1 references
 
@@ -437,7 +461,7 @@ Indicates that the LHS item semantically refers to or is informed by the RHS ite
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T10:00Z,
+[uuidA, 2025-07-28T10:00Z,
   [decision,
      "Proceed with option B",
      uri:"https://workspace/docs/discussion-summary"]
@@ -454,7 +478,7 @@ Indicates semantic supersession: the LHS is intended to supersede or override th
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T10:10Z,
+[uuidA, 2025-07-28T10:10Z,
   [document,
      "Final Draft",
      uri:"/docs/final.pdf"]
@@ -471,7 +495,7 @@ The LHS is a derived or excerpted sub-part of the RHS—typically in a child rol
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T10:20Z,
+[uuidA, 2025-07-28T10:20Z,
   [snippet,
      "Key passage from study",
      uri:"https://papers.ai/conference2025/paper42#passage26"]
@@ -488,7 +512,7 @@ LHS is a flat set or collection of RHS items, such as a pile or unordered list.
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T10:30Z,
+[uuidA, 2025-07-28T10:30Z,
   [pile,
      "Articles for Review",
      uri:"https://mycompany.com/pileState.pile"]
@@ -505,7 +529,7 @@ LHS is constructed as a structured whole from multiple RHS components. Hierarchi
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T10:40Z,
+[uuidA, 2025-07-28T10:40Z,
   [agenda,
      "Monday Sync Agenda",
      uri:"https://calendar.company.com/agenda/monday-sync"]
@@ -522,7 +546,7 @@ LHS is a new, elevated form of RHS, which it displaces. Used when transforming o
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T10:50Z,
+[uuidA, 2025-07-28T10:50Z,
   [stream, "Live Workstream", uuidOldPile] promotes {uuidOldPile} ];
 ```
 
@@ -535,7 +559,7 @@ LHS provides a subordinate comment, note, or enrichment on the RHS item. It does
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T11:00Z,
+[uuidA, 2025-07-28T11:00Z,
   [comment,
      "Needs clarification",
      uri:"https://workspace/docs/proposal-draft"]
@@ -552,7 +576,7 @@ LHS is a functional subcomponent or enabler of the RHS. Use for required substru
 Example:
 
 ```
-[uuidA, uuidAuthorIdentity, 2025-07-28T11:10Z,
+[uuidA, 2025-07-28T11:10Z,
   [scene, "Initial Scene",
     json:{
       "timestamp": "00:00:00",
@@ -790,11 +814,9 @@ author = uuidReference
 
 ```
 
-Represents the author, signer, and generator of the Artipoint.
+The author field contains a UUID reference to an Identity Artipoint that represents the participant authoring the Articulation Sequence. The author field is located in the sequence header (see Section 5.3).
 
-- **uuidReference**: The RFC-4122 standard UUID of an IdentityArtipoint of the human or agent generating the Artipoint.
-
-Cryptographic integrity, privacy, and audience scoping are all handled by **ASCP channel encoding**, not the grammar.
+All normative requirements for author identity, validation, and external identifiers are defined in Section 5.3.2. Cryptographic integrity, privacy, and audience scoping are handled by ASCP Channel encoding, not the grammar.
 
 # **14. Strings and Escaping**
 
@@ -870,7 +892,7 @@ In the future we could/should add sections covering:
 
 ; Core definitions cover:
 ; - Artipoint Expression structure
-; - Author attribution
+; - Articulation Sequence Author attribution
 ; - Operators and articulation patterns
 ; - Referencing, typing and composition
 
@@ -889,15 +911,23 @@ In the future we could/should add sections covering:
 ; - Routing/visibility is scoped by the ASCP channel.
 
 ; ----- Core sequence -----
-articulation-sequence   = 1*(articulation-statement)
-articulation-statement  = OWS artipoint OWS ";" OWS [ end-of-line ]
+articulation-sequence   = OWS "{" OWS sequence-header separator
+                          OWS 1*(articulation-statement) OWS "}"
+                          OWS [ end-of-line ]
+articulation-statement  = OWS artipoint-expression OWS ";"
+                          OWS [ end-of-line ]
+
+; ----- Articulation Sequence Header ------
+sequence-header = seq-number separator author
+                  [ separator timestamp ]
 
 ; ----- Artipoint Expression -----
-artipoint      = "[" OWS uuid separator author separator timestamp
-                     separator expression OWS "]"
-expression     = instantiation / annotation / connection / construction
+artipoint-expression = "[" OWS uuid separator timestamp separator
+                           articulation-pattern OWS "]"
+articulation-pattern = instantiation / annotation / connection
+                           / construction
 
-; ----- Expression Forms -----
+; ----- Articulation Pattern Forms -----
 instantiation  = "[" OWS artipoint-type separator
                      label separator payload OWS "]"
                      [ dot attribute-list ]
@@ -937,6 +967,7 @@ attr-operator  = OWS ( "+" / "-" / "=" / ":=" ) OWS
 
 ; ----- Identity & refs -----
 uuidReference  = OWS uuid OWS
+seq-number     = uint
 author         = uuidReference
 
 ; ----- Timestamps -----
@@ -969,9 +1000,9 @@ BINOCTET       = 8BIT
 BIT            = %x30 / %x31
 
 ; ----- Signed Integer value -----
-integer        = [ minus ] int
+integer        = [ minus ] uint
 minus          = %x2D
-int            = %x30 / (DIGIT19 *DIGIT)
+uint           = %x30 / (DIGIT19 *DIGIT)
 
 ; ----- Strings (RFC 8259 compatible escapes) -----
 quoted-string  = DQUOTE *string-char DQUOTE
@@ -1054,7 +1085,8 @@ Where:
 | 0x00           | Bytes (opaque)     | YES             | Arbitrary binary data from hex or binary string representations                          |
 | 0x01           | UTF-8 string (raw) | YES             | UTF-8 quoted string without JSON-style escaping required                                 |
 | 0x02           | UUID Set           | YES             | Set of UUIDs enclosed by braces {} in textual form. Length will be multiple of 16 bytes. |
-| 0x03 - 0x1f    | Reserved           | YES             | Variable Length reserved                                                                 |
+| 0x03           | Sequence Number    | YES             | Unsigned integer using ULEB128 as the value itself                                       |
+| 0x04 - 0x1f    | Reserved           | YES             | Variable Length reserved                                                                 |
 | 0x20           | UUID               | NO              | Single UUID on an artipoint or author field with a fixed 16-byte payload                 |
 | 0x21           | ISO Timestamp      | NO              | 4-byte timestamp encoding                                                                |
 | 0x22           | ISO Timestamp      | NO              | 8-byte timestamp encoding                                                                |
@@ -1251,7 +1283,7 @@ Where:
 - **Case handling:** Accept both upper and lowercase hex digits
 - **Output format:** Always store as raw binary data
 
-### B.1.6 UTF-8 Strings (Type = 0x03)
+### B.1.6 UTF-8 Strings (Type = 0x01)
 
 Encodes UTF-8 text strings without requiring JSON-style escaping for common characters.
 
@@ -1264,13 +1296,13 @@ Encodes UTF-8 text strings without requiring JSON-style escaping for common char
 #### **Binary Format**
 
 ```plaintext
-0x1F | 0x03 | <ULEB128-length> | <utf8-bytes>
+0x1F | 0x01 | <ULEB128-length> | <utf8-bytes>
 ```
 
 Where:
 
 - `0x1F` = Binary Value Island (BVI) introducer
-- `0x03` = UTF-8 string type identifier
+- `0x01` = UTF-8 string type identifier
 - `<ULEB128-length>` = Number of bytes in UTF-8 encoding
 - `<utf8-bytes>` = Raw UTF-8 encoded string data
 
@@ -1285,9 +1317,9 @@ Where:
 
 #### **Examples**
 
-- **ASCII:** `"Hello"` → `0x1F 0x03 0x05` + `48656c6c6f`
-- **Unicode:** `"世界"` → `0x1F 0x03 0x06` + `e4b896e7958c`
-- **Empty string:** `""` → `0x1F 0x03 0x00`
+- **ASCII:** `"Hello"` → `0x1F 0x01 0x05` + `48656c6c6f`
+- **Unicode:** `"世界"` → `0x1F 0x01 0x06` + `e4b896e7958c`
+- **Empty string:** `""` → `0x1F 0x01 0x00`
 
 #### **Character Handling**
 
@@ -1353,6 +1385,44 @@ Where:
 - Hours restricted to 00-23 (RFC 3339 clarification over ISO 8601)
 - Case-insensitive 'T' and 'Z' characters accepted per RFC 3339
 - Leap seconds handled per RFC 3339 specification (time-second may be "60")
+
+### B.1.8 Sequence Number Values (Type = 0x03)
+
+Encodes unsigned sequence number values directly into ULEB128 values.
+
+#### **Textual Forms**
+
+```
+1003        ; Unsigned representation
+96576878    ; Unsigned representation
+```
+
+#### **Binary Format**
+
+```
+0x1F | 0x03 | <ULEB128-value>
+```
+
+Where:
+
+- `0x1F` = Binary Value Island (BVI) introducer
+- `0x03` = Binary values type identifier
+- `<ULEB128-value>` = The value of the sequence number itself
+
+#### **Encoding Process**
+
+1. Parse unsigned base-10 integer representation
+2. Encode the number value into ULEB128 to represent the value itself
+
+#### **Examples**
+
+- **integer input:** `1002` → `0x1F 0x03 0xEA 0x07`
+- **integer input:** `323456` → `0x1F 0x03 0x80 0xDE 0x09`
+- **integer input:** `0` → `0x1F 0x03 0x00`
+
+#### **Validation Requirements**
+
+- **Integer format:** Must contain decimal digits only and any non-numeric digits in the field MUST cause a parsing error to be flagged.
 
 ## B.2 Default Symbol Dictionary (DSD v1)
 
