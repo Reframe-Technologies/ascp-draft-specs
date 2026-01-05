@@ -2,8 +2,8 @@
 
 **Terminology and Architectural Layering Reference**
 
-Version: 0.63 — Informational  
-December 2025
+Version: 0.64 — Informational  
+January 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -56,7 +56,7 @@ Unless otherwise qualified, the term *Artipoint* refers to this semantic concept
 
 An **Artipoint Expression** is the Layer-2 grammatical representation of an Artipoint, as defined by the ASCP Artipoint Grammar.
 
-An Artipoint Expression encodes the structural fields necessary to represent an Artipoint, including its identifier, author reference, timestamp, and articulation expression. It is a representation *of* an Artipoint, not an act of articulation itself.
+An Artipoint Expression encodes the structural fields necessary to represent an Artipoint, including its identifier, timestamp, and articulation pattern. It is a representation *of* an Artipoint, not an act of articulation itself.
 
 Artipoint Expressions are purely structural artifacts. They do not carry cryptographic guarantees, imply trust or authority, or define visibility or distribution. Those concerns are addressed by lower protocol layers.
 
@@ -64,7 +64,7 @@ The role of the Artipoint Expression is to provide a deterministic, canonical fo
 
 ## **3.3 Articulation Statement**
 
-An **Articulation Statement** is a single, atomic act of articulation expressed using the ASCP grammar. Each Articulation Statement corresponds to exactly one coordination move performed by an author at a specific time.
+An **Articulation Statement** is a single, atomic act of articulation expressed using the ASCP grammar. Each Articulation Statement corresponds to exactly one coordination move performed by an associated author (as established by its containing Articulation Sequence) at some specific time.
 
 While an Artipoint names a unit of meaning, an Articulation Statement names the *act* that introduces, relates, annotates, or constructs that meaning within the shared coordination graph.
 
@@ -78,7 +78,7 @@ An **Articulation Sequence** is an ordered collection of one or more Articulatio
 
 The Articulation Sequence is the unit passed from the articulation layer to the secure distribution layer. All statements in a sequence share authorship and are jointly secured via **Channel Encoder** processing.
 
-An Articulation Sequence is not a semantic object in its own right and does not introduce additional meaning beyond the statements it contains. Its purpose is organizational and operational, not semantic.
+An Articulation Sequence is not a semantic object in its own right and does not introduce additional meaning beyond the statements it contains other than grammatically providing the authorship and integrity boundary under which those statements are recorded.
 
 ## 3.5 Channel
 
@@ -175,7 +175,7 @@ A foundational distinction in ASCP is between syntax and semantics:
 
 - **Layer-0** is responsible for durable, ordered replication of opaque log entries.
 - **Layer-1** realizes semantic constraints through cryptographic encoding and decoding.
-- **Layer-2** defines the syntax of Artipoint Expressions.
+- **Layer-2** defines the syntax of Artipoint Expressions, Articulation Statements, and Articulation Sequences.
 - **Layer-3** defines the semantics of Artipoints and their relationships.
 
 ## **4.2 Representation vs. Interpretation**
@@ -333,13 +333,13 @@ The following errors are explicitly avoided by the ASCP layering model:
 
 ## **Table 1: Artipoint vs. Articulation**
 
-| **Conceptual Role** | **Term**               |
-| ------------------- | ---------------------- |
-| Semantic unit       | Artipoint              |
-| Grammar form        | Artipoint Expression   |
-| Act                 | Articulation Statement |
-| Batch of acts       | Articulation Sequence  |
-| Logged artifact     | Artipoint Record       |
+| **Conceptual Role**    | **Term**               |
+| ---------------------- | ---------------------- |
+| Semantic unit          | Artipoint              |
+| Grammar form           | Artipoint Expression   |
+| Act                    | Articulation Statement |
+| Batch of authored acts | Articulation Sequence  |
+| Logged artifact        | Artipoint Record       |
 
 ## **Table 2: Layering Terminology Table**
 
