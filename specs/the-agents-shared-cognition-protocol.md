@@ -4,8 +4,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.61 — Informational (Pre-RFC Working Draft)  
-December 2025
+Version: 0.62 — Informational (Pre-RFC Working Draft)  
+January 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -202,7 +202,6 @@ Each Artipoint is a **Contextual Atom**: a permanent, author-attributed articula
 An Artipoint is represented—at the grammar layer—by an **Artipoint Expression**, which encodes:
 
 - a **UUID** (stable identifier),
-- an **author reference** (human or agent identity),
 - a **timestamp**,
 - a **payload** (commonly a URI or structured reference), and
 - an **expression** describing the articulated claim.
@@ -485,6 +484,8 @@ Layer 2 defines the **semantic substrate** for the protocol suite. It provides t
 **Technical specification:** The complete syntax, semantics, and parsing rules are defined in the *ASCP Artipoint Grammar* specification document.
 
 ## **15.3 Layer 1 — Channels (Secure Distribution & Visibility Scoping)**
+
+While a Channel is defined semantically at Layer-3 as a Distribution Construct, Layer-1 realizes Channel semantics via the Channel Encoder/Decoder and envelope formats.
 
 Layer 1 governs how articulated context is distributed and who can see it. Channels define cryptographic visibility scopes: an Articulation Sequence sent to a Channel is accessible only to participants who hold the relevant keys.
 
