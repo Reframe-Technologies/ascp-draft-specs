@@ -2,8 +2,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.71 — Informational (Pre-RFC Working Draft)  
-January 2026
+Version: 0.75 — Informational (Pre-RFC Working Draft)
+February 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -130,7 +130,7 @@ Because Artipoints capture the persistent cognitive substrate rather than dynami
 { 1234, 018e8c5a-3b2f-7890-abcd-ef1234567890,
   [ 018e8c5a-4d12-7a3c-9f2e-8b7c6d5a4321, 2024-03-15T14:30:22.123Z,
     [ "bookmark",
-    "Attention Mechanisms in Transformer Models",  
+    "Attention Mechanisms in Transformer Models",
     uri:"https://arxiv.org/abs/2023.12345" ]
   ] supports <relevant-stream-uuid>;
 }
@@ -138,11 +138,11 @@ Because Artipoints capture the persistent cognitive substrate rather than dynami
 
 This creates a permanent record: "this agent determined this paper was highly relevant to this project at this moment." The paper may be updated or moved, but the cognitive judgment—the structural relationship between paper and project stream—remains immutable and traceable.
 
-## 4.5 Coordination Scopes
+## 4.5 Coordination Contexts (Informative)
 
-A **scope** is any articulated contextual structure (such as a Space, Stream, Pile, or other aggregate Artipoint) in which one or more Artipoints are explicitly composed via coordination relationships.
+Artipoint type labels—such as Spaces, Streams, Piles, or other aggregate types—are semantic hints only. They carry no structural meaning. Structure is established exclusively through explicit verb-operator articulations in the coordination DAG.
 
-Scope is always derived from explicit articulation within the coordination DAG. Scope is never implicit, global, or inferred from payload content; it exists only where established by explicit articulation.
+In this specification, all structural grouping is represented explicitly through hierarchical parent–child relationships established by operators. No implicit or global scope semantics exist.
 
 ## 4.6 Structural Benefits
 
@@ -291,9 +291,10 @@ A connection:
 
 - **MUST** be evaluated atomically as a single articulation event with no intermediate states.
 - **MUST NOT** create new Artipoint&#x73;**.** Only construction or instantiation expressions create new Artipoints.
-- **MUST** apply all structural effects as determined by the operator semantics, including hierarchical placement, masking behavior, and any Scoped Displacement Behavior (SDB) defined for that operator.
+- **MUST** apply all structural effects as determined by the operator semantics, including any hierarchical parent–child relationships defined for that operator.
+- Any visibility effects, including Sibling Displacement Behavior (SDB), are evaluated during the visibility phase defined in Section 8 and MUST NOT modify the coordination DAG.
 
-See Section 8 for detailed definitions of structural, hierarchical, and Scoped Displacement Behavior effects.
+See Section 8 for detailed definitions of hierarchical and Sibling Displacement Behavior effects.
 
 ## **6.4 Construction**
 
@@ -308,9 +309,10 @@ A construction:
 
 - **MUST** be evaluated atomically as a single articulation event with no intermediate states. The new Artipoint instantiation and operator application occur in one inseparable operation.
 - **MUST NOT** be treated as two separate operations (instantiation followed by connection).
-- **MUST** establish all structural effects through operator semantics, including the new Artipoint's initial hierarchical placement, masking behavior, and any Scoped Displacement Behavior (SDB) evaluated using the birth context.
+- **MUST** establish all structural effects through operator semantics, including the new Artipoint's initial hierarchical placement where applicable.
+- Any visibility effects, including Sibling Displacement Behavior (SDB), are evaluated during the visibility phase defined in Section 8 and MUST NOT depend on any special “birth context.”
 
-See **Operator Semantics** for the definitions of topological, hierarchical, and SDB effects.
+See Section 8 for the definitions of hierarchical and Sibling Displacement Behavior effects.
 
 # **7. Payloads and Typed Blocks**
 
@@ -366,97 +368,183 @@ The standard payload types (`json`, `string`, `uri`, `data`, `uuid`) are fixed a
 
 # 8. Articulation Operator Taxonomy and Semantics
 
+This section defines the semantic effects of operators, the deterministic construction of the structural forest of trees projection implied by those semantics, and the visibility rules governing projection. The canonical coordination log serves as the sole source of truth, and projection and visibility rules MUST NOT mutate canonical structure.
+
 ## 8.1 General Principles
 
-Verb-operators define **coordination relationships** between Artipoints. Their semantics are governed by the following principles:
+Verb-operators define **coordination relationships** between Artipoints through append-only, immutable, and deterministic semantics. Their principles are:
 
 - **Declarative Only:** Operators state relationships; they do not execute behavior, enforce policy, or encode workflow logic.
 - **Append-Only Structure:** Operators **MUST NOT** modify, delete, or overwrite any existing Artipoint or relationship. Each operator invocation extends the coordination DAG solely by the addition of new edges (and, in the case of constructions, a new node plus edges).
 - **Structural vs Semantic Effects:** Operators define **structural effects** on the coordination DAG (as defined in Section 4). Any masking, supersession, prioritization, or displacement behavior is a **semantic evaluation effect** applied during interpretation and **MUST NOT** alter the underlying DAG.
-- **Determinism:** Given an identical articulation history replayed in the same Layer-0 log order, and evaluated per Section 4, all conforming implementations MUST derive identical structural DAG effects and identical semantic evaluation outcomes.
+- **Determinism:** Given an identical articulation history replayed in the same Layer-0 log order, all conforming implementations MUST derive identical hierarchical edge sets, forest projections, visibility results, and semantic evaluation outcomes.
 - **Forward Compatibility:** Operators MAY be extended with future verbs. Unrecognized operators **MUST** be admitted to the log and treated as **no-op** with respect to structural and semantic effects, while remaining fully addressable.
 
-## 8.2 Verb Operator Structure and Hierarchy
+## 8.2 Evaluation Order
 
-This table defines a set of verb-based operators used in the Artipoint grammar and classifies them by their semantic intent and structural behavior. Each verb enables fine-grained, semantically rich articulation of cognitive structure within the Cortex Layer, allowing both humans and agents to reason explicitly over relationships—from provenance chains to agenda construction to scoped replacements and incremental composition.
+The evaluation order of applying the operator semantics proceeds through three deterministic, sequential phases, each building upon the output of the previous:
 
-The following table classifies verb-operators by their **coordination intent** and **semantic profile**. It does not define application behavior, enforcement, or presentation. The table exists to ensure consistent interpretation of operator effects on the coordination DAG and on scope-bounded semantic evaluation.
+1. **DAG Construction:** Replay all Articulation Statements in canonical log order to construct the immutable coordination DAG. This phase instantiates all nodes and derives all structural edges (topological, hierarchical, and semantic) according to the grammar. Output: a complete, append-only DAG that serves as the authoritative record and cannot be modified by subsequent articulations or phases.
+2. **Hierarchical Forest Projection:** Evaluate hierarchical operators in log order to project a "forest of trees" structure from the DAG. This phase organizes canonical nodes into parent–child relationships and determines occurrence placement within the forest. Output: a hierarchical forest where each canonical node may have multiple occurrences across different tree positions. This projection depends entirely on Phase 1's DAG and establishes the structural hierarchy for Phase 3.
+3. **Visibility and Masking Application:** Apply visibility and masking rules from Sibling Displacement Behavior (SDB) operators in log order. This phase determines which occurrences remain visible, which are masked, and which are superseded based on operator semantics. Output: final visibility state for each occurrence. This phase depends on Phase 2's forest structure and does not modify the DAG or forest topology—only visibility.
 
-| Verb       | Type                 | Orientation | **Hierarchical**? | SDB? |
-| ---------- | -------------------- | ----------- | ----------------- | ---- |
-| references | semantic link        | LHS → RHS   | No                | No   |
-| replaces   | semantic override    | LHS → RHS   | No                | Yes  |
-| extracts   | derivation           | LHS ← RHS   | LHS is Child      | No   |
-| groups     | flat collection      | LHS → {RHS} | No                | No   |
-| assembles  | hierarchy builder    | LHS → {RHS} | LHS is Parent     | No   |
-| promotes   | elevation            | LHS ← RHS   | RHS raised to LHS | Yes  |
-| annotates  | weak subordinate     | LHS → RHS   | LHS is Child      | No   |
-| supports   | strong subordinate   | LHS → RHS   | LHS is Child      | No   |
-| adds       | structural inclusion | LHS += RHS  | RHS joins LHS     | No   |
-| removes    | structural exclusion | LHS -= RHS  | RHS leaves LHS    | Yes  |
+No phase backtracks or modifies earlier results.
 
-Table Column Definitions:
+## 8.3 Operator Taxonomy
 
-- **Verb**: The name of the relationship operator, used in declarative Artipoint grammar statements.
-- **Type**: A high-level classification of the relationship based on its cognitive or structural function.
-- **Orientation**: Indicates the directional relationship between LHS and RHS, such as "LHS += RHS" for inclusion or "LHS ← RHS" for derivation. In instantiation and construction, the LHS is created with the specified relationship to existing RHS nodes. In connections, both nodes exist and the operator defines their new or updated edge relationship.
-- **Hierarchical**: Specifies if/how the relationship implies a structural or hierarchical containment or dependency.
-- **SDB**: Scoped Displacement Behavior (yes or no) indicates whether the operator produces scoped masking or displacement semantics within the contextual structures that contain both LHS and RHS. That is,  whether the operator suggests a semantic replacement, displacement, or archival of the RHS item.
+### 8.3.1 Hierarchal Operators
 
-## 8.3 Scope and Masking
+A hierarchical operator establishes a parent–child relationship between two canonical nodes. Hierarchical edges are append-only and immutable.
 
-Certain operators exhibit **Scoped Displacement Behavior (SDB)**. SDB is a **semantic evaluation rule**, not a structural mutation. When present, SDB affects how Artipoints are interpreted within specific contextual structures, without modifying the coordination DAG.
+For an articulation:
 
-1. **Scope:** This is defined as the set of contextual structures (e.g., Spaces, Streams, Piles, or other aggregate Artipoints) in which **both** the LHS and RHS appear through explicit composition relations.
-2. **Displacement**: Displacement effects **MUST** be applied **only** within scopes shared by both the LHS and RHS.
-3. **Masking Rule:** Within any shared scope, the RHS **MUST** be treated as inactive in default materializations of that scope. The underlying DAG, including the RHS Artipoint and all prior relationships, remains unchanged.
-4. **No Scope → No Displacement:** If the LHS and RHS share **no** contextual structure, displacement **MUST NOT** occur. Implementations **MAY** emit a diagnostic.
-5. **Non-Propagation:** Displacement effects **MUST NOT** apply outside shared scopes and MUST NOT propagate to unrelated structures.
+```
+[LHS] <hierarchical-operator> {RHS};
+```
 
-## **8.4 Operator Implications on the DAG**
+a directed parent→child edge MUST be derived according to the following table of hierarchical operators:
 
-This section defines the **Layer-2 structural effects** of verb-operators on the coordination DAG, independent of any semantic evaluation or view materialization.
+| Operator    | Type                 | Hierarchy Effect                       |
+| ----------- | -------------------- | -------------------------------------- |
+| `assembles` | Construction         | LHS is parent of RHS                   |
+| `adds`      | Structural Inclusion | LHS is parent of RHS                   |
+| `groups`    | Collection           | LHS is parent of RHS (flat collection) |
+| `supports`  | Strong Subordinate   | LHS is child of RHS                    |
+| `annotates` | Weak Subordinate     | LHS is child of RHS                    |
+| `extracts`  | Derivation           | LHS is child of RHS                    |
 
-The verb-operator determines the complete structural effect of both **connection** and **construction** articulations. Operators define how the LHS relates to the RHS within the coordination DAG, including:
+### 8.3.2 Non-Hierarchical Operators
 
-- hierarchical containment
-- grouping and ordering
-- successor/predecessor relationships
-- semantic linkage
-- Scoped Displacement Behavior (SDB)
-- parent/child relationships
-- structural participation in contextual boundaries established through explicit composition
+The following operators affect semantics or visibility only and MUST NOT create or modify parent–child relationships:
 
-All operators MUST be applied atomically within a single articulation event, whether invoked through a **connection** or **construction** expression. Construction additionally performs instantiation, but evaluation of operator semantics MUST remain identical across both forms once the LHS exists.
+| Verb       | Type                 | Hierarchy Effect | SDB? |
+| ---------- | -------------------- | ---------------- | ---- |
+| references | semantic link        | None             | No   |
+| replaces   | semantic override    | None             | Yes  |
+| promotes   | elevation            | None             | No   |
+| removes    | structural exclusion | None             | Yes  |
 
-The semantics of each operator—its orientation, hierarchical rules, displacement profile, and DAG update effects—are normative and MUST be implemented exactly as defined in this section.
+See §8.5 for the semantics of Sibling Displacement Behavior (SDB).
 
-## 8.5 Operator Semantics Summary
+## 8.4 Forest Projection Model
 
-This section defines the **normative semantics** of each operator in the Artipoint Grammar. The purpose is to ensure that all compliant implementations interpret operator intent consistently, even as application views and UI materializations may differ.
+The Forest Projection Model describes how the immutable canonical log (Phase 1, §8.2) is transformed into a hierarchical forest structure (Phase 2, §8.2). This model distinguishes between **canonical nodes**—the immutable log entities that never change—and **occurrences**—the placements of those nodes within the projected forest. The forest construction process is deterministic and mandatory: it depends solely on hierarchical operator semantics applied in canonical log order, and it is completely unaffected by visibility rules (Phase 3, §8.2), which are applied non-destructively afterward. The result is a proper forest of trees where canonical nodes may be shared across multiple hierarchical contexts, enabling reference stability and semantic identity without introducing cycles or violating tree structure.
 
-| Operator   | Output / Effect                                                                                                                                                                                           |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| references | Declares that the LHS Artipoint semantically refers to each RHS Artipoint. No containment, no order implied.                                                                                              |
-| replaces   | Declares that the LHS Artipoint supersedes the RHS **within shared scope**. The RHS remains in the coordination DAG but **MUST** be masked in default materializations of any scope in which both appear. |
-| extracts   | Declares each LHS as a sub-part derived from RHS. Directional dependency, but does not mask RHS.                                                                                                          |
-| groups     | Declares LHS as a flat collection of RHS items. Order of RHS is not semantically meaningful.                                                                                                              |
-| assembles  | Declares LHS as a structured whole composed of RHS items. Order of RHS MUST be preserved.                                                                                                                 |
-| promotes   | Declares the LHS as a new elevated form of the RHS. Within shared scope, the RHS **MUST** be masked in default materializations. All prior structure and history remain preserved.                        |
-| annotates  | Declares LHS as metadata or commentary on RHS. RHS remains active; LHS enriches but does not supersede.                                                                                                   |
-| supports   | Declares LHS as a required subcomponent enabling RHS. Dependency is directional.                                                                                                                          |
-| adds       | Declares RHS is now included in the structure. Semantically equivalent to post-facto grouping.                                                                                                            |
-| removes    | Declares that the RHS is excluded from the addressed structure **within shared scope**. The RHS remains in the coordination DAG and may remain active in other scopes.                                    |
+### 8.4.1 Canonical Nodes and Occurrences
+
+A **Canonical Node** is the immutable log entity representing a single Artipoint. Canonical nodes are never modified, deleted, or reordered; they form the permanent record of what was articulated.
+
+An **Occurrence** is a placement of a canonical node within the projected forest structure. The occurrence relationships form a proper **forest of trees**, where each occurrence MUST have exactly one parent. Traversing upward from any occurrence reaches exactly one root per tree, ensuring that the forest is acyclic and properly structured.
+
+However, the same canonical node may appear as multiple distinct occurrences in different branches or trees. For example, a document artipoint may appear as a separate occurrence within three different workstreams, each with its own parent and position in the hierarchy. This design enables shared semantic identity and reference stability across multiple independent hierarchical contexts without introducing cycles or violating tree structure. A single canonical node can thus serve as a stable reference point across multiple organizational or collaborative boundaries, while each context maintains its own local hierarchical relationships.
+
+### 8.4.2 Forest Construction Algorithm
+
+The structural projection MUST be constructed deterministically by iterating through each hierarchical operator in canonical log order (as defined in §9) and executing the following steps for each operator:
+
+1. Extract the LHS and RHS Artipoints from the operator statement.
+2. Apply the operator's hierarchical semantics (as defined in §8.3.1) to derive parent→child occurrence relationships.
+3. Materialize each derived relationship by creating or updating the corresponding parent and child occurrences in the forest.
+
+This construction phase is deterministic because it depends **solely** on hierarchical operator semantics applied in canonical log order. The algorithm is **explicitly unaffected** by Sibling Displacement Behavior (SDB) rules, which are applied only during the subsequent visibility evaluation phase (§8.5).
+
+The outcome of this phase is a **forest of tree occurrences**. Because the same canonical node may be referenced by multiple hierarchical operators, a single canonical node can appear as multiple distinct occurrences in different trees, each with its own parent and position. All parent–child relationships are fully materialized and deterministic.
+
+### 8.4.3 Unorganized Nodes
+
+A canonical node with zero derived parent relationships after forest construction is considered **Unorganized**.
+
+The canonical projection MUST represent each unorganized node as a distinct single-node tree within the forest. This ensures deterministic, interoperable forest structure across all conforming implementations.
+
+Implementations MAY internally use a virtual root as an organizational convenience for processing or storage optimization. However, if a virtual root is used internally, it MUST NOT be exposed in the canonical forest structure, MUST NOT be treated as a canonical node, and MUST NOT appear in the coordination DAG. The canonical projection rendered to consumers MUST always present each unorganized node as a separate single-node tree, regardless of internal representation choices.
+
+This approach ensures that all implementations produce structurally identical forests from identical logs while permitting internal implementation flexibility.
+
+## 8.5 Sibling Displacement Behavior (SDB)
+
+Sibling Displacement Behavior defines visibility rules among sibling occurrences under a visible parent occurrence.
+
+### 8.5.1 Definition of Siblings
+
+Two occurrences are siblings if and only if:
+
+- They are distinct child occurrences,
+- Under the same parent occurrence in the projected forest.
+
+Sibling Displacement Behavior (SDB) evaluation is performed for all parent occurrences in the forest during visibility computation. Whether a parent occurrence is itself ultimately visible does not affect the evaluation of SDB among its children.
+
+Displacement evaluation MUST occur only among direct sibling occurrences under the same parent occurrence.
+
+### 8.5.2 SDB-Capable Operators
+
+The following operators exhibit Sibling Displacement Behavior:
+
+- `replaces`
+- `removes`
+
+`promotes` does not produce SDB.
+
+### 8.5.3 Replace Semantics
+
+For an articulation:
+
+```
+[A] replaces {B};
+```
+
+For every parent occurrence P where P has both child occurrences A and B, the occurrence of B under P MUST be hidden.
+
+Hiding applies only within that specific parent occurrence and MUST NOT propagate to other occurrences of B under different parents.
+
+### 8.5.4 Remove Semantics
+
+For an articulation:
+
+```
+[P] removes {C};
+```
+
+The child occurrence of C under P MUST be hidden. No hierarchical edges are deleted. Other occurrences of C under different parents are unaffected.
+
+### 8.5.5 Visibility Computation
+
+Visibility is computed for every occurrence in the projected forest.
+
+For each parent occurrence P, and for each child occurrence C under P:
+
+C is hidden if and only if there exists a sibling occurrence D under P such that:
+
+1. An SDB-capable articulation declares that D displaces C; and
+2. That articulation appears later in canonical log order than any articulation declaring C displaces D.
+
+Displacement evaluation:
+
+- Applies only among direct sibling occurrences under the same parent occurrence.
+- Is not transitive.
+- Does not depend on the current visibility state of the displacing occurrence.
+- Is evaluated deterministically using canonical log order.
+
+If a child occurrence C is hidden, the entire subtree rooted at C is hidden.
+
+Visibility evaluation MUST NOT modify canonical nodes, canonical edges, or forest topology.
+
+### 8.5.6 Deterministic Evaluation and Integrity
+
+When multiple SDB-capable articulations affect the same sibling set, evaluation MUST strictly follow canonical log order, with later articulations superseding earlier ones for visibility decisions. Given identical logs, compliant implementations MUST derive identical visibility results.
+
+If a child occurrence C is hidden, the entire subtree rooted at C is hidden.
+
+Visibility evaluation MUST NOT modify canonical nodes, modify hierarchical edges, affect occurrences under other parents, or introduce or remove edges. Visibility is a projection-layer concern only.
 
 ## 8.6 Detailed Description of each Operator
 
-The operators described below appear within **Articulation Statements** as defined in Section 5. Each operator follows the same invariant pattern: articulation extends the coordination DAG with new relationships, while any supersession or exclusion semantics are applied only during interpretation and only within explicitly shared scope.
+The operators described below appear within **Articulation Statements** as defined in Section 5. Each operator follows the same invariant pattern: articulation extends the coordination DAG with new relationships, while any supersession or exclusion semantics are applied only during interpretation and only among sibling occurrences within the projected forest as defined in Section 8.5.
 
 For clarity, the examples in the subsections below show individual articulation statements. In practice, per the grammar defined in Section 5.1, all such statements appear within an enclosing `articulation-sequence` that includes a `sequence-header` as defined in Section 5.3.
 
 ### 8.6.1 references
 
-Indicates that the LHS item semantically refers to or is informed by the RHS item, without implying dependency or structural inclusion.
+Declares that the LHS Artipoint semantically refers to each RHS Artipoint without implying dependency, structural inclusion, or ordering semantics.
 
 Example:
 
@@ -473,7 +561,7 @@ Example:
 
 ### 8.6.2 replaces
 
-Indicates semantic supersession: the LHS is intended to supersede or override the RHS. The RHS remains in history but is no longer active.
+The RHS remains immutable in the coordination DAG but MUST be hidden under any parent occurrence where both LHS and RHS occur as sibling children.
 
 Example:
 
@@ -490,7 +578,7 @@ Example:
 
 ### 8.6.3 extracts
 
-The LHS is a derived or excerpted sub-part of the RHS—typically in a child role. Used for derivation without supersession.
+Declares that the LHS Artipoint is a derived or excerpted sub-part of each RHS Artipoint, establishing a directional hierarchical dependency where LHS is a child of RHS. The RHS remains active and unmasked.
 
 Example:
 
@@ -507,7 +595,7 @@ Example:
 
 ### 8.6.4 groups
 
-LHS is a flat set or collection of RHS items, such as a pile or unordered list.
+Declares that the LHS Artipoint is a flat collection of RHS items without order semantics.
 
 Example:
 
@@ -524,7 +612,7 @@ Example:
 
 ### 8.6.5 assembles
 
-LHS is constructed as a structured whole from multiple RHS components. Hierarchical containment is implied.
+Declares that the LHS Artipoint is a structured whole composed of RHS items with hierarchical containment and preserved order.
 
 Example:
 
@@ -541,7 +629,7 @@ Example:
 
 ### 8.6.6 promotes
 
-LHS is a new, elevated form of RHS, which it displaces. Used when transforming one structure into a new one that absorbs its content.
+Declares that the LHS Artipoint is an elevated form of RHS, establishing a semantic relationship without affecting hierarchy, visibility, or displacement.
 
 Example:
 
@@ -550,11 +638,11 @@ Example:
   [stream, "Live Workstream", uuidOldPile] promotes {uuidOldPile} ];
 ```
 
-*A stream promotes an earlier pile, replacing it as the active structure.*
+*A stream promotes an earlier pile, establishing a semantic elevation relationship without altering hierarchy or visibility.*
 
 ### 8.6.7 annotates
 
-LHS provides a subordinate comment, note, or enrichment on the RHS item. It does not structurally alter the RHS.
+Declares that the LHS Artipoint is a comment or enrichment on RHS. RHS remains active and unmasked.
 
 Example:
 
@@ -571,7 +659,7 @@ Example:
 
 ### 8.6.8 supports
 
-LHS is a functional subcomponent or enabler of the RHS. Use for required substructure or infrastructural dependency.
+LHS is a functional subcomponent or enabler of the RHS. Use for required substructure or infrastructural dependency. Declares LHS as a required subcomponent enabling RHS. Dependency is directional.
 
 Example:
 
@@ -592,7 +680,7 @@ Example:
 
 ### 8.6.9 adds
 
-LHS includes new RHS items into an existing structure or set. This is a post-facto inclusion.
+Declares that RHS items are now included in the LHS structure through post-facto grouping.
 
 Example:
 
@@ -604,9 +692,9 @@ uuidPile adds {uuidNewDoc};
 
 ### 8.6.10 removes
 
-LHS excludes the RHS item from an existing structure, marking it as no longer active.
+Declares that the LHS Artipoint hides the child occurrence of RHS under LHS.
 
-Example:
+The RHS remains immutable in the coordination DAG. Only the specific child occurrence under LHS is hidden; other occurrences of RHS under different parents are unaffected.
 
 ```
 uuidPile removes {uuidOldDoc};
@@ -645,9 +733,9 @@ This model ensures that evaluation is **prefix-deterministic**: given the same o
 Evaluation proceeds in two strictly ordered phases for each Articulation Statement:
 
 1. **Structural application**, in which the coordination DAG is extended according to the grammar and operator structure outlined in Section 4.
-2. **Semantic interpretation**, in which operator-specific meaning — including scope, masking, prioritization, supersession, or displacement — is evaluated according to Section 8.
+2. **Semantic interpretation** — including Sibling Displacement Behavior (SDB) visibility evaluation — applied as a projection layer over the forest of occurrences defined in Section 8.
 
-Semantic interpretation MUST NOT modify the underlying coordination DAG. Structural effects are permanent; semantic effects are interpretive.
+Semantic interpretation MUST NOT modify the underlying coordination DAG. Structural effects are permanent; semantic effects are interpretive projections only.
 
 ## **9.4 Unresolved References and Deferred Interpretation**
 
@@ -886,7 +974,7 @@ In the future we could/should add sections covering:
 ```ebnf
 ; Artipoint Grammar Definition (ABNF)
 ; -----------------------------------
-; This grammar captures the syntax of Artipoints Expressions for 
+; This grammar captures the syntax of Artipoints Expressions for
 ; structured, immutable cognitive statements within the Cortex Layer
 ; of the ASCP (Agent Shared Cognition Protocol).
 
@@ -1218,7 +1306,7 @@ Where:
 **Mixed encoding (textual + binary):**
 
 ```
-{ a1b2c3d4-e5f6-7890-abcd-ef1234567890, 0x1F 0x20 <16-bytes>,  
+{ a1b2c3d4-e5f6-7890-abcd-ef1234567890, 0x1F 0x20 <16-bytes>,
   f9e8d7c6-b5a4-9382-7160-594837261504, 0x1F 0x20 <16-bytes> }
 ```
 
@@ -1336,7 +1424,7 @@ Encodes RFC 3339 compliant UTC timestamps using variable-width binary formats op
 
 ```asciidoc
 2025-08-18T12:34:56Z           ; no fractional seconds
-2025-08-18T12:34:56.789Z       ; millisecond precision  
+2025-08-18T12:34:56.789Z       ; millisecond precision
 2025-08-18T12:34:56.123456Z    ; microsecond precision
 ```
 
@@ -1367,11 +1455,11 @@ Where:
 
 #### **Examples**
 
-- **Basic timestamp:** `2025-08-18T12:34:56Z` → `0x1F 0x21 0x66C7B310`  
+- **Basic timestamp:** `2025-08-18T12:34:56Z` → `0x1F 0x21 0x66C7B310`
   *(1,723,988,096 seconds since Unix epoch, encoded as 4-byte time32)*
-- **With milliseconds:** `2025-08-18T12:34:56.789Z` → `0x1F 0x22 0x2F0A83DE66C7B310`  
+- **With milliseconds:** `2025-08-18T12:34:56.789Z` → `0x1F 0x22 0x2F0A83DE66C7B310`
   *(789,000,000 nanoseconds in upper 30 bits, same epoch seconds in lower 34 bits)*
-- **With microseconds:** `2025-08-18T12:34:56.123456Z` → `0x1F 0x22 0x1E74DF8066C7B310`  
+- **With microseconds:** `2025-08-18T12:34:56.123456Z` → `0x1F 0x22 0x1E74DF8066C7B310`
   *(123,456,000 nanoseconds in upper 30 bits, same epoch seconds in lower 34 bits)*
 
 #### **Format Specifications**
@@ -1568,7 +1656,7 @@ JSON payload formatting within the grammar (e.g., `json:` blocks or attribute va
 
 **NOTE:** The formatting conventions in "Textual Format Recommendations" and "JSON Payload Formatting" are **not required for signature correctness**, but are highly encouraged to promote consistent encoding, diffability, and tooling interoperability across ASCP implementations.
 
-# Appendix D: Validation and Error Handling (Normative) 
+# Appendix D: Validation and Error Handling (Normative)
 
 This section defines **accept‑and‑record** behavior for an immutable log. Once an articulation enters a channel log, it is **never altered or removed** by protocol action. All implementations MUST converge on identical handling by following the rules below.
 
@@ -1601,7 +1689,7 @@ Use the following decision table to produce identical outcomes across implementa
 | **E4**  | **Invalid UUID syntax** in any reference                               | Do not create edges involving invalid UUID; instantiation (if present) remains                                | uuid\_invalid          |
 | **E5**  | **Reference to non‑existent UUID** (not observed yet or never will be) | Create **dangling reference** entry; edge materializes if/when target arrives                                 | uuid\_unresolved       |
 | **E6**  | **Timestamp missing/invalid**                                          | Report diagnostic; process normally.                                                                          | ts\_invalid            |
-| **E7**  | replaces/promotes target **invalid or unresolved**                     | No masking applied; source remains ordinary node                                                              | mask\_target\_invalid  |
+| **E7**  | replaces target **invalid or unresolved**                              | No displacement applied; source remains ordinary node                                                         | mask\_target\_invalid  |
 | **E8**  | adds/removes on **non‑collection** LHS                                 | Treat as **no‑op**                                                                                            | op\_context\_invalid   |
 | **E9**  | **Oversize payload** (exceeds implementation/profile cap)              | Store envelope; treat payload as opaque; apply operator sans payload semantics                                | payload\_oversize      |
 | **E10** | Unknown **DSD/BVI** codes                                              | Preserve bytes; attempt textual fallback if present; otherwise treat affected token as unknown ⇒ follow E1/E2 | encoding\_unknown      |
@@ -1610,8 +1698,11 @@ Use the following decision table to produce identical outcomes across implementa
 
 ## D.4 Masking & Supersession Determinism
 
-- replaces and promotes **mask** their RHS **only within the same applicable scope** (e.g., same parent collection/structure as established by accompanying relations or application context). If scope cannot be resolved (E7), **no mask occurs**.
-- removes excludes RHS from the addressed structure only; history is unaffected.
+- `replaces` produces Sibling Displacement Behavior (SDB). For any parent occurrence P where both LHS and RHS occur as sibling children, the RHS occurrence under P is hidden.
+- `promotes` does not produce masking or displacement effects.
+- `removes` hides only the specific child occurrence of RHS under the addressed LHS parent occurrence.
+
+Masking is determined solely by hierarchical sibling relationships within the projected forest and canonical log order. No masking effect alters canonical nodes or edges.
 
 ## D.5 Diagnostics (SHOULD)
 
