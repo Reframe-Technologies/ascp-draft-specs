@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.75 — Informational (Pre-RFC Working Draft)
+Version: 0.76 — Informational (Pre-RFC Working Draft)
 February 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -508,7 +508,7 @@ The child occurrence of C under P MUST be hidden. No hierarchical edges are dele
 
 ### 8.5.5 Visibility Computation
 
-Visibility is computed for every occurrence in the projected forest.
+Visibility is computed deterministically for every occurrence in the projected forest, using canonical log order as the sole authority.
 
 For each parent occurrence P, and for each child occurrence C under P:
 
@@ -517,24 +517,11 @@ C is hidden if and only if there exists a sibling occurrence D under P such that
 1. An SDB-capable articulation declares that D displaces C; and
 2. That articulation appears later in canonical log order than any articulation declaring C displaces D.
 
-Displacement evaluation:
+Displacement evaluation applies only among direct sibling occurrences under the same parent occurrence and is evaluated deterministically using canonical log order.
 
-- Applies only among direct sibling occurrences under the same parent occurrence.
-- Is not transitive.
-- Does not depend on the current visibility state of the displacing occurrence.
-- Is evaluated deterministically using canonical log order.
-
-If a child occurrence C is hidden, the entire subtree rooted at C is hidden.
+If a child occurrence C is hidden, the subtree rooted at C remains navigable in the view. Visibility flags for nodes within that subtree are still computed independently by SDB rules and MUST NOT be forcibly overridden by parent visibility.
 
 Visibility evaluation MUST NOT modify canonical nodes, canonical edges, or forest topology.
-
-### 8.5.6 Deterministic Evaluation and Integrity
-
-When multiple SDB-capable articulations affect the same sibling set, evaluation MUST strictly follow canonical log order, with later articulations superseding earlier ones for visibility decisions. Given identical logs, compliant implementations MUST derive identical visibility results.
-
-If a child occurrence C is hidden, the entire subtree rooted at C is hidden.
-
-Visibility evaluation MUST NOT modify canonical nodes, modify hierarchical edges, affect occurrences under other parents, or introduce or remove edges. Visibility is a projection-layer concern only.
 
 ## 8.6 Detailed Description of each Operator
 
