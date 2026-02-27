@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.76 — Informational (Pre-RFC Working Draft)
+Version: 0.77 — Informational (Pre-RFC Working Draft)
 February 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -452,13 +452,11 @@ The outcome of this phase is a **forest of tree occurrences**. Because the same 
 
 ### 8.4.3 Unorganized Nodes
 
-A canonical node with zero derived parent relationships after forest construction is considered **Unorganized**.
+An unorganized node is a canonical node with zero parent edges and zero child edges after forest construction.
 
-The canonical projection MUST represent each unorganized node as a distinct single-node tree within the forest. This ensures deterministic, interoperable forest structure across all conforming implementations.
+In the canonical projection, each unorganized node MUST appear as a separate single-node tree within the forest. This ensures deterministic, interoperable forest structure across all conforming implementations.
 
-Implementations MAY internally use a virtual root as an organizational convenience for processing or storage optimization. However, if a virtual root is used internally, it MUST NOT be exposed in the canonical forest structure, MUST NOT be treated as a canonical node, and MUST NOT appear in the coordination DAG. The canonical projection rendered to consumers MUST always present each unorganized node as a separate single-node tree, regardless of internal representation choices.
-
-This approach ensures that all implementations produce structurally identical forests from identical logs while permitting internal implementation flexibility.
+Implementations MAY optionally introduce a virtual root occurrence in the view projection to group unorganized nodes for client processing convenience. This virtual root exists in the view layer only and MUST NOT modify the canonical DAG.
 
 ## 8.5 Sibling Displacement Behavior (SDB)
 
