@@ -4,8 +4,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.62 — Informational (Pre-RFC Working Draft)  
-January 2026
+Version: 0.64 — Informational (Pre-RFC Working Draft)  
+March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -130,7 +130,7 @@ This section enumerates the companion specifications that comprise the ASCP prot
 | **Layer / Scope**                       | **Document**                                               | **Purpose**                                                                                    | **Normative Contents**                                                                                                                      |
 | --------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Top-Level Architecture**              | **The Agents Shared Cognition Protocol** (this document)   | Defines the architectural model, conceptual framework, and cross-layer relationships for ASCP. | Architectural principles, protocol layering, conceptual primitives, non-normative overview; consolidated compliance matrix (informational). |
-| **Layer 2 — Articulation Layer**        | **ASCP Artipoint Grammar**                                 | Specifies the formal grammar for immutable, addressable coordination statements.               | Artipoint structure, articulation expressions, operator taxonomy, ABNF grammar, serialization requirements.                                 |
+| **Layer 2 — Articulation Layer**        | **ASCP Artipoint Grammar**                                 | Specifies the formal grammar for immutable, addressable coordination statements.               | Artipoint Expressions, Articulation Statements, Articulation Sequences, operator taxonomy, ABNF grammar, serialization requirements.        |
 | **Layer 1 — Secure Distribution Layer** | **ASCP Channels: Secure Distribution Layer Specification** | Defines the cryptographic envelope and distribution mechanism for Articulation Sequences.      | JWS/JWE processing, channel membership semantics, keyframes, key rotation, envelope formats, access control inputs.                         |
 | **Layer 0 — Log and Transport Layer**   | **ASCP LogSync Protocol (ALSP)**                           | Specifies append-only log synchronization across replicas.                                     | Message formats, ordering rules, pull/push models, divergence detection, channel access proofs, error handling.                             |
 | **Identity & Trust**                    | **ASCP Identity & Trust**                                  | Establishes identity representation and authorship verification.                               | Key provisioning, trust-root anchoring, identity binding, signature verification rules, recovery mechanisms.                                |

@@ -1,8 +1,8 @@
 # ASCP Profile for Coordinated Work
 
 **Public Comment Draft —** *Request for community review and collaboration*  
-Version: 0.02 — Informational (Pre-RFC Working Draft)  
-December 2025
+Version: 0.10 — Informational (Pre-RFC Working Draft)  
+March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -481,7 +481,7 @@ Where applicable, ASCP is compatible with replica convergence techniques such as
 
 The profile aligns conceptually with established provenance models that emphasize authorship, derivation, and responsibility over time. Prior standardization efforts in this space demonstrate that durable attribution is critical for trust, accountability, and governance in distributed systems.
 
-ASCP extends this lineage by binding provenance directly to coordination artifacts rather than treating it as auxiliary metadata. Every Artipoint carries verifiable authorship and temporal placement within a shared graph, enabling downstream systems to reason about how decisions, commitments, and interpretations emerged.
+ASCP extends this lineage by binding provenance directly to coordination artifacts rather than treating it as auxiliary metadata. Every articulation is durably attributable through signed Articulation Sequences and temporally placed within a shared graph, enabling downstream systems to reason about how decisions, commitments, and interpretations emerged.
 
 **Key distinction:** ASCP treats provenance as *structural*, not annotative.
 

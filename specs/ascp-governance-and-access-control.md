@@ -2,8 +2,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.33 — Informational (Pre-RFC Working Draft)  
-December 2025
+Version: 0.34 — Informational (Pre-RFC Working Draft)  
+March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -73,7 +73,7 @@ An **Addressing Construct** is a **Semantic Construct** that defines one or more
 
 ## **4.4 Distribution Construct**
 
-A **Distribution Construct** defines the cryptographic delivery boundaries for articulated context. Distribution Constructs, realized as Channels, determine how Artipoints are signed, encrypted, transported, and synchronized across replicas. They specify *how* articulated context flows, distinct from contextual meaning, participant identity, or security metadata stored as attributes.
+A **Distribution Construct** defines the cryptographic delivery boundaries for articulated context. Distribution Constructs, realized as Channels, determine how Articulation Sequences are signed, encrypted, transported, and synchronized across replicas. They specify *how* articulated context flows, distinct from contextual meaning, participant identity, or security metadata stored as attributes.
 
 ## **4.5 Security Construct**
 
@@ -714,7 +714,7 @@ Layer-1 never reads these attributes directly; Layer-3 processes them and genera
 ### **10.1.2 Required Attributes**
 
 - `payload_cipher`: The symmetric cipher identifier used to determine whether Layer-1 applies JWE encryption to envelopes. Valid values are defined by Section 6.3 or use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Note: In current implementations, @bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band. See **ASCP Bootstrap Process and Channel Discovery** for details.
-- `message_signing`: The signature algorithm required for Artipoint signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
+- `message_signing`: The signature algorithm required for Articulation Sequence / Channel Envelope signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
 - `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. Determines the CAK algorithm used at Layer-0. The algorithm used for the Channel Access Key (CAK) is determined by Layer-0 policy including a value for `"none"` for open channels.
 - `keyframe::kid`: The identifier for the currently active symmetric key. Each Channel Artipoint MUST have a `keyframe::kid` Attribute pointing to the current Keyframe associated with the channel in value form of `ascp:keyframe:<uuid>`. The kid identifies the AES and CAK keys in use for the Keyframe’s lifetime.
 

@@ -4,8 +4,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.52 — Informational (Pre-RFC Working Draft)  
-December 2025
+Version: 0.53 — Informational (Pre-RFC Working Draft)  
+March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -104,7 +104,7 @@ A **conceptual, immutable unit of articulated meaning** in the ASCP semantic mod
 An Artipoint represents a discrete contribution—such as an identity declaration, certificate publication, endorsement, or coordination construct—and serves as a first-class node in ASCP’s semantic graph. Artipoints are **Layer-3 semantic constructs**.
 
 An Artipoint is independent of any specific serialization, signature, or transport mechanism. It is *represented* using the Layer-2 Artipoint Grammar and *materialized* as a signed record in an ASCP channel log, but the Artipoint itself is not a log entry.  
-  
+
 Convention: Subsequent sections use ‘Artipoint’ to refer to the semantic construct, unless explicitly referring to **Artipoint Expressions** or **Artipoint Records**.
 
 ### **Artipoint Expression**
@@ -121,7 +121,7 @@ Articulation Statements have no inherent trust, governance, or authorization mea
 
 ### **Articulation Sequence**
 
-An **ordered sequence of Articulation Statements** that forms the payload committed to a Channel Log.
+An **ordered sequence of Articulation Statements** that forms the payload carried by a Channel Envelope.
 
 An Articulation Sequence is the unit encoded, protected, and carried by the Channel Envelope.
 
@@ -141,7 +141,7 @@ A durable, cryptographically secured materialization of an **Articulation Sequen
 
 In the ASCP terminology taxonomy, **Addressing Constructs** are Artipoints whose primary semantic role is to identify *who* participates in coordination and to provide stable, durable references to participants over time.
 
-Addressing Constructs are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP Channels.
+Addressing Constructs are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as Artipoint Records carried in signature-protected Channel Envelopes in ASCP Channels.
 
 Examples include Identity Artipoints and, in other ASCP documents, Group Artipoints.
 
@@ -149,7 +149,7 @@ Examples include Identity Artipoints and, in other ASCP documents, Group Artipoi
 
 In the ASCP terminology taxonomy, **Security Constructs** are Artipoints whose primary semantic role is to establish or describe **cryptographic material, provenance evidence, trust anchors, or security-relevant lifecycle state**.
 
-Security Constructs are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as signed Artipoint Records in ASCP Channels.
+Security Constructs are **Layer-3 semantic constructs**. They are represented using the Layer-2 Artipoint Grammar and materialized as Artipoint Records carried in signature-protected Channel Envelopes in ASCP Channels.
 
 This specification defines Security Constructs that are evaluated in relationship to **Addressing Constructs** (i.e., participants). Concretely: Addressing Constructs like Identity Artipoints name participants, while Security Constructs like Certificate, RootCA, and Keyframe Artipoints define cryptographic keys, anchors, and epochs that can be bound to those participants and evaluated at log-time.
 
@@ -179,7 +179,7 @@ Keyframe Artipoints encapsulate Layer-3 cryptographic configuration and distribu
 
 ### **Log-Anchored Trust**
 
-In ASCP, trust is an evaluation performed by a verifier over immutable evidence. The ASCP trust model ensures that **all trust decisions derive from immutable, signed Artipoint Records** rather than from real-time certificate validation or mutable external state.
+In ASCP, trust is an evaluation performed by a verifier over immutable evidence. The ASCP trust model ensures that **all trust decisions derive from immutable Artipoint Records with signature-verified Channel Envelopes / Articulation Sequences** rather than from real-time certificate validation or mutable external state.
 
 Trust evaluation is performed against historical log state ("log-time trust") and explicitly configured local policy inputs, enabling deterministic, replayable verification independent of external infrastructure availability.
 
@@ -496,7 +496,7 @@ The **normative structure, validation rules, and lifecycle constraints** for Ide
 
 # 7. Security Construct Artipoints
 
-This section defines the **normative Security Construct Artipoints** used by ASCP to represent identity, cryptographic keys, trust anchors, and channel cryptographic state. All constructs defined in this section are **Layer-3 semantic constructs**, represented using the Layer-2 Artipoint Grammar and materialized as immutable, signed Artipoint Records in ASCP logs.
+This section defines the **normative Security Construct Artipoints** used by ASCP to represent identity, cryptographic keys, trust anchors, and channel cryptographic state. All constructs defined in this section are **Layer-3 semantic constructs**, represented using the Layer-2 Artipoint Grammar and materialized as immutable Artipoint Records carried in signature-protected Channel Envelopes in ASCP logs.
 
 Each Security Construct Artipoint defined below is a **peer construct**. All follow the same structural pattern and are evaluated under the same log-anchored trust model.
 
@@ -825,7 +825,7 @@ Each purpose attribute is expressed as:
 
 | **Purpose**           | **Meaning**                           | **Required For**                |
 | --------------------- | ------------------------------------- | ------------------------------- |
-| purpose::assert       | Artipoint authorship and endorsements | All signed Artipoints           |
+| purpose::assert       | Artipoint authorship and endorsements | All signed Articulation Sequences |
 | purpose::auth         | Session authentication                | ALSP and channel authentication |
 | purpose::keyAgreement | Key agreement and encryption          | Keyframe and recovery envelopes |
 

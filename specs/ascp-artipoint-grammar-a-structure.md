@@ -2,8 +2,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.77 — Informational (Pre-RFC Working Draft)
-February 2026
+Version: 0.78 — Informational (Pre-RFC Working Draft)
+March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -169,7 +169,7 @@ artipoint-expression = "[" uuid "," timestamp "," articulation-pattern "]"
 
 ## 5.2 Articulation Statement
 
-Each Artipoint is a single, semicolon-terminated line (called an `artipoint-statement` in the formal grammar):
+Each Articulation Statement is a single, semicolon-terminated line (called an `artipoint-statement` in the formal grammar):
 
 ```bnf
 articulation-statement = artipoint-expression ";" [ end-of-line ]

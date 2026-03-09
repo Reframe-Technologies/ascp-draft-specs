@@ -2,8 +2,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.32 — Informational (Pre-RFC Working Draft)  
-December 2025
+Version: 0.35 — Informational (Pre-RFC Working Draft)
+March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -167,19 +167,19 @@ A **Bootstrap-Serving Replica** is a replica that possesses sufficient local sta
 
 ### **Channel**
 
-A named, append-only communication log used to distribute Artipoints among authorized participants. Each channel has a globally unique identifier (UUID) and a human-readable name.
+A semantic Distribution Construct that defines the intended audience and trust/visibility scope for articulated context. Channel semantics are realized by Layer-1 Channel Envelopes and persisted in Channel Logs. Each channel has a globally unique identifier (UUID) and a human-readable name.
 
 ### **Channel Log**
 
-The persistent, ordered log of Artipoints associated with a channel. Channel logs are replicated between replicas using ALSP.
+The persistent, ordered log of Artipoint Records associated with a channel. Channel Logs are replicated between replicas using ALSP.
 
 ### **Artipoint**
 
-An immutable, signed, and addressable statement recorded in an ASCP channel log. Artipoints are the foundational coordination primitive of ASCP and may represent trust material, identity bindings, channel declarations, or other coordination artifacts.
+An immutable, addressable semantic unit of articulated meaning. Artipoints are represented at Layer-2 as Artipoint Expressions, introduced via Articulation Statements, and carried durably as Artipoint Records in Channel Logs.
 
 ### **Channel Reference (Channel-Ref Artipoint)**
 
-A signed Artipoint recorded in the @references channel that declares the existence of a channel and provides metadata required for discovery and replication, such as channel UUID and log location.
+A Channel Reference Artipoint represented by a Channel-Ref Artipoint Expression and introduced by articulation in the @references channel. It declares the existence of a channel and provides metadata required for discovery and replication, such as channel UUID and log location.
 
 ### **Initial Trust Input (ITI)**
 
@@ -215,7 +215,7 @@ The relevant layers are:
 
 - **Layer 0 — LogSync Protocol (ALSP) -** Provides authenticated session establishment, append-only log replication, ordering, and convergence detection. ALSP treats log payloads as opaque and does not interpret trust or coordination semantics.
 - **Layer 1 — Channels (Secure Distribution Layer) -** Defines channel membership, confidentiality boundaries, and encryption semantics for log content once trust relationships exist.
-- **Layer 2 — Artipoint Grammar -** Defines the structural encoding of Artipoints and their attributes, independent of transport or trust evaluation.
+- **Layer 2 — Artipoint Grammar -** Defines the structural encoding of Artipoint Expressions, Articulation Statements, and Articulation Sequences, independent of transport or trust evaluation.
 - **Layer 3 — Semantic Trust and Coordination -** Interprets Artipoints to construct trust graphs, identity bindings, and higher-level coordination structures.
 
 Bootstrap is a **Layer 3 concern** because it establishes the initial semantic conditions under which trust and coordination can be evaluated. However, bootstrap cannot function without invoking Layer 0 for replication and Layer 1 for subsequent secure distribution.
@@ -474,10 +474,10 @@ This information is limited to **trust anchoring and discovery identification** 
 At a minimum, the @bootstrap channel MUST include:
 
 1. **Bootstrap Trust Anchor Declaration**
-   - A signed Artipoint that introduces the RootCA and binds it to the organizational instance.
-   - This Artipoint serves as the cryptographic root for validating subsequent bootstrap artifacts.
+   - An articulation that introduces the RootCA Artipoint and binds it to the organizational instance.
+   - The containing Articulation Sequence (as carried in a Channel Envelope / Artipoint Record) MUST be signature-verifiable and serves as the cryptographic root for validating subsequent bootstrap artifacts.
 2. **Mandatory Channel Declarations**
-   - A signed reference identifying the @references channel as the authoritative discovery registry.
+   - A channel-reference articulation identifying the @references channel as the authoritative discovery registry.
    - This reference MUST be sufficient for a replica to locate and replicate the @references channel.
 3. **Bootstrap Manifests or Metadata (Optional but RECOMMENDED)**
    - Structured metadata that assists replicas in interpreting bootstrap state (e.g., versioning, creation timestamps).
@@ -485,7 +485,7 @@ At a minimum, the @bootstrap channel MUST include:
 4. **Bootstrap Identity References (Optional)**
    - One or more Identity Reference Artipoints identifying identities explicitly permitted to serve join bootstrap, providing minimal, RootCA-traceable public key material sufficient for bootstrap-time peer authentication.
 
-All Artipoints in the @bootstrap channel MUST be verifiable, directly or indirectly, against the RootCA once validation completes.
+All bootstrap articulations in the @bootstrap channel MUST be signature-verifiable and RootCA-traceable once validation completes.
 
 ## **7.3 Identity Reference Artipoint**
 
@@ -558,7 +558,7 @@ Once normal identity and certificate resolution becomes available, identity-ref 
 
 A replica validating an Identity Reference Artipoint MUST:
 
-1. Verify the Artipoint signature under normal ASCP rules.
+1. Verify the signature on the Articulation Sequence / Channel Envelope carrying the identity-ref articulation under normal ASCP rules.
 2. Confirm that the author identity is traceable, directly or indirectly, to the Bootstrap Trust Anchor (RootCA).
 3. Confirm that cert\_kid is well-formed.
 4. Confirm that cert\_public\_jwk is syntactically valid and usable for cryptographic verification.
@@ -745,7 +745,7 @@ The following semantics apply to all Channel Reference Artipoints:
 
 A replica validating a Channel Reference Artipoint MUST:
 
-1. Verify the Artipoint signature under normal ASCP trust rules.
+1. Verify the signature on the Articulation Sequence / Channel Envelope carrying the channel-ref articulation under normal ASCP trust rules.
 2. Confirm that the author identity is traceable to the organizational trust anchor.
 3. Confirm that all required attributes are present and well-formed.
 4. Confirm that at least one CAK public key is designated as active.
@@ -791,7 +791,7 @@ If a replica encounters invalid, unverifiable, or conflicting Channel Reference 
 - halt discovery processing for affected entries, and
 - preserve all previously validated discovery state.
 
-Replicas MUST NOT attempt to reconcile or repair discovery inconsistencies locally. Resolution occurs only through additional Artipoints recorded in the @references channel.
+Replicas MUST NOT attempt to reconcile or repair discovery inconsistencies locally. Resolution occurs only through additional articulations recorded in the @references channel.
 
 ## **8.8 Section Summary**
 
@@ -828,11 +828,11 @@ During genesis bootstrap, the organizational operator (human or system acting in
 
 The RootCA:
 
-- MUST be generated prior to authoring any bootstrap Artipoints,
+- MUST be generated prior to authoring any bootstrap articulations,
 - MUST be scoped exclusively to the organizational instance, and
 - MUST be introduced as the cryptographic root of trust for the repository.
 
-The RootCA MUST be articulated into the @bootstrap channel as a signed Artipoint in accordance with the ASCP Trust and Identity Architecture. No other trust anchor MAY precede it.
+The RootCA MUST be articulated into the @bootstrap channel in accordance with the ASCP Trust and Identity Architecture. The containing Articulation Sequence / Channel Envelope MUST be signature-verifiable. No other trust anchor MAY precede it.
 
 Optional endorsements or attestations (e.g., PKI, external identity providers) MAY be associated with the RootCA at genesis time, but such endorsements are not required for correctness.
 
@@ -870,11 +870,11 @@ These self-descriptive references establish a closed, discoverable core and ensu
 Genesis bootstrap is considered complete when all of the following conditions are met:
 
 1. A RootCA has been generated and recorded in the @bootstrap channel.
-2. The @bootstrap channel exists and contains valid bootstrap Artipoints.
+2. The @bootstrap channel exists and contains valid bootstrap articulations (introducing corresponding bootstrap Artipoints).
 3. The @references channel exists and contains valid Channel Reference Artipoints for:
    - @bootstrap, and
    - @references.
-4. All bootstrap Artipoints are verifiable against the RootCA.
+4. All bootstrap articulations are signature-verifiable and traceable against the RootCA.
 
 Once these conditions are satisfied, the organizational instance is **initialized** and MAY accept new replicas via join bootstrap.
 
@@ -1490,7 +1490,7 @@ The @bootstrap channel is readable prior to full authorization and therefore rep
 Security properties of the @bootstrap channel rely on:
 
 - authenticated ALSP session establishment,
-- cryptographic authentication of all bootstrap Artipoints, and
+- cryptographic authentication of all bootstrap Articulation Sequences / Channel Envelopes, and
 - strict minimization of bootstrap content.
 
 The @bootstrap channel MUST NOT be used to convey sensitive coordination data, authorization state, or application-level information.
@@ -1502,7 +1502,7 @@ Bootstrap artifacts may be replayed or substituted by an attacker attempting to 
 Mitigations include:
 
 - ALSP-level replay prevention during bootstrap acquisition,
-- signature verification of all bootstrap and discovery Artipoints, and
+- signature verification of all bootstrap and discovery Articulation Sequences / Channel Envelopes, and
 - validation of author identities against the organizational trust anchor.
 
 Replicas MUST reject bootstrap artifacts that cannot be validated in context.
@@ -1572,7 +1572,7 @@ ASCP bootstrap is intentionally designed to avoid destructive changes to trust h
 
 Operationally, this means:
 
-- New signing keys or certificates are introduced via additional Artipoints.
+- New signing keys and/or root certificates are introduced via additional articulations that add to the history.
 - Replicas joining after key evolution will observe the full trust history and validate it deterministically.
 - Existing replicas do not need to re-bootstrap unless local trust state is lost or corrupted.
 
@@ -1680,7 +1680,7 @@ This appendix explains the rationale for these design choices in a descriptive m
 ASCP treats **authentication**, **authorization**, and **visibility** as independent concerns, each addressed by a distinct protocol mechanism.
 
 - **Authentication** establishes authorship. It answers the question: *Who authored this statement?*
-- Authentication is cryptographic and objective. Every Artipoint is individually signed and attributable to a specific key, enabling durable provenance and replayable verification.
+- Authentication is cryptographic and objective. Every Articulation Sequence is signed and attributable to a specific key, enabling durable provenance and replayable verification.
 - **Authorization** determines semantic effect. It answers the question: *Should this statement have effect in this context?*
 - Authorization is evaluated declaratively through governance semantics applied to immutable history. Authorization may vary by scope, time, or role, and does not affect the existence or authenticity of statements.
 - **Visibility** determines disclosure. It answers the question: *Who can receive and decrypt this statement?*

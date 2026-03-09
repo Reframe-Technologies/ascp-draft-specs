@@ -13,7 +13,7 @@ See the top-level [`README.md`](../README.md) file of this repo for more details
 | [`the-agents-shared-cognition-protocol.md`](./the-agents-shared-cognition-protocol.md) | Master specification outlining the ASCP architecture, layered model, and coordination primitives |
 | [`ascp-terminology-primer.md`](./ascp-terminology-primer.md) | Canonical terms, definitions, and shared language used across the specifications |
 | [`ascp-stack.md`](./ascp-stack.md) | Layered stack overview and how the ASCP documents map to each layer |
-| [`ascp-artipoint-grammar-a-structure.md`](./ascp-artipoint-grammar-a-structure.md) | Defines the grammar for immutable, addressable Artipoints — the atomic units of shared cognition |
+| [`ascp-artipoint-grammar-a-structure.md`](./ascp-artipoint-grammar-a-structure.md) | Defines the grammar for Artipoint Expressions, Articulation Statements, and Articulation Sequences |
 | [`ascp-channels-secure-distribution-layer.md`](./ascp-channels-secure-distribution-layer.md) | Secure distribution of Artipoints using encrypted channels |
 | [`ascp-logsync-protocol-alsp.md`](./ascp-logsync-protocol-alsp.md) | Transport and synchronization layer for distributed logs |
 | [`ascp-governance-and-access-control.md`](./ascp-governance-and-access-control.md) | Governance attributes, groups, virtual groups, RACI-style roles, and the normative evaluation algorithm |
