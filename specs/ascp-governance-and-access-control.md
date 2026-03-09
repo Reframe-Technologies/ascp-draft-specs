@@ -338,7 +338,7 @@ A Bookmark:
 ### **8.1.1 Canonical Form**
 
 ```asciidoc
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["bookmark", "<bookmark title>", uri:"https://example.com/resource"]
 ]
 ```
@@ -379,7 +379,7 @@ Piles represent the “workbench trays” of articulated work—useful for gathe
 ### **8.2.1 Canonical Form**
 
 ```asciidoc
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["pile", "<pile title>", payload ]
 ]
 ```
@@ -430,7 +430,7 @@ Streams ensure that execution occurs within bounded cognitive spaces, enabling b
 ### **8.3.1 Canonical Form**
 
 ```asciidoc
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["stream", "<stream title>", payload ]
 ]
 ```
@@ -478,7 +478,7 @@ A Space:
 ### **8.4.1 Canonical Form**
 
 ```c
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["space", "<space title>", payload ]
 ]
 ```
@@ -561,7 +561,7 @@ A Group is immutable once instantiated; all evolution of its definition occurs t
 ### **9.2.1 Canonical Form**
 
 ```c
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["group", "<group name>",
    uri:"https://app.example.com/group/<group-id>"
   ]
@@ -696,7 +696,7 @@ A Channel Artipoint is a Layer-2 encoded Distribution Construct of type `channel
 ### **10.1.1 Canonical Form**
 
 ```bnf
-[uuid, source, timestamp,
+[uuid, timestamp,
   ["channel", "Hiring Team", "@HiringTeam"] .
   (
     payload_cipher := "<cipher-id>",
@@ -740,7 +740,7 @@ Changes in governance state—such as adding or removing participants, modifying
 ### **10.1.5 Example Channel Artipoint**
 
 ```bnf
-[uuid, source, timestamp,
+[uuid, timestamp,
   channel-uuid .
   (
     keyframe::kid := "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002",
@@ -1006,16 +1006,24 @@ Bootstrap establishes the initial trust root and authoritative governance metada
 ## A.1 Group Composition Example
 
 ```
-[group-irt-guid, source, timestamp,
-  ["group", "Incident Response Team", "urn:group:irt"] .
-  (
-    member + "550e8400-e29b-41d4-a716-446655440010",
-    member + "550e8400-e29b-41d4-a716-446655440011",
-    owner := "550e8400-e29b-41d4-a716-446655440012",
-    role::responsible := "550e8400-e29b-41d4-a716-446655440010",
-    role::accountable := "550e8400-e29b-41d4-a716-446655440012"
-  )
-] < {group-guid-ops-team}
+{ 10, source, timestamp,
+  [group-irt-guid, timestamp,
+    ["group", "Incident Response Team", "urn:group:irt"] .
+    (
+      member + "550e8400-e29b-41d4-a716-446655440010",
+      member + "550e8400-e29b-41d4-a716-446655440011",
+      owner := "550e8400-e29b-41d4-a716-446655440012",
+      role::responsible := "550e8400-e29b-41d4-a716-446655440010",
+      role::accountable := "550e8400-e29b-41d4-a716-446655440012"
+    )
+  ];
+  [group-guid-ops-team, timestamp,
+    ["group", "Ops Team", "urn:group:ops"] .
+    (
+      member + "group-irt-guid"
+    )
+  ];
+}
 ```
 
 ## A.2 Inheritance Override Example
@@ -1031,4 +1039,3 @@ deny::writer := "550e8400-e29b-41d4-a716-446655440014"
 ```
 role::consulted := @members
 ```
-

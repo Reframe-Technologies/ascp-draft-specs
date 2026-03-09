@@ -669,77 +669,91 @@ This document makes no requests of IANA.
 ## A.1 Decision → Commitment → Tasks → State (exception trace)
 
 ```clike
-[ISSUE1, AUTH1, 2025-12-25T10:00:00Z,
-  [issue, "Renewal discount over policy cap?", string:"Cap 10% unless exception."]];
-
-[OPT1, AUTH1, 2025-12-25T10:02:00Z,
-  [option, "Approve 20% with exception", string:"Route approvals + record precedent"]
-  references {ISSUE1}];
-
-[EVID1, AUTH1, 2025-12-25T10:03:00Z,
-  [evidence, "SEV1 incident list", uri:"https://pagerduty.example/incidents?sev=1&since=30d"]];
-
-[ARG1, AUTH1, 2025-12-25T10:04:00Z,
-  [argument, "Service impact justifies exception", string:"pro"]
-  references {OPT1}];
-
-[EVID1] supports {ARG1};
-
-[DEC1, AUTH1, 2025-12-25T10:06:00Z,
-  [decision, "Approve 20% under policy v3.2 exception", uri:"https://policy.example/v3.2"]
-  references {ISSUE1}
-  supports   {OPT1}];
-
-[GOAL1, AUTH1, 2025-12-25T10:07:00Z,
-  [goal, "Retain account", string:"Renewal secured this quarter"]];
-
-[TASK1, AUTH1, 2025-12-25T10:08:00Z,
-  [task, "Route exception to Finance", uri:"https://linear.example/issue/ABC-123"]];
-
-[TASK2, AUTH1, 2025-12-25T10:08:10Z,
-  [task, "Update CRM discount terms", uri:"https://salesforce.example/opp/006…"]];
-
-[COM1, AUTH1, 2025-12-25T10:09:00Z,
-  [commitment, "Execute renewal exception path", string:"Finance approval + CRM update"]
-  references {DEC1}
-  supports   {GOAL1}
-  assembles  {TASK1, TASK2}];
-
-[TS1, AUTH1, 2025-12-25T10:10:00Z,
-  [task_state, "Open", string:"open"] references {TASK1}];
-
-[TS2, AUTH1, 2025-12-25T10:30:00Z,
-  [task_state, "Done", string:"done"] references {TASK1} replaces {TS1}];
+{ 100, AUTH1, 2025-12-25T10:30:00Z,
+  [ISSUE1, 2025-12-25T10:00:00Z,
+    [issue, "Renewal discount over policy cap?", string:"Cap 10% unless exception."]
+  ];
+  [OPT1, 2025-12-25T10:02:00Z,
+    [option, "Approve 20% with exception", string:"Route approvals + record precedent"]
+    references {ISSUE1}
+  ];
+  [EVID1, 2025-12-25T10:03:00Z,
+    [evidence, "SEV1 incident list", uri:"https://pagerduty.example/incidents?sev=1&since=30d"]
+  ];
+  [ARG1, 2025-12-25T10:04:00Z,
+    [argument, "Service impact justifies exception", string:"pro"]
+    references {OPT1}
+  ];
+  [SUP1, 2025-12-25T10:04:05Z, EVID1 supports {ARG1}];
+  [DEC1, 2025-12-25T10:06:00Z,
+    [decision, "Approve 20% under policy v3.2 exception", uri:"https://policy.example/v3.2"]
+    references {ISSUE1}
+  ];
+  [DEC1S, 2025-12-25T10:06:05Z, DEC1 supports {OPT1}];
+  [GOAL1, 2025-12-25T10:07:00Z,
+    [goal, "Retain account", string:"Renewal secured this quarter"]
+  ];
+  [TASK1, 2025-12-25T10:08:00Z,
+    [task, "Route exception to Finance", uri:"https://linear.example/issue/ABC-123"]
+  ];
+  [TASK2, 2025-12-25T10:08:10Z,
+    [task, "Update CRM discount terms", uri:"https://salesforce.example/opp/006…"]
+  ];
+  [COM1, 2025-12-25T10:09:00Z,
+    [commitment, "Execute renewal exception path", string:"Finance approval + CRM update"]
+    references {DEC1}
+  ];
+  [COM1S, 2025-12-25T10:09:05Z, COM1 supports {GOAL1}];
+  [COM1A, 2025-12-25T10:09:10Z, COM1 assembles {TASK1, TASK2}];
+  [TS1, 2025-12-25T10:10:00Z,
+    [task_state, "Open", string:"open"]
+    references {TASK1}
+  ];
+  [TS2, 2025-12-25T10:30:00Z,
+    [task_state, "Done", string:"done"]
+    references {TASK1}
+  ];
+  [TS2R, 2025-12-25T10:30:01Z, TS2 replaces {TS1}];
+}
 ```
 
 ## A.2 Objective hierarchy with work lists
 
 ```clike
-[OBJ1, AUTH1, 2025-12-25T12:00:00Z,
-  [objective, "Reliability Q1", string:"Improve platform reliability"]];
-
-[GOAL2, AUTH1, 2025-12-25T12:01:00Z,
-  [goal, "Reduce P1 incidents", string:"< 2/month by end of quarter"]];
-
-[OBJ1] assembles {GOAL2};
-
-[LIST1, AUTH1, 2025-12-25T12:02:00Z,
-  [list, "Sprint 12", string:"Current sprint backlog"]];
-
-[LIST1] assembles {TASK1, TASK2};
+{ 200, AUTH1, 2025-12-25T12:05:00Z,
+  [OBJ1, 2025-12-25T12:00:00Z,
+    [objective, "Reliability Q1", string:"Improve platform reliability"]
+  ];
+  [GOAL2, 2025-12-25T12:01:00Z,
+    [goal, "Reduce P1 incidents", string:"< 2/month by end of quarter"]
+  ];
+  [OBJ1A, 2025-12-25T12:01:10Z, OBJ1 assembles {GOAL2}];
+  [LIST1, 2025-12-25T12:02:00Z,
+    [list, "Sprint 12", string:"Current sprint backlog"]
+  ];
+  [TASK3, 2025-12-25T12:02:30Z,
+    [task, "Harden alert thresholds", uri:"https://linear.example/issue/OPS-440"]
+  ];
+  [TASK4, 2025-12-25T12:02:40Z,
+    [task, "Tune autoscaling guardrails", uri:"https://linear.example/issue/OPS-441"]
+  ];
+  [LIST1A, 2025-12-25T12:03:00Z, LIST1 assembles {TASK3, TASK4}];
+}
 ```
 
 ## A.3 Agenda tying together rationale and work
 
 ```clike
-[AGEN1, AUTH1, 2025-12-25T14:00:00Z,
-  [agenda, "Renewal exception review", string:"Weekly exception and precedent review"]];
-
-[DP1, AUTH1, 2025-12-25T14:01:00Z,
-  [discussion_point, "Review DEC1 trace and outcomes", string:"Confirm precedent + audit approval chain"]
-  references {DEC1, COM1}];
-
-[AGEN1] assembles {DP1};
+{ 300, AUTH1, 2025-12-25T14:02:00Z,
+  [AGEN1, 2025-12-25T14:00:00Z,
+    [agenda, "Renewal exception review", string:"Weekly exception and precedent review"]
+  ];
+  [DP1, 2025-12-25T14:01:00Z,
+    [discussion_point, "Review DEC1 trace and outcomes", string:"Confirm precedent + audit approval chain"]
+    references {DEC1, COM1}
+  ];
+  [AGEN1A, 2025-12-25T14:02:00Z, AGEN1 assembles {DP1}];
+}
 ```
 
 # Appendix B. Suggested Attribute Conventions (Informative)

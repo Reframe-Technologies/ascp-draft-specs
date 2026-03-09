@@ -526,7 +526,7 @@ Identity Artipoints establish authorship provenance but do not grant authorizati
 ### 7.1.2 Canonical Form
 
 ```c
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["identity", <label>, <payload>]
 ]
 ```
@@ -581,7 +581,7 @@ Certificates are the canonical source of public keys used for:
 ### 7.2.2 Canonical Form
 
 ```c
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["certificate", <label>, json:{ <JWK> }]
 ]
 ```
@@ -625,7 +625,7 @@ The RootCA represents an implied, unnamed **semantic authority** anchoring the i
 ### 7.3.2 Canonical Form
 
 ```c
-[uuid, author, timestamp,
+[uuid, timestamp,
   ["rootca", "Root Certificate", json:{ <JWK> }]
 ]
 ```
@@ -663,9 +663,9 @@ Keyframe semantics are evaluated at Layer-3; key material contained in envelope 
 ### 7.4.2 Canonical Form
 
 ```c
-[uuid, author, timestamp,
-  ["keyframe", <label>, <urn>]
-] supports {channel-uuid}
+[uuid, timestamp,
+  ["keyframe", <label>, <urn>] supports {channel-uuid}
+]
 ```
 
 ### 7.4.3 Required Attributes
@@ -978,7 +978,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ### **8.7.1 PKI Endorsement of Certificate Fingerprint**
 
 ```
-[ endorse-uuid, author-uuid, 2025-08-13T14:00:00Z,
+[ endorse-uuid, 2025-08-13T14:00:00Z,
     cert-uuid .
     ( endorsement::jws-x5c + json:{
         "schema":"ascp.endorsement.v1",
@@ -996,7 +996,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ### **8.7.2 OIDC Identity Binding**
 
 ```
-[ verify-uuid, author-uuid, 2025-08-08T14:30:25Z,
+[ verify-uuid, 2025-08-08T14:30:25Z,
     cert-uuid .
     ( endorsement::oidc-icb + json:{
         "schema":"ascp.endorsement.v1",
@@ -1012,7 +1012,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ### **8.7.3 DID-based Endorsement**
 
 ```
-[ did-endorse-uuid, author-uuid, 2025-08-20T10:00:00Z,
+[ did-endorse-uuid, 2025-08-20T10:00:00Z,
     cert-uuid .
     ( endorsement::did-jws + json:{
         "schema":"ascp.endorsement.v1",
@@ -1028,7 +1028,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ### **8.7.4 TSA Time Attestation**
 
 ```
-[ tsa-uuid, author-uuid, 2025-08-13T14:02:00Z,
+[ tsa-uuid, 2025-08-13T14:02:00Z,
     cert-uuid .
     ( endorsement::tsa-rfc3161 + json:{
         "schema":"ascp.endorsement.v1",
@@ -1300,33 +1300,33 @@ Deployments that use OIDC **SHOULD** use Authorization Code + PKCE and **SHOULD*
 Example showing an Identity Artipoint, Certificate Artipoint, and resulting endorsement:
 
 ```json
-[identity-uuid, author-uuid, 2025-08-08T14:30:22Z,
-  ["identity", "Jeff Szczepanski", "mailto:jeff@example.com"] .
-  ( type := "human",
-    certificate::kid := "ascp:cert:cert-uuid"
-  )
-];
-
-[cert-uuid, author-uuid, 2025-08-08T14:30:22Z,
-  ["certificate", "Jeff ES256 Identity Key", json:{ <JWK> }] .
-  ( fingerprint := "sha256:abcd...",
-    issued := "2025-08-08T14:30:22Z" )
-];
-
-[verify-uuid, author-uuid, 2025-08-08T14:30:25Z,
-  cert-uuid .
-  ( endorsement::oidc-icb + json:{
-      "schema":"ascp.endorsement.v1",
-      "attestation":"id-binding",
-      "thumbprint":"sha256:abcd...",
-      "issuer":{"mechanism":"oidc-icb","hint":"accounts.google.com"},
-      "evidence":{
-        "icb":"<IdentityClaimBundle JWS>"
-      },
-      "issued_at":"2025-08-08T14:30:25Z"
-    }
-  )
-];
+{ 1, author-uuid, 2025-08-08T14:30:25Z,
+  [identity-uuid, 2025-08-08T14:30:22Z,
+    ["identity", "Jeff Szczepanski", "mailto:jeff@example.com"] .
+    ( type := "human",
+      certificate::kid := "ascp:cert:cert-uuid"
+    )
+  ];
+  [cert-uuid, 2025-08-08T14:30:22Z,
+    ["certificate", "Jeff ES256 Identity Key", json:{ <JWK> }] .
+    ( fingerprint := "sha256:abcd...",
+      issued := "2025-08-08T14:30:22Z" )
+  ];
+  [verify-uuid, 2025-08-08T14:30:25Z,
+    cert-uuid .
+    ( endorsement::oidc-icb + json:{
+        "schema":"ascp.endorsement.v1",
+        "attestation":"id-binding",
+        "thumbprint":"sha256:abcd...",
+        "issuer":{"mechanism":"oidc-icb","hint":"accounts.google.com"},
+        "evidence":{
+          "icb":"<IdentityClaimBundle JWS>"
+        },
+        "issued_at":"2025-08-08T14:30:25Z"
+      }
+    )
+  ];
+}
 ```
 
 # **10. Keyframe Rotation and Cryptographic Continuity**
@@ -1997,4 +1997,3 @@ This adaptability ensures that ASCP can support long-lived collaboration, even a
 ASCP’s trust and identity architecture is intentionally deployment-agnostic. Its primitives—Identity Artipoints, Certificate Artipoints, endorsements, purposes, and recovery envelopes—operate consistently whether used by an individual, an enterprise, or a federation of organizations. What varies is not the protocol itself but the policies, evidence sources, and operational expectations layered atop it.
 
 By grounding trust in immutable history and participant-controlled keys, ASCP provides a stable substrate capable of supporting a wide variety of real-world collaboration patterns. Whether deployed privately on a single machine, across a corporate boundary, or within a global ecosystem of agents and organizations, the same foundational mechanisms ensure verifiable provenance, durable identity, and trustworthy coordination. This appendix offers a conceptual guide to those possibilities, helping reviewers understand how the normative requirements of the specification translate into practical deployment scenarios.
-

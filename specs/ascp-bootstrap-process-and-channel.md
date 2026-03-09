@@ -524,7 +524,7 @@ Only identities explicitly recorded via identity-ref are eligible to act as **jo
 An Identity Reference Artipoint MUST be articulated using the following primary payload form:
 
 ```asciidoc
-[ uuid, author, timestamp,
+[ uuid, timestamp,
   ["identity-ref", <label>, <identity-uuid>]
 ]
 ```
@@ -692,7 +692,7 @@ Channel Reference Artipoints are the **sole normative mechanism** by which chann
 A Channel Reference Artipoint MUST be articulated using the following primary payload form:
 
 ```asciidoc
-[ uuid, author, timestamp,
+[ uuid, timestamp,
   ["channel-ref", <label>, <channel-uuid>]
 ]
 ```
