@@ -711,8 +711,10 @@ A Channel Reference Artipoint MUST include the following required attributes:
 - **cak\_kid -** Identifies the Channel Access Key (CAK) associated with the channel. The value MUST be a stable key identifier of the form:
 
 ```asciidoc
-ascp:cak:<channel-uuid>
+ascp:cak:<keyframe-uuid>
 ```
+
+The `cak_kid` value SHALL identify the CAK associated with the channel's active keyframe epoch.
 
 - **cak\_public\_keys -** One or more Ed25519 public keys corresponding to the referenced CAK.
   - At least one public key MUST be designated as **active**.
@@ -1143,7 +1145,7 @@ Where:
 - type MUST be "bootstrap-key-package".
 - version MUST be "1.0".
 - scope MUST identify the @references channel.
-- keys MUST be a non-empty ordered array of plaintext JSON formatted **Channel Key Envelopes**, each conforming exactly to the **Channel Key Envelope** structure defined in *ASCP Channels, Section 9.6*.
+- keys MUST be a non-empty ordered array of plaintext JSON formatted **Channel Key Envelopes**, each conforming exactly to the **Channel Key Envelope (CKE) Schema** defined in *ASCP Trust and Identity Architecture, Section 8.3.2*.
 - ordering MUST be "oldest-first".
 - active\_index MUST be an integer index into the keys array indicating the most recent key that senders SHOULD use when encrypting new @references entries.
 
@@ -1748,4 +1750,3 @@ Trust is evaluated at log-time, not join-time, preserving the ability to reason 
 ## **A.8 Architectural Summary**
 
 The ASCP architecture prioritizes reproducibility, privacy, and durable shared meaning over immediate convenience. By maintaining strict separation between authentication, authorization, and visibility, and by treating bootstrap as an explicit phase transition rather than an implicit assumption, ASCP enables long-lived, auditable collaboration between humans and agents without reliance on centralized control or mutable state.
-

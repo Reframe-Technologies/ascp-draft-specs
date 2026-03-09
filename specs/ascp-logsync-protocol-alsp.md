@@ -1691,7 +1691,7 @@ Replicas that do not possess the corresponding payload decryption keys MAY still
 
 ## **11.1 Channel Access Keys (CAKs)**
 
-A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per Channel that enables replicas to prove **admission to synchronize** the channel’s log. The CAK enables clients to prove authorization to access the channel’s log.
+A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per channel keyframe epoch that enables replicas to prove **admission to synchronize** the channel’s log. The CAK enables clients to prove authorization to access the channel’s log.
 
 ### **11.1.1 Key Structure and Distribution**
 
@@ -1699,7 +1699,7 @@ A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per Channel tha
   - **Public Key (pk):** Distributed via the ASCP bootstrap process.
   - **Private Key (sk):** Distributed only to replicas (or operators) intended to be **admitted to synchronize** the channel log, via secure, out-of-band mechanisms.
 - The CAK public key:
-  - **MUST** be referenced by a stable kid value of the form: `ascp:cak:<channel_uuid>`
+  - **MUST** be referenced by a stable kid value of the form: `ascp:cak:<keyframe_uuid>`
   - **MUST** be present in the channel’s bootstrap manifest.
   - **MUST** be integrity-protected by a signature from the channel creator or governing authority (per bootstrap specification).
 - The CAK private key:
@@ -1740,7 +1740,7 @@ The protected header **MUST** contain:
 ```json
 {
   "alg": "EdDSA",
-  "kid": "ascp:cak:<channel_uuid>",
+  "kid": "ascp:cak:<keyframe_uuid>",
   "typ": "alsp+cak"
 }
 ```
@@ -1906,7 +1906,7 @@ ascp:<type>:<uuid>
   - Used in JWS protected headers for peer authentication
   - Resolved from the bootstrap process certificate directory
   - Contains the public key corresponding to the `user_auth_cert` exchanged during hello
-- `ascp:cak:<uuid>` - References a Channel Access Key for Channel Log replication admission
+- `ascp:cak:<uuid>` - References a keyframe-bound Channel Access Key for Channel Log replication admission
   - Used in JWS protected headers for channel access proofs
   - Resolved from the channel manifest obtained during bootstrap
   - Contains the Ed25519 public key for the specific channel
@@ -1956,7 +1956,7 @@ This is compliant with RFC 7517 §4.2, which permits keys to omit the use field 
   "crv": "Ed25519",  
   "x": "<base64url-encoded-public-key>",
   "alg": "EdDSA",
-  "kid": "ascp:cak:550e8400-e29b-41d4-a716-446655440002"
+  "kid": "ascp:cak:<keyframe_uuid>"
 }
 ```
 
