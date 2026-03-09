@@ -993,7 +993,7 @@ Authenticity and integrity are provided by JWS signatures. Every Channel Envelop
 
 A valid signature cryptographically binds the payload and protected header to the signing key selected via `kid`. Any modification to the payload or protected header invalidates the signature and results in rejection for Layer-2 handoff.
 
-Layer-1 does not determine whether a signing key *should* be trusted; it verifies signatures mechanically using provisioned verification material. The correctness of identity binding and certificate legitimacy is assumed.
+Layer-1 does not determine whether a signing key *should* be trusted; it verifies signatures mechanically using provisioned verification material. The correctness of identity-certificate relationship evaluation and certificate legitimacy is assumed.
 
 ## **12.3 Replay and Duplication**
 
@@ -1286,6 +1286,6 @@ DIDComm supports per-message encryption to specific recipients but lacks a share
 
 ### **ActivityPub / Other DAG-like Systems**
 
-ASCP differs by treating all shared state as cryptographically verifiable and by binding contributions to identity certificates and Keyframe-driven cryptographic state, rather than relying on server-level assurance.
+ASCP differs by treating all shared state as cryptographically verifiable and by binding contributions to certificate-backed identities and Keyframe-driven cryptographic state, rather than relying on server-level assurance.
 
 These comparisons highlight ASCP’s unique goals: to provide cryptographically verifiable shared cognition across humans and agents, anchored in an immutable coordination substrate rather than a messaging protocol or transport stream.

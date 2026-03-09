@@ -1312,7 +1312,7 @@ The server **MUST** include its identity certificate in all `auth_challenge` mes
   - In **Provisioned Mode**, **MUST** be present and the server **MUST** encrypt the user-key-envelope with the `recovery_cert` supplied in the initial authentication request with structure and validation are governed exclusively by Trust & Identity §11.2–§11.3.
 - **identity\_cert**
   - Type: string (JWS-encoded Certificate Artipoint)
-  - **MUST** provide the challenging server's JWS-signed Certificate Artipoint that binds its identity to a signing key. This certificate **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (Trust & Identity §7.2).
+  - **MUST** provide the challenging server's JWS-signed Certificate Artipoint and corresponding identity relationship evidence (as defined by Trust & Identity) linking that certificate to the asserted server identity. This certificate **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (Trust & Identity §7.2).
   - **MUST** be consistent with the kid used in the JWS protected header for this and all following messages.
 - **user\_identity**
   - Type: string (UTF-8)
@@ -2780,23 +2780,23 @@ They are independent.
 
 *This section is informative, but draws on normative details found in the ASCP Trust and Identity Architecture specification.*
 
-### **B.1 Challenge Flow (New Identity Binding)**
+### **B.1 Challenge Flow (New Identity-Certificate Relationship)**
 
-The Challenge Flow is used for first-time connections where new identity binding is required, or when the server needs to re-authenticate the connecting peer's identity. This flow involves an additional round-trip through the auth\_challenge message.
+The Challenge Flow is used for first-time connections where a new identity-certificate relationship is required, or when the server needs to re-authenticate the connecting peer's identity. This flow involves an additional round-trip through the auth\_challenge message.
 
 The message sequence proceeds as follows:
 
 - Client sends auth\_request with their identity information and JWK for their public identity key (direct mode) or their public recovery key (provisioned mode). The JWS protected header typically omits the `kid` field since no binding exists yet.
 - Server responds with auth\_challenge, which provides the server's session nonce and, in provisioned mode, may include the **client\_key\_env** JWE containing the generated or recovered client identity encrypted using the `recovery_cert` from the auth\_request.
-- Client sends hello, including the JWS-signed Identity Token Package in the `user_auth_cert` field to establish identity binding.
-- Server responds with hello to complete mutual authentication, or sends an error if identity binding fails.
+- Client sends hello, including the JWS-signed Identity Token Package in the `user_auth_cert` field to establish identity-certificate relationship evidence.
+- Server responds with hello to complete mutual authentication, or sends an error if identity-certificate relationship validation fails.
 
-### **B.2 Immediate Flow (Known Identity)**
+### **B.2 Immediate Flow (Known Identity-Certificate Relationship)**
 
-The Immediate Flow is the standard authentication process when peers already have established, trusted identity-key bindings. This flow skips the challenge step, reducing the handshake to a single round-trip.
+The Immediate Flow is the standard authentication process when peers already have established, trusted identity-certificate relationships. This flow skips the challenge step, reducing the handshake to a single round-trip.
 
 The message sequence proceeds as follows:
 
 - Client sends auth\_request with their identity and JWK for their public identity key. The JWS protected header includes the `kid` for their signing certificate.
-- Server validates the key-identity binding immediately and responds directly with hello, skipping the challenge step.
+- Server validates the certificate-identity relationship immediately and responds directly with hello, skipping the challenge step.
 - Client responds with their own hello to complete mutual authentication.

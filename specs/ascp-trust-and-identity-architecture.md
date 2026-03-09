@@ -66,7 +66,7 @@ The Trust and Identity Architecture defined in this document is intended to prov
 This document defines:
 
 - Trust-relevant **Security Construct Artipoints** used to represent identity, certificates, trust anchors, endorsements, key lifecycle state, and recovery evidence.
-- The Layer-3 verification and evaluation rules for **identity bootstrap**, **certificate binding**, **key rotation**, and **recovery**.
+- The Layer-3 verification and evaluation rules for **identity bootstrap**, **identity-certificate relationships**, **key rotation**, and **recovery**.
 - Verification requirements needed for interoperable Trust and Identity implementations.
 
 Normative requirements use the terms **MUST**, **SHOULD**, and **MAY** as described in RFC 2119 and RFC 8174.
@@ -157,7 +157,7 @@ This specification defines Security Constructs that are evaluated in relationshi
 
 An **Addressing Construct** Artipoint that declares the existence of a participant—human, agent, or system component—and provides a **durable addressing reference** for that participant.
 
-An Identity Artipoint does **not** contain cryptographic key material. Instead, it references one or more Certificate Artipoints via `certificate::kid` attributes to establish which keys are currently bound to the identity.
+An Identity Artipoint does **not** contain cryptographic key material. Instead, one or more Certificate Artipoints relate to the identity via `supports` to establish which keys are currently bound to that identity.
 
 ### **Certificate Artipoint**
 
@@ -300,7 +300,7 @@ An RFC 3161-compliant service that issues Time-Stamp Tokens (TSTs), providing in
 
 # **5. ASCP Trust Architecture Overview**
 
-ASCP establishes trust using **durable, signed log records** rather than mutable external state or real-time certificate validation. Identity binding, authorship verification, endorsement evaluation, and key lifecycle interpretation are derived from the **history articulated in the Channel log** (“log-time trust”).
+ASCP establishes trust using **durable, signed log records** rather than mutable external state or real-time certificate validation. Identity-certificate relationship evaluation, authorship verification, endorsement evaluation, and key lifecycle interpretation are derived from the **history articulated in the Channel log** (“log-time trust”).
 
 This section is **informative**. It provides architectural context and scope boundaries for the normative requirements in Sections 6–9.
 
@@ -308,7 +308,7 @@ This section is **informative**. It provides architectural context and scope bou
 
 ASCP’s trust model is grounded in three architectural principles:
 
-1. **Immutable provenance -** Trust-relevant events (e.g., identity declarations, certificate bindings, endorsements, and key lifecycle events) are expressed as signed artifacts and committed to an append-only history. Verifiers evaluate evidence **as recorded**, not as reinterpreted under present-day external conditions.
+1. **Immutable provenance -** Trust-relevant events (e.g., identity declarations, certificate `supports` / `replaces` relationships, endorsements, and key lifecycle events) are expressed as signed artifacts and committed to an append-only history. Verifiers evaluate evidence **as recorded**, not as reinterpreted under present-day external conditions.
 2. **Replica-local validation -** A replica can validate authorship and trust evidence from log contents plus explicitly configured local policy inputs. External systems may strengthen provenance, but are **not required** for correctness or availability.
 3. **Deterministic evaluation over articulated history -** Trust conclusions are derived by deterministic Layer-3 interpretation of the log state. Cryptographic verification provides evidence; trust is the semantic interpretation of that evidence under the rules defined by this document.
 
@@ -352,7 +352,7 @@ All trust decisions remain grounded in signed log evidence and Layer-3 evaluatio
 
 The log-anchored model provides the following high-level properties:
 
-- **Verifiable provenance:** a replica can reconstruct the evidence trail supporting identity bindings, certificate use, endorsements, and key lifecycle interpretation from immutable log history.
+- **Verifiable provenance:** a replica can reconstruct the evidence trail supporting identity-certificate relationships, certificate use, endorsements, and key lifecycle interpretation from immutable log history.
 - **Replay robustness:** trust-relevant events are interpreted against historical log state rather than mutable external conditions, reducing the opportunity to reinterpret evidence under a different trust state.
 - **Offline-capable verification:** replicas can evaluate trust without requiring continuous connectivity to external services.
 
@@ -380,9 +380,9 @@ An identity provides:
 
 An Identity Artipoint does **not** contain cryptographic key material and does **not** grant authorization. Identity presence alone does not confer authorship permission, channel membership, or governance authority. All such determinations are made by governance and channel semantics outside the trust layer.
 
-Instead, an Identity Artipoint *references* one or more Certificate Artipoints via a `certificate::kid` attribute, indicating which certificates are currently bound to the identity for cryptographic operations. This indirection allows identities to remain stable while keys rotate over time.
+Instead, an Identity-Certificate relationship is articulated in the graph: a Certificate Artipoint `supports` an Identity Artipoint to indicate that the certificate is bound to that identity for cryptographic operations. This indirection allows identities to remain stable while keys rotate over time.
 
-Because Identity Artipoints are immutable and recorded in append-only logs, identity bindings are:
+Because Artipoints are immutable and recorded in append-only logs, identity-certificate relationships are:
 
 - auditable,
 - replayable,
@@ -422,8 +422,8 @@ To reduce ambiguity about “where a verifier should look” for specific classe
 
 | **Construct**             | **Role in the model**                                                            | **Primary contents / bindings**                                                                                                            | **How other constructs reference it**                                                                                                                   |
 | ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Identity Artipoint**    | Durable addressing reference for a participant (human/agent/system)              | **No key material.** Indicates active key bindings by referencing one or more Certificate Artipoints via `certificate::kid`.               | Referenced as the **Author** of Artipoint Records; referenced by Keyframes via `envelope::<recipient>` attribute naming (recipient identity UUID).      |
-| **Certificate Artipoint** | Publishes operational cryptography and cryptographic intent                      | **JWK public key** (payload), declared `purpose::*`, optional `endorsement::*`, optional `recovery_envelope`.                              | Referenced by Identity Artipoints (`certificate::kid`); referenced by JOSE headers (e.g., `kid`) when used for signing or key agreement.                |
+| **Identity Artipoint**    | Durable addressing reference for a participant (human/agent/system)              | **No key material.** Certificate bindings are expressed by incoming `supports` relations from Certificate Artipoints.                       | Referenced as the **Author** of Artipoint Records; referenced by Keyframes via `envelope::<recipient>` attribute naming (recipient identity UUID).      |
+| **Certificate Artipoint** | Publishes operational cryptography and cryptographic intent                      | **JWK public key** (payload), declared `purpose::*`, optional `endorsement::*`, optional `recovery_envelope`.                              | References Identity Artipoints using `supports`; references older certificates via `replaces`; referenced by JOSE headers (e.g., `kid`) for key lookup. |
 | **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | Carries per-recipient **Channel Key Envelopes (CKEs)** as `envelope::<recipient-identity-uuid> := "<JWE>"` attributes (one per recipient). | Referenced by Channels (e.g., via `keyframe::kid`, as defined elsewhere); evaluated at Layer-3 to provision cryptographic consequences to lower layers. |
 | **RootCA Artipoint**      | Instance trust anchor                                                            | Distinguished certificate-like Security Construct that anchors certificate acceptance and onboarding provenance for the ASCP instance.     | Introduced via bootstrap history; used as the trust root for instance-level verification and optional external anchoring evidence.                      |
 
@@ -461,7 +461,7 @@ ASCP employs a simple certificate lifecycle grounded in immutable history. The f
 
 1. **Key generation:** A participant generates a cryptographic keypair locally or in secure hardware.
 2. **Certificate publication:** The public key is published as a Certificate Artipoint, optionally including purpose declarations, recovery material, and endorsements.
-3. **Identity binding:** The Identity Artipoint references the active certificate via `certificate::kid`, establishing a verifiable binding.
+3. **Identity binding:** A Certificate Artipoint `supports` the Identity Artipoint, establishing a verifiable binding.
 4. **Rotation:** When a key is replaced, a new Certificate Artipoint is published and the identity’s binding is updated. Historical signatures remain valid because verification uses log-time trust.
 5. **Recovery (optional):** If recovery material is present, a participant may restore access to a private key without exposing it to ASCP services.
 6. **External anchoring (optional):** Endorsements from PKI, OIDC, DID, or TSA systems may be added at any time to strengthen provenance.
@@ -472,7 +472,7 @@ These steps are **illustrative**, not procedural mandates.
 
 A common—but not universal—deployment model uses **locally generated keys** under participant control.
 
-In this model, each participant generates a keypair, publishes the public key in a (typically self-signed) Certificate Artipoint, and uses the corresponding private key to produce signature evidence on authored payloads. Because certificate bindings and related evidence are committed to immutable log history, historical signatures can be evaluated using **log-time** state without requiring online revocation services.
+In this model, each participant generates a keypair, publishes the public key in a (typically self-signed) Certificate Artipoint, and uses the corresponding private key to produce signature evidence on authored payloads. Because identity-certificate relationships and related evidence are committed to immutable log history, historical signatures can be evaluated using **log-time** state without requiring online revocation services.
 
 Implementations typically store private keys using platform-appropriate secure storage. Key storage and device protection mechanisms are deployment-specific and out of scope for this specification.
 
@@ -517,7 +517,7 @@ An Identity Artipoint:
 
 - Represents *who* may author Artipoints
 - Contains **no cryptographic key material**
-- Binds to one or more Certificate Artipoints via indirection
+- Is bound to one or more Certificate Artipoints via relationship expressions
 
 The UUID of an Identity Artipoint is the stable identifier used throughout ASCP to reference that participant.
 
@@ -537,9 +537,13 @@ Identity Artipoints establish authorship provenance but do not grant authorizati
 - **label**: MAY be empty; SHOULD be human-readable
 - **payload**: MUST be present; MAY be a URI or descriptive string
 
-### 7.1.4 Required Attributes
+### 7.1.4 Required relationships
 
-- `certificate::kid` — references the UUID(s) of active Certificate Artipoints bound to this identity
+- None.
+
+Certificate binding is articulated using relationship expressions authored by Certificate Artipoints:
+
+- `certificate supports {identity}`
 
 ### 7.1.5 Optional Attributes
 
@@ -550,11 +554,16 @@ These attributes are informational only.
 
 ### 7.1.6 Key Binding and Rotation
 
-Identity Artipoints bind active signing keys by updating `certificate::kid`. Historical bindings remain valid for log-time verification.
+Identity binding and key rotation are expressed by Certificate Artipoint relationships:
 
-#### Proof of Possession for Third-Party Published Certificates
+- `certificate supports {identity}` binds a certificate to an identity.
+- `new-certificate replaces {old-certificate}` expresses certificate supersession lineage.
 
-If a Certificate Artipoint is authored by an identity other than the Identity Artipoint that binds to it via `certificate::kid`, then verifiers **MUST NOT** treat that certificate binding as valid unless the binding Identity demonstrates **Proof of Possession (PoP)** of the corresponding private key at **log-time**.
+Historical relationships remain valid for log-time verification.
+
+### 7.1.7 Proof of Possession for Third-Party Published Certificates
+
+If a Certificate Artipoint is authored by an identity other than the Identity Artipoint it `supports`, verifiers **MUST NOT** treat that support relationship as valid unless the supported Identity demonstrates **Proof of Possession (PoP)** of the corresponding private key at **log-time**.
 
 A binding Identity minimally demonstrates PoP by authoring at least one **PoP Assertion** that:
 
@@ -562,7 +571,7 @@ A binding Identity minimally demonstrates PoP by authoring at least one **PoP As
 2. is signed using the private key corresponding to the Certificate Artipoint’s published JWK (e.g., via the JOSE `kid` / JWK thumbprint profile), and
 3. unambiguously binds the signing act to that specific Certificate Artipoint (the annotation target reference satisfies this requirement; implementations MAY additionally include an explicit `kid` / thumbprint reference for defense-in-depth).
 
-Verifiers **MUST** treat the `certificate::kid` binding as effective only from the log position at which a valid PoP Assertion exists (i.e., the binding is **pending** until PoP is observed).
+Verifiers **MUST** treat the `supports` relationship as effective only from the log position at which a valid PoP Assertion exists (i.e., the relationship is **pending** until PoP is observed).
 
 ASCP instance policy **MAY** require stronger PoP, including but not limited to: (a) a self-signed assertion over the certificate thumbprint, or (b) PoP as part of an **Identity Claim Bundle (ICB)**.
 
@@ -594,17 +603,28 @@ Certificates are the canonical source of public keys used for:
 
 The `author` of a Certificate Artipoint MUST be the UUID of the RootCA or another Identity Artipoint with traceable provenance back to the RootCA.
 
-If a Certificate Artipoint is authored by an identity other than the Identity Artipoint that binds to it via certificate::kid, verifiers MUST apply the Proof of Possession (PoP) requirements in **Section 7.1.6** before treating that binding as valid.
+If a Certificate Artipoint is authored by an identity other than the Identity Artipoint it `supports`, verifiers MUST apply the Proof of Possession (PoP) requirements in **Section 7.1.6** before treating that support relationship as valid.
 
 ### 7.2.4 Purpose Semantics
 
 Certificates MAY declare one or more `purpose::*` attributes. A key MUST NOT be used for a purpose not declared.
 
-### 7.2.5 Endorsements
+### 7.2.5 Identity Binding
+
+Certificate-to-identity association is defined by relationship expressions, not by identity attributes.
+
+- `certificate supports {identity}` binds a certificate to an identity.
+- `new-certificate replaces {old-certificate}` expresses certificate supersession lineage.
+
+When the certificate author differs from the supported identity, verifiers MUST apply the Proof of Possession requirements in Section 7.1.6 before treating the `supports` relationship as valid.
+
+JOSE `kid` values are transport key-selection metadata only, MUST conform to **ASCP Channels §6.4**, and MUST NOT be interpreted as identity-binding semantics.
+
+### 7.2.6 Endorsements
 
 Certificates MAY carry endorsement attributes providing external attestations. Endorsements strengthen provenance but do not alter certificate semantics.
 
-### 7.2.6 Recovery Envelopes
+### 7.2.7 Recovery Envelopes
 
 Certificates MAY include `recovery_envelope` attributes enabling secure key recovery.
 
@@ -691,7 +711,7 @@ Verifiers MUST ensure that Keyframe Artipoints are evaluated according to the li
 
 # **8. Security Construct Attributes**
 
-This section defines normative attribute families that extend the semantic meaning of Security Construct Artipoints defined in Section 7. Attributes are immutable, additive, and non-destructive: they attach additional semantic information to an Artipoint without mutating or invalidating its original meaning.
+This section defines normative attribute families that extend the meaning of Security Construct Artipoints defined in Section 7. Attributes are immutable, additive, and non-destructive: they attach additional semantic information to an Artipoint without mutating or invalidating its original meaning.
 
 All attributes defined herein are evaluated at Layer-3 and expressed using the Layer-2 grammar. This section provides normative definitions for attribute names, value encodings, and schemas. Construction, decoding, and validation procedures for Recovery Envelopes and Channel Key Envelopes are specified in Sections 11 and 12, respectively.
 
@@ -703,7 +723,6 @@ The following attribute families are defined:
 2. `purpose::*`
 3. `envelope::*`
 4. `recovery_envelope`
-5. `certificate::*`
 
 ## **8.1 Endorsement Attribute Family**
 
@@ -921,39 +940,16 @@ The value of the `recovery_envelope` attribute is a JSON structure as follows:
 
 See Section 11 for all details around constructing the recovery envelope and in particular the construction and decoding process of the `user-key-envelope` populating the `user_key_jwe` JSON field.
 
-## 8.5 Certificate Attributes
+## **8.5 Key Usage Evaluation Summary (Normative)**
 
-### 8.5.1 Purpose and Scope
+This section defines the evaluation rules used to determine whether a given Certificate Artipoint is acceptable for a specific cryptographic use at a given **log-time**. Implementations MUST evaluate key usage deterministically from log evidence plus explicitly configured local policy inputs.
 
-The `certificate::*` attribute family provides semantic modifiers specific to **certificate binding and interpretation**.
-
-This family is intentionally extensible. At present, only one attribute is defined.
-
-### 8.5.2 Value Encoding
-
-The `certificate::kid` attribute declares the key identifier associated with a Certificate Artipoint.
-
-Its semantics are modeled directly after JOSE `kid` values and are interpreted consistently with **ASCP Channels §6.4**. This cross-reference is strictly for interoperability of JOSE header `kid` values across ASCP documents; it does not delegate any Trust & Identity evaluation semantics, key generation, or key-wrapping behavior to Layer-1.
-
-### 8.5.3 Semantics
-
-The `certificate::kid` value:
-
-- MUST uniquely identify the certificate within the ASCP instance,
-- MUST be stable for the lifetime of the certificate,
-- MUST align with JOSE header usage for signing and encryption.
-
-### 8.5.4 Validation Rules
-
-Verifiers MUST resolve `certificate::kid` deterministically against historical log state.
-
-## **8.6 Key Usage Evaluation Summary (Normative)**
-
-This section defines attribute families used to evaluate whether a given Certificate Artipoint is acceptable for a specific cryptographic use at a given **log-time**. Implementations MUST evaluate key usage deterministically from log evidence plus explicitly configured local policy inputs.
+Relationship semantics used here (including `supports` and `replaces`) are defined in Section 7.2.5.
 
 Given:
 
-- `cert_kid`: the UUID of a candidate Certificate Artipoint
+- `cert_id`: the UUID of a candidate Certificate Artipoint
+- `identity_id`: the UUID of the identity for which the certificate is being evaluated
 - `required_purpose`: one of `purpose::assert`, `purpose::auth`, `purpose::keyAgreement`, etc.
 - `t`: a log-time instant (i.e., evaluation point within an append-only history)
 - `policy`: replica-local trust policy (including optional endorsement requirements)
@@ -961,21 +957,24 @@ Given:
 A verifier MUST evaluate key usage as follows:
 
 1. **Verify certificate validity at log-time**
-   - Resolve `cert_kid` to a Certificate Artipoint present in the Coordination Log at or before `t`.
+   - Resolve `cert_id` to a Certificate Artipoint present in the Coordination Log at or before `t`.
    - Apply any lifecycle constraints relevant to certificate applicability at `t` (e.g., non-retroactivity, supersession handling, or instance policy constraints defined elsewhere in this document).
    - If the certificate is not applicable at `t`, the verifier MUST reject it for the candidate use.
-2. **Verify purpose match**
+2. **Verify identity relationship**
+   - The certificate MUST `supports` `identity_id` at log-time `t`.
+   - If no valid `supports` relationship is present at `t`, the verifier MUST reject the certificate for this identity.
+3. **Verify purpose match**
    - The Certificate Artipoint MUST declare `required_purpose` as a `purpose::*` attribute.
    - If `required_purpose` is not declared, the verifier MUST reject the certificate for that use.
-3. **Optionally evaluate endorsement strength**
+4. **Optionally evaluate endorsement strength**
    - If `policy` requires endorsements for `required_purpose`, the verifier MUST evaluate endorsement presence and validity at `t` (including any external attestation verification procedures required by `policy`).
    - If endorsement requirements are not met, the verifier MUST reject the certificate for that use.
 
 If all required checks succeed, the verifier MAY treat the certificate as an acceptable public key for `required_purpose` at log-time `t`.
 
-## **8.7 Example Attribute Annotations (Informative)**
+## **8.6 Example Attribute Annotations (Informative)**
 
-### **8.7.1 PKI Endorsement of Certificate Fingerprint**
+### **8.6.1 PKI Endorsement of Certificate Fingerprint**
 
 ```
 [ endorse-uuid, 2025-08-13T14:00:00Z,
@@ -993,7 +992,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ];
 ```
 
-### **8.7.2 OIDC Identity Binding**
+### **8.6.2 OIDC Identity Binding**
 
 ```
 [ verify-uuid, 2025-08-08T14:30:25Z,
@@ -1009,7 +1008,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ];
 ```
 
-### **8.7.3 DID-based Endorsement**
+### **8.6.3 DID-based Endorsement**
 
 ```
 [ did-endorse-uuid, 2025-08-20T10:00:00Z,
@@ -1025,7 +1024,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ];
 ```
 
-### **8.7.4 TSA Time Attestation**
+### **8.6.4 TSA Time Attestation**
 
 ```
 [ tsa-uuid, 2025-08-13T14:02:00Z,
@@ -1303,14 +1302,15 @@ Example showing an Identity Artipoint, Certificate Artipoint, and resulting endo
 { 1, author-uuid, 2025-08-08T14:30:25Z,
   [identity-uuid, 2025-08-08T14:30:22Z,
     ["identity", "Jeff Szczepanski", "mailto:jeff@example.com"] .
-    ( type := "human",
-      certificate::kid := "ascp:cert:cert-uuid"
-    )
+    ( type := "human" )
   ];
   [cert-uuid, 2025-08-08T14:30:22Z,
     ["certificate", "Jeff ES256 Identity Key", json:{ <JWK> }] .
     ( fingerprint := "sha256:abcd...",
       issued := "2025-08-08T14:30:22Z" )
+  ];
+  [bind-uuid, 2025-08-08T14:30:23Z,
+    cert-uuid supports {identity-uuid}
   ];
   [verify-uuid, 2025-08-08T14:30:25Z,
     cert-uuid .
@@ -1696,7 +1696,7 @@ The JWE Protected Header for a CKE MUST be valid JSON and MUST include:
 The header MUST satisfy:
 
 - `typ` MUST be `"ascp+cke"`.
-- `kid` MUST be the exact `certificate::kid` value of the recipient’s Certificate Artipoint whose public key is used for the JWE operation. The `kid` value MUST conform to the JOSE `kid` encoding profile defined in **ASCP Channels §6.4**.
+- `kid` MUST identify the recipient Certificate Artipoint key whose public key is used for the JWE operation (for example, `ascp:cert:<cert-uuid>`). The `kid` value MUST conform to the JOSE `kid` encoding profile defined in **ASCP Channels §6.4**.
 - The referenced Certificate Artipoint MUST declare purpose::keyAgreement and MUST be valid under Layer-3 trust evaluation for the relevant log-time.
 
 The header MAY include:

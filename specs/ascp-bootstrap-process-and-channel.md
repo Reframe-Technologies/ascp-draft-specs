@@ -78,7 +78,7 @@ Safe participation in the Agents Shared Cognition Protocol (ASCP) is achieved on
 
 First, **authenticated log replication**, as defined by the ASCP Log Synchronization Protocol (ALSP), ensures that a replica can obtain an append-only, integrity-protected history of channel events from authorized peers. ALSP provides transport-level authentication, replay protection, and deterministic convergence of replicated logs, but it is intentionally agnostic to the semantics of identity, trust, and governance.
 
-Second, **log-anchored trust evaluation**, as defined in the ASCP Trust and Identity Architecture, derives identity validity, certificate binding, delegation, and trust relationships exclusively from immutable, signed history contained within ASCP channels. Trust is not inferred from transport-level authentication or configuration state, but from verifiable statements recorded in the shared log.
+Second, **log-anchored trust evaluation**, as defined in the ASCP Trust and Identity Architecture, derives identity validity, identity-certificate relationships, delegation, and trust relationships exclusively from immutable, signed history contained within ASCP channels. Trust is not inferred from transport-level authentication or configuration state, but from verifiable statements recorded in the shared log.
 
 Third, **ordered acquisition of bootstrap and discovery history**, as defined in this document, specifies the sequence by which a replica transitions from initial trust input to operational readiness. This model assumes an Initial Trust Input (ITI) supplied out-of-band; **thereafter**, all safety-relevant conclusions are derived exclusively from immutable, verifiable history. This includes the mandatory retrieval and validation of bootstrap channels, establishment of authoritative trust roots, and deterministic discovery of additional channels prior to normal replication.
 
@@ -216,7 +216,7 @@ The relevant layers are:
 - **Layer 0 — LogSync Protocol (ALSP) -** Provides authenticated session establishment, append-only log replication, ordering, and convergence detection. ALSP treats log payloads as opaque and does not interpret trust or coordination semantics.
 - **Layer 1 — Channels (Secure Distribution Layer) -** Defines channel membership, confidentiality boundaries, and encryption semantics for log content once trust relationships exist.
 - **Layer 2 — Artipoint Grammar -** Defines the structural encoding of Artipoint Expressions, Articulation Statements, and Articulation Sequences, independent of transport or trust evaluation.
-- **Layer 3 — Semantic Trust and Coordination -** Interprets Artipoints to construct trust graphs, identity bindings, and higher-level coordination structures.
+- **Layer 3 — Semantic Trust and Coordination -** Interprets Artipoints to construct trust graphs, identity-certificate relationships, and higher-level coordination structures.
 
 Bootstrap is a **Layer 3 concern** because it establishes the initial semantic conditions under which trust and coordination can be evaluated. However, bootstrap cannot function without invoking Layer 0 for replication and Layer 1 for subsequent secure distribution.
 

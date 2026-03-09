@@ -133,7 +133,7 @@ This section enumerates the companion specifications that comprise the ASCP prot
 | **Layer 2 — Articulation Layer**        | **ASCP Artipoint Grammar**                                 | Specifies the formal grammar for immutable, addressable coordination statements.               | Artipoint Expressions, Articulation Statements, Articulation Sequences, operator taxonomy, ABNF grammar, serialization requirements.        |
 | **Layer 1 — Secure Distribution Layer** | **ASCP Channels: Secure Distribution Layer Specification** | Defines the cryptographic envelope and distribution mechanism for Articulation Sequences.      | JWS/JWE processing, channel membership semantics, keyframes, key rotation, envelope formats, access control inputs.                         |
 | **Layer 0 — Log and Transport Layer**   | **ASCP LogSync Protocol (ALSP)**                           | Specifies append-only log synchronization across replicas.                                     | Message formats, ordering rules, pull/push models, divergence detection, channel access proofs, error handling.                             |
-| **Identity & Trust**                    | **ASCP Identity & Trust**                                  | Establishes identity representation and authorship verification.                               | Key provisioning, trust-root anchoring, identity binding, signature verification rules, recovery mechanisms.                                |
+| **Identity & Trust**                    | **ASCP Identity & Trust**                                  | Establishes identity representation and authorship verification.                               | Key provisioning, trust-root anchoring, identity-certificate relationship semantics, signature verification rules, recovery mechanisms.    |
 | **Governance & Access Control**         | **ASCP Governance and Access Control**                     | Defines the declarative governance model for participation, access, and role semantics.        | Attribute definitions, inheritance rules, virtual groups, RACI-style roles, evaluation algorithm.                                           |
 | **Bootstrap & Discovery**               | **ASCP: Bootstrap Process and Channel Discovery**          | Describes initial provisioning, trust establishment, and channel discovery procedures.         | Bootstrap workflow, trust-graph retrieval, manifest discovery, validation steps.                                                            |
 
@@ -416,7 +416,7 @@ ASCP separates **authentication**, **authorization**, **visibility**, and **gove
 
 This separation ensures that **authorship remains verifiable even when authorization is disputed or revoked**. An articulation may be judged unauthorized, ignored, or superseded by governance rules, but it is never erased or anonymized. ASCP therefore preserves a complete, replayable, and auditable history of who "said" what and when, while allowing authority to evolve transparently over time.
 
-Normative details for identity binding, signature verification, governance evaluation, and certificate semantics are specified in the companion ASCP documents. This section summarizes the architectural principles that unify them.
+Normative details for identity-certificate relationship semantics, signature verification, governance evaluation, and certificate semantics are specified in the companion ASCP documents. This section summarizes the architectural principles that unify them.
 
 ## **14.1 Collaborative Governance: Roles, Authority, and Accountability**
 
