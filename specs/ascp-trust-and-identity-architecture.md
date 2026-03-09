@@ -424,7 +424,7 @@ To reduce ambiguity about “where a verifier should look” for specific classe
 | ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Identity Artipoint**    | Durable addressing reference for a participant (human/agent/system)              | **No key material.** Certificate bindings are expressed by incoming `supports` relations from Certificate Artipoints.                       | Referenced as the **Author** of Artipoint Records; referenced by Keyframes via `envelope::<recipient>` attribute naming (recipient identity UUID).      |
 | **Certificate Artipoint** | Publishes operational cryptography and cryptographic intent                      | **JWK public key** (payload), declared `purpose::*`, optional `endorsement::*`, optional `recovery_envelope`.                              | References Identity Artipoints using `supports`; references older certificates via `replaces`; referenced by JOSE headers (e.g., `kid`) for key lookup. |
-| **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | Carries per-recipient **Channel Key Envelopes (CKEs)** as `envelope::<recipient-identity-uuid> := "<JWE>"` attributes (one per recipient). | Referenced by Channels (e.g., via `keyframe::kid`, as defined elsewhere); evaluated at Layer-3 to provision cryptographic consequences to lower layers. |
+| **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | Carries per-recipient **Channel Key Envelopes (CKEs)** as `envelope::<recipient-identity-uuid> := "<JWE>"` attributes (one per recipient). | Binds to Channels via `supports`; evaluated at Layer-3 to derive active and historical keyframe state and provision cryptographic consequences to lower layers. |
 | **RootCA Artipoint**      | Instance trust anchor                                                            | Distinguished certificate-like Security Construct that anchors certificate acceptance and onboarding provenance for the ASCP instance.     | Introduced via bootstrap history; used as the trust root for instance-level verification and optional external anchoring evidence.                      |
 
 ## **6.3 Why Artipoint-Based Identities**
@@ -674,7 +674,7 @@ Keyframes:
 
 - Encapsulate cryptographic configuration
 - Distribute encrypted channel key material
-- Are referenced by Channels via `keyframe::kid`
+- Bind to Channels via `supports`
 
 Keyframes define *what cryptographic state exists*, not how it evolves over time.
 
@@ -1437,6 +1437,8 @@ At any point in the evaluated history, Layer-3 MUST deterministically derive:
 
 - The **active Keyframe** for new encryption operations, and
 - The **set of historical Keyframes** required for verification and decryption.
+
+The active Keyframe for a Channel MUST be the newest articulated Keyframe that `supports` that Channel. Keyframe `replaces` relationships are optional for correctness but SHOULD be articulated to provide explicit supersession lineage and audit clarity.
 
 Layer-3 implementations MUST NOT select an active Keyframe based on receipt order, wall-clock time, or local mutable state. Selection MUST be based solely on articulated history and semantic evaluation.
 

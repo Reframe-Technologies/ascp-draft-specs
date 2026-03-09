@@ -1582,22 +1582,20 @@ The DSD v1 organizes tokens into functional ranges to enable efficient lookup an
 | 0x54      | flag                  |
 | 0x55      | deny::                |
 | 0x56      | expiration::          |
-| 0x57      | keyframe::            |
-| 0x58      | keyframe::kid         |
-| 0x59      | role::                |
-| 0x5A      | role::accountable     |
-| 0x5B      | role::approver        |
-| 0x5C      | role::auditor         |
-| 0x5D      | role::consulted       |
-| 0x5E      | role::informed        |
-| 0x5F      | role::observer        |
-| 0x60      | role::responsible     |
-| 0x61      | endorsement::         |
-| 0x62      | purpose::             |
-| 0x63      | purpose::auth         |
-| 0x64      | purpose::assert       |
-| 0x65      | purpose::keyAgreement |
-| 0x66–0x7F | Reserved attributes   |
+| 0x57      | role::                |
+| 0x58      | role::accountable     |
+| 0x59      | role::approver        |
+| 0x5A      | role::auditor         |
+| 0x5B      | role::consulted       |
+| 0x5C      | role::informed        |
+| 0x5D      | role::observer        |
+| 0x5E      | role::responsible     |
+| 0x5F      | endorsement::         |
+| 0x60      | purpose::             |
+| 0x61      | purpose::auth         |
+| 0x62      | purpose::assert       |
+| 0x63      | purpose::keyAgreement |
+| 0x64–0x7F | Reserved attributes   |
 
 #### **Vendor/Extension Range (Future)**
 

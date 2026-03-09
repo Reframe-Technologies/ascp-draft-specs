@@ -702,8 +702,7 @@ A Channel Artipoint is a Layer-2 encoded Distribution Construct of type `channel
     payload_cipher := "<cipher-id>",
     message_signing := "<signing-id>",
     channel_access_alg := "<access-id>",
-    bootstrap := false,
-    keyframe::kid := "ascp:keyframe:<uuid>" 
+    bootstrap := false
   )
 ]
 
@@ -716,7 +715,8 @@ Layer-1 never reads these attributes directly; Layer-3 processes them and genera
 - `payload_cipher`: The symmetric cipher identifier used to determine whether Layer-1 applies JWE encryption to envelopes. Valid values are defined by Section 6.3 or use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Note: In current implementations, @bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band. See **ASCP Bootstrap Process and Channel Discovery** for details.
 - `message_signing`: The signature algorithm required for Articulation Sequence / Channel Envelope signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
 - `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. Determines the CAK algorithm used at Layer-0. The algorithm used for the Channel Access Key (CAK) is determined by Layer-0 policy including a value for `"none"` for open channels.
-- `keyframe::kid`: The identifier for the currently active symmetric key. Each Channel Artipoint MUST have a `keyframe::kid` Attribute pointing to the current Keyframe associated with the channel in value form of `ascp:keyframe:<uuid>`. The kid identifies the AES and CAK keys in use for the Keyframe’s lifetime.
+
+The currently active Keyframe is derived by Layer-3 from articulated Keyframe history for that Channel.
 
 #### **10.1.3 Optional Governance Attributes**
 
@@ -741,10 +741,7 @@ Changes in governance state—such as adding or removing participants, modifying
 
 ```bnf
 [uuid, timestamp,
-  channel-uuid .
-  (
-    keyframe::kid := "ascp:keyframe:550e8400-e29b-41d4-a716-446655440002",
-  )
+  channel-uuid
 ]
 ```
 
@@ -753,9 +750,11 @@ Changes in governance state—such as adding or removing participants, modifying
 A **Keyframe** is a Layer-2 encoded Artipoint of type keyframe that declares the intended cryptographic state of a Channel at a particular point in time. Keyframes:
 
 - identify a new cryptographic epoch,
-- reference the Channel they configure,
+- reference the Channel they configure (via `supports {channel-uuid}`),
 - carry recipient-specific wrapped keys (as Layer-2 attributes),
 - provide immutable, auditable records of cryptographic state transitions.
+
+For new encryption operations, the active Keyframe is the newest articulated Keyframe supporting the Channel. A Keyframe MAY use `replaces` to make supersession lineage explicit and SHOULD do so for audit clarity.
 
 Keyframes are **semantic declarations**, not executable instructions.
 
