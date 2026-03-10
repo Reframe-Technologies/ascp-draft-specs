@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.54 — Informational (Pre-RFC Working Draft)  
+Version: 0.55 — Informational (Pre-RFC Working Draft)
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -356,7 +356,7 @@ Specifically:
 - Once accepted by Layer-0, an Artipoint Record **MUST NOT** be modified, reordered, or removed.
 - Layer-0 **MUST** ensure deterministic convergence such that any two replicas possessing the same set of accepted Artipoint Records compute an identical Channel Log in Canonical Order.
 
-Layer-0 authority over Channel Logs is **structural and protocol-scoped only**.  
+Layer-0 authority over Channel Logs is **structural and protocol-scoped only**.
 Layer-0 **MUST NOT** interpret the semantic meaning, governance implications, authorship intent, or application-level consequences of any Artipoint Record.
 
 Semantic interpretation, authority evaluation, governance enforcement, and lifecycle meaning are defined exclusively by higher layers (Layer-2 and Layer-3) and are explicitly out of scope for ALSP.
@@ -829,6 +829,12 @@ A client operating in Provisioned Mode:
 - **MUST** sign the initial authentication request using the private key associated with the recovery certificate.
 - **MUST** use an empty key identifier value in the protected header of the initial authentication request.
 
+A server processing the initial Provisioned Mode authentication request:
+
+- **MUST** verify the request signature immediately using the public key contained in `recovery_cert`.
+- **MUST NOT** defer signature verification for this message.
+- **MUST** reject the request with `invalid_auth` if recovery-certificate parsing, key extraction, or signature verification fails.
+
 If the server determines that additional identity material is required, it **MUST** issue an authentication challenge. The client’s response to this challenge:
 
 - **MUST** include its newly provisioned identity certificate or identity package.
@@ -908,7 +914,7 @@ After the session enters AUTHENTICATED state, all ALSP messages MUST follow the 
 
 These requirements apply to all messages sent in AUTHENTICATED and SYNC\_READY states.
 
-*Non-normative note:*  
+*Non-normative note:*
 This transition model ensures that authentication is mutual and complete before any channel synchronization occurs, and that all subsequent messages carry cryptographic proof of session binding through the cross-nonce mechanism.
 
 ## **8.7. Session Lifecycle and Resilience**
@@ -1144,7 +1150,7 @@ These requirements ensure that all implementations produce comparable encodings 
 - The value of `alsp_msg_header` **MUST** be a valid **UTF‑8** encoded **JSON** document (RFC 8259). I‑JSON (RFC 7493) is RECOMMENDED.
 - To promote stable signatures and easy comparisons between implementations, producers **SHOULD** serialize this JSON in **canonical form** (e.g., JCS / RFC 8785).
 - Receivers **MUST** treat the header as an **opaque byte string** at the CBOR layer and **MUST NOT** re‑serialize it when verifying signatures.
-- The schema of the JSON header is intentionally flexible but MUST NOT be reserialized when verfied. It is the entire CBOR envelope that MUST be signed as sent and verified as received. 
+- The schema of the JSON header is intentionally flexible but MUST NOT be reserialized when verfied. It is the entire CBOR envelope that MUST be signed as sent and verified as received.
 
 The JSON schema for `alsp_msg_header` is defined in the remainder of this section 10 for each concrete ALSP message type (e.g., hello, sync\_request, sync\_response, sync\_update, error).
 
@@ -1607,7 +1613,8 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 **kid:**
 
 - **Type:** string
-- **MUST** be present on all ALSP messages except when constructing the initial auth\_request in Provisioned Mode. The missing `kid` signifies the absence of a resolvable identity key at this point in the authentication process.
+- **MUST** be present on all ALSP messages except when constructing the initial auth\_request in Provisioned Mode, where it **MUST** be an empty string.
+- For the initial Provisioned Mode auth\_request, receivers **MUST** verify the JWS using the public key in `recovery_cert` and **MUST NOT** perform `kid`-based key resolution for that message.
 - When present, **MUST** uniquely reference the signing key (identity key) as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
 - Implementations **MUST** emit proper kid for all messages once the authentication completes.
 - The receiver **MUST** use the kid value to resolve the appropriate public key for signature verification.
@@ -1653,7 +1660,9 @@ Receivers **MUST** validate, in order:
 7. Signature correctness over the CBOR envelope bytes
 8. Timestamp validation per Section 10.4.5
 
-Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5, with one exception: when constructing the initial auth\_request in Provisioned Mode, the receiver **MUST** **defer** signature verification (step 7 above) until the referenced key is available. All other validation steps must pass immediately.
+For the initial Provisioned Mode auth\_request, key resolution in step 5 **MUST** use the public key carried in `recovery_cert`, and step 7 **MUST** be performed immediately using that key.
+
+Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
 
 ### **10.4.5 Timestamp Validation**
 
@@ -1836,7 +1845,7 @@ ALSP places the following minimal constraints on the JWE protected header:
 
 - The header **MUST** be syntactically valid JOSE JSON.
 - The `kid` field:
-  - **SHOULD** reference the recipient’s identity certificate using the form  
+  - **SHOULD** reference the recipient’s identity certificate using the form
     `ascp:cert:<uuid>` *when such a reference is known and resolvable by the sender*.
   - **MUST** be the empty string (`""`) if no such certificate reference exists at the time of wrapping.
 - ALSP **MUST NOT** assign or interpret any semantic meaning to the `kid` value beyond enabling JWE processing.
@@ -1953,7 +1962,7 @@ This is compliant with RFC 7517 §4.2, which permits keys to omit the use field 
 ```json
 {
   "kty": "OKP",
-  "crv": "Ed25519",  
+  "crv": "Ed25519",
   "x": "<base64url-encoded-public-key>",
   "alg": "EdDSA",
   "kid": "ascp:cak:<keyframe_uuid>"
@@ -2285,7 +2294,7 @@ Replicas MUST validate that all required fields are present and correctly typed 
 3. Senders SHOULD NOT automatically retry push delivery to avoid message storms
 4. Optionally, send an ALSP error message with error\_code "push\_failed" and suggested\_action "Re-sync via pull request"
 
-**Graceful Degradation:**  
+**Graceful Degradation:**
 Replicas operating in unreliable network conditions MAY disable push mode entirely and rely on periodic pull sync to ensure eventual consistency.
 
 ## **16.5 Reconnection & Backoff**
@@ -2628,7 +2637,7 @@ This breaks down into three segments:
 // Dot separator
 2e
 
-// Payload segment: 1f 44 (escape + ULEB128(68)) + 68 bytes  
+// Payload segment: 1f 44 (escape + ULEB128(68)) + 68 bytes
 1f 44
 7b 22 73 75 62 22 3a 22 31 32 33 34 35 36 37 38
 39 30 22 2c 22 6e 61 6d 65 22 3a 22 4a 6f 68 6e
