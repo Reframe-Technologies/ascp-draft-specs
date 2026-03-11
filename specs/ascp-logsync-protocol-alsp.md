@@ -630,7 +630,7 @@ In both flows:
 
 This invariant ensures that ALSP never exposes log material or permits reliance on bootstrap state before establishing a mutually authenticated session. Bootstrap artifacts MAY be carried during the final `hello` exchange, but they do not become eligible for higher-layer reliance until session authentication completes and those higher-layer validation procedures run.
 
-The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions to the AUTHENTICATED state (Section 8.4). After that transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.3.2.2.
+The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions to AUTHENTICATED and the post-authentication nonce rules of Section 8.3.2.2 take effect.
 
 *Non-normative note:* The handshake design allows authentication to succeed even in asymmetric trust-discovery scenarios, such as when only one peer realizes a challenge is required or when caches differ across replicas.
 
@@ -645,7 +645,7 @@ ALSP employs two complementary scopes of authentication:
 1. **Message-level authentication**, which applies to every ALSP message and provides authenticity and integrity using JWS signatures.
 2. **Session-level authentication**, which is established once per connection and binds subsequent messages to a specific authenticated session, providing cryptographic continuity, replay resistance, and eligibility for privileged operations.
 
-Session-level authentication is realized through an authenticated handshake that establishes fresh, session-scoped nonces. After the handshake completes, message-level authentication operates in post-authentication mode, binding each message to the negotiated session via those nonces and preventing replay across connections.
+Session-level authentication is realized through an authenticated handshake that establishes fresh, session-scoped nonces. After the handshake completes, message-level authentication binds each message to the negotiated session via those nonces and prevents replay across connections.
 
 Session-level authentication builds upon, but does not replace, message-level authentication. Both scopes are required for correct and secure ALSP operation.
 
@@ -692,7 +692,7 @@ This cross-use of nonces ensures that:
 
 The `session_nonce` field in the ALSP message body MUST always contain the sender’s own nonce.
 
-Successful nonce exchange and validation bind both peers to a shared session context and establish cryptographic continuity across subsequent ALSP messages.
+Successful nonce exchange and validation bind both peers to a shared session context.
 
 #### 8.3.2.3 Progressive Replay Protection Model
 
@@ -786,8 +786,7 @@ Both peers have:
 - validated `timestamp` freshness and rejected stale/replayed authentication messages
 - exchanged `hello` messages
 
-At this point, the session is fully authenticated.
-Reaching AUTHENTICATED switches the expected protected-header nonce behavior for subsequent messages from the sender’s own `session_nonce` to the peer’s `session_nonce`, as defined in Section 8.3.2.2.
+At this point, the session is fully authenticated. Reaching AUTHENTICATED switches the expected protected-header nonce behavior for subsequent messages from the sender’s own `session_nonce` to the peer’s `session_nonce`, as defined in Section 8.3.2.2.
 
 ### **SYNC\_READY**
 
@@ -916,7 +915,7 @@ Mode selection determines what identity material the client supplies; flow selec
 
 ## **8.6 Transition to AUTHENTICATED State**
 
-A session enters the **AUTHENTICATED** state (Section 8.4) after both peers have exchanged valid `hello` messages and verified each other's `identity`, `session_nonce`, and `timestamp` freshness.
+A session enters the **AUTHENTICATED** state (Section 8.4) after both peers have exchanged valid `hello` messages and verified each other's identity, `session_nonce`, and `timestamp` freshness.
 
 ### Transition Requirements
 
@@ -925,9 +924,7 @@ A peer MUST NOT consider the session AUTHENTICATED until it has both:
 1. **sent** its own `hello`, and
 2. **received** a valid `hello` from the peer.
 
-Once both conditions are met, the session transitions to AUTHENTICATED and the nonce binding rules defined in Section 8.3.2.2 take effect for all subsequent messages.
-
-From AUTHENTICATED, the session transitions to SYNC\_READY only after receiving and validating at least one subsequent ALSP message under the post-authentication nonce rule.
+Once both conditions are met, the session transitions to AUTHENTICATED and the nonce binding rules defined in Section 8.3.2.2 take effect for all subsequent messages. From AUTHENTICATED, the session transitions to SYNC\_READY only after receiving and validating at least one subsequent ALSP message under the post-authentication nonce rule.
 
 ### Post-Authentication Requirements
 
@@ -939,7 +936,7 @@ After the session enters AUTHENTICATED, all ALSP messages MUST follow the post-a
 
 These requirements apply to all messages sent in AUTHENTICATED and SYNC\_READY.
 
-*Non-normative note:* This transition model ensures that authentication is mutual and complete before any channel synchronization occurs, that the nonce-usage rule switches cleanly at AUTHENTICATED, and that SYNC\_READY is reached only once post-authentication cross-nonce message binding has actually been observed on the wire.
+*Non-normative note:* This transition model ensures that authentication is mutual and complete before any channel synchronization occurs, that the nonce rule switches cleanly at AUTHENTICATED, and that SYNC\_READY is reached only once post-authentication cross-nonce binding has actually been observed on the wire.
 
 ## **8.7 Session Lifecycle and Resilience**
 
@@ -1662,7 +1659,7 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
   "alg": "ES256",                // Signing algorithm
   "kid": "ascp:cert:<uuid>",     // Identity or session key reference
   "typ": "alsp",                 // Identifies ALSP message
-  "nonce": "<nonce>"             // Nonce per Section 10
+  "nonce": "<nonce>"             // Nonce per Section 8.3.2.2
 }
 ```
 
@@ -1736,7 +1733,7 @@ For subsequent client-authored messages in a Provisioned Mode session, key resol
 
 For Direct Mode messages, step 5 **MUST** treat the presented `kid` as identifying the certificate being authenticated for the session. If existing state is resolved for that `kid`, the receiver **MUST** confirm that the presented certificate material matches it before proceeding with signature validation.
 
-Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
+Messages failing any requirement **MUST** be rejected with an ALSP error message as defined in Section 16.
 
 ### **10.4.5 Timestamp Validation**
 
@@ -1750,7 +1747,7 @@ When a message is rejected due to timestamp violation, the receiver MUST send an
 
 ## **10.5 Error Cases**
 
-Use the standard ALSP error message. Additional guidance is provided in Section 16.
+Use the standard ALSP error message defined in Section 16.
 
 - `invalid_auth`: Bad signature, unknown kid, or cert mismatch.
 - `unauthorized`: Replication admission failed (token invalid/expired, or CAP missing/invalid).
@@ -2270,7 +2267,7 @@ Replicas **MAY** maintain concurrent ALSP sessions with multiple remote endpoint
 Regardless of connectivity pattern:
 
 - Ordering semantics **MUST** follow Section 9.
-- Session establishment and authentication **MUST** follow Section 8 and Section 14.
+- Session establishment and authentication **MUST** follow Section 8. Transport bindings **MUST** follow Section 14.
 - Divergence detection and recovery **MUST** follow Section 17.1.
 
 Topology does not affect any protocol guarantees.
@@ -2463,21 +2460,15 @@ Divergence Prevention Guidelines:
 
 While divergence is expected to be rare, these tools ensure that detection and repair can be handled gracefully without compromising global convergence.
 
-# **18. Normative Implementation Guidance**
+# **18. Implementation Guidance**
 
 ## **18.1 Deduplication**
 
-Upon receiving **Layer-0 entries** (e.g., in `sync_response` or `sync_update`), replicas MUST deduplicate based on `message_id` before inserting into local Channel Logs.
-
-If a message with the same message\_id already exists in the local log, it MUST NOT be reinserted or affect the Lamport counter. However, the replica MUST still process any lamport\_max values from the **ALSP message header** for counter synchronization.
-
-This ensures idempotent sync and prevents duplication during retries, reconnects, or when receiving the same message from multiple peers.
+Replicas MUST apply the deduplication rules of Sections 9.6 and 17.1 before inserting received Layer-0 entries into local Channel Logs.
 
 ## **18.2 Channel Message Scope**
 
-All **Layer-0 entries** included in a single `sync_response` or `sync_update` MUST belong to the same `channel_id` as declared in the **ALSP message header**.
-
-Messages from different channels MUST NOT be intermixed in the same ALSP sync message. Implementations MUST send separate sync messages for each channel, even when responding to multiple concurrent sync requests.
+Implementations MUST follow the per-message channel scoping rules defined in Section 10.3. In particular, entries from different channels MUST NOT be intermixed in the same ALSP synchronization message.
 
 ## **18.3 Push Mode Lamport Rules**
 
@@ -2486,14 +2477,12 @@ In push mode, replicas MUST always transmit sync\_update messages when they have
 This ensures:
 
 - Proper advancement of the receiver's Lamport counter to the highest observed value.
-- Prevents rollback or reordering anomalies
-- Maintains causal consistency under concurrent sync conditions
+- Prevention of rollback or reordering anomalies.
+- Preservation of deterministic logical ordering under concurrent sync conditions.
 
 ## **18.4 Ordering Guarantees**
 
-When inserting received messages into local logs, replicas MUST maintain canonical ordering using the tuple (lamport\_time, message\_id) regardless of the order in which messages were received or transmitted.
-
-Messages MAY be received out of canonical order due to network conditions or batching optimizations. The `more: true` field in sync responses provides natural flow control, allowing senders to segment large message sets across multiple responses while respecting the `max_alsp_length` negotiated during hello. Implementations MUST sort and insert them in the correct positions within the local log structure.
+Implementations MUST follow the canonical insertion and ordering rules of Section 9.6 regardless of the order in which entries are received or transmitted. Batching and segmentation do not alter those rules.
 
 ## **18.5 Persistence Requirements**
 
@@ -2505,15 +2494,13 @@ Upon restart, replicas MUST initialize their counter to the maximum of:
 - The highest Lamport value across all locally stored **Channel Log entries**
 - Any previously received lamport\_max value from peers (if preserved)
 
-**Startup Sync Optimization**: To maximize wall-clock time ordering quality, replicas SHOULD attempt to sync with at least one peer and process any received `lamport_max` values before encoding new local articulations into the Layer 0 channel logs. This ensures that new messages receive Lamport values that are temporally consistent with current network activity rather than artificially low values that would cause them to appear out of chronological sequence in the global timeline.
-
-This prevents counter regression and maintains the best possible wall clock sorted global ordering consistency across restarts.
+**Startup Sync Optimization**: Replicas SHOULD attempt to sync with at least one peer and process any received `lamport_max` values before encoding new local articulations into Layer-0 Channel Logs. This reduces the chance of assigning locally low Lamport values immediately after restart and helps maintain continuity with current network ordering state.
 
 ## **18.6 Channel Log Persistence and Implementation Flexibility**
 
-ALSP defines **protocol understanding and convergence semantics** for Channel Logs, but **does not prescribe how Channel Logs are stored, indexed, or physically persisted** by an implementation.
+ALSP defines Channel Log semantics and convergence requirements, but does not prescribe how Channel Logs are stored, indexed, or physically persisted by an implementation.
 
-Implementations MAY choose any internal strategy for Channel Log persistence, including but not limited to:
+Implementations MAY choose any internal persistence strategy, including:
 
 - in-memory structures,
 - append-only files,
@@ -2521,7 +2508,7 @@ Implementations MAY choose any internal strategy for Channel Log persistence, in
 - segmented or sharded storage layouts, or
 - derived indexes or caches.
 
-Any such strategy **MUST preserve the externally observable semantics defined by this specification**, including:
+Any such strategy **MUST** preserve the externally observable semantics defined by this specification, including:
 
 - append-only behavior,
 - deterministic Canonical Order,
@@ -2529,7 +2516,7 @@ Any such strategy **MUST preserve the externally observable semantics defined by
 - correct digest computation, and
 - convergence behavior during synchronization.
 
-Internal compaction, snapshotting, or optimization techniques are permitted **only if they are semantically equivalent** to replaying the full append-only Channel Log in Canonical Order.
+Internal compaction, snapshotting, or optimization techniques are permitted only if they are semantically equivalent to replaying the full append-only Channel Log in Canonical Order.
 
 ALSP does not define operational policies for retention, garbage collection, or archival. Those concerns are implementation- and deployment-specific and MAY be governed by higher-layer policy or operator configuration.
 
