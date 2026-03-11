@@ -840,7 +840,7 @@ If the server determines that additional identity material is required, it **MUS
 
 - **MUST** be signed using the newly provisioned identity private key recovered from `recovery_envelope.user_key_jwe`.
 - **MUST** use `recovery_envelope.identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
-- **MUST** include its newly provisioned identity certificate or identity package as required by the Challenge Flow.
+- **MUST** include its newly provisioned identity certificate or identity package, as required by the Challenge Flow.
 - **MUST NOT** include the recovery certificate.
 
 Provisioned Mode allows clients without preexisting identity credentials to participate in Session Authentication using identity materials issued securely during the session establishment.
@@ -1261,7 +1261,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - Type: string (JWS compact serialization carrying a JWK encoded public identity key)
   - A JWS-encoded JWK containing the client’s public identity key. This field **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
   - The JWS signature of the included JWK and also all of the sender's ALSP message **MUST** be verifiable using this same public identity key, thereby proving possession of the corresponding private identity key.
-  - When included, this JWK **SHALL** be used by the server to authenticate the client and to validate all JWS signatures during the session (Trust & Identity §7.2).
+  - When included, this JWK **SHALL** be used by the server to authenticate the client and to validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - Informational Note: In **Provisioned Mode**, the identity will be provisioned by the server via `recovery_envelope` in a subsequent message.
 - **recovery\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded public recovery key)
@@ -1272,13 +1272,14 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - The JWS protected header for `recovery_cert` **MUST** use `alg = "ES256"`; `ES384` and other signature algorithms are not permitted for this artifact.
   - The JWS signature of the included JWK and also the entire ALSP message itself **MUST** be verifiable using this same recovery public key, thereby proving possession of the corresponding recovery private key.
   - This artifact is a Provisioned-Mode bootstrap credential for ALSP transport. It supplies the recovery public key used by the server when constructing the `user_key_jwe` field inside the `recovery_envelope` returned by `auth_challenge`.
+  - This field is distinct from the optional `recovery_cert_kid` field inside a Trust & Identity `recovery_envelope`; `recovery_cert` carries the bootstrap recovery public key directly in the ALSP message.
   - This artifact is not itself required to be a pre-existing Certificate Artipoint in ASCP logs.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be present.
-  - **MUST** contain a UTF-8 encoded client side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
+  - **MUST** contain a UTF-8 encoded client-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
-  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to ASCP Trust and Identity Specification rules.
+  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture.
   - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrapping materials.
 - **node\_id**
   - Type: string (UUID)
@@ -1292,14 +1293,14 @@ The `auth_challenge` message is sent by the server during the Challenge Flow whe
 
 The server **MUST** include its identity key in any `auth_challenge` message it sends. The server **MUST** also sign all ALSP messages with the private identity key corresponding to the included public identity key. During bootstrapping operations, the client **MUST** treat this key as the sender's provisional identity key for the session, but **MUST NOT** complete the bootstrap process until it has completed the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification.
 
-In Provisioned Mode, the server uses the `auth_challenge` message to send the bootstrapping client a `recovery_envelope` JSON object conforming to Trust & Identity §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
+In Provisioned Mode, the server uses the `auth_challenge` message to send the bootstrapping client a `recovery_envelope` JSON object conforming to ASCP Trust & Identity Architecture §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
 
 ```json
 {
   "alsp_msg_type": "auth_challenge",     // Explicit ALSP Auth Challenge
   "timestamp": "<timestamp>",            // RFC 3339 UTC
   "session_nonce": "utf-8-string",       // Server's session nonce
-  "recovery_envelope": { ... },          // Trust & Identity recovery_envelope JSON object
+  "recovery_envelope": { ... },          // ASCP Trust & Identity recovery_envelope JSON object
   "identity_cert": "<JWK+JWS>",          // Self-Signed JWK of public identity key
   "user_identity": "utf-8-string",       // Server’s user identity as a UUID
   "node_id": "uuid"                      // Server’s replica node UUID
@@ -1324,7 +1325,7 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
   - **MUST** be treated as the server's session nonce and used for subsequent JWS nonce values according to the rules in Section 8.3.2.2.
   - This value serves as the challenge nonce for identity and key-binding proof, as defined in the Trust & Identity Architecture.
 - **recovery\_envelope**
-  - Type: object (JSON object conforming to Trust & Identity `recovery_envelope`)
+  - Type: object (JSON object conforming to ASCP Trust & Identity `recovery_envelope`)
   - In **Direct Mode**, this field **MUST** be omitted.
   - In **Provisioned Mode**, this field **MUST** be present.
   - The object **MUST** conform to the `recovery_envelope` structure defined by the ASCP Trust & Identity Architecture (§8.4 and §11).
@@ -1334,22 +1335,22 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
   - For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
   - The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
   - The `user_identity` value within the object identifies the identity the server is provisioning for the client in that session and is treated as provisional session state at this stage.
-  - Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust and Identity Architecture specification.
+  - Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust & Identity Architecture.
   - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
   - **MUST** be the server's JWS self-signed JWK of the server's public identity key.
-  - This JWK encoded public identity key **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (Trust & Identity §7.2).
+  - This JWK encoded public identity key **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - **MUST** be consistent with the kid used in the JWS protected header for this and all following messages.
   - The JWS signature of the included JWK and also all of the sender's ALSP message **MUST** be verifiable using this same public identity key, thereby proving possession of the corresponding private identity key.
 
 - **user\_identity**
   - Type: string (UTF-8 UUIDv7 string)
   - **MUST** be present.
-  - **MUST** contain a UTF-8 encoded server side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be the UUID of the Identity Artipoint itself.
+  - **MUST** contain a UTF-8 encoded server-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to identity\_cert or the identity resulting from the provisioned identity flow.
-  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to both ASCP Trust and Identity Specification rules and also ASCP Bootstrapping and Channel Discovery rules.
-  - Clients undergoing a replica bootstrap process must ultimately validate the identity and associated public according to the rules outlined in the ASCP Bootstrapping and Channel Discovery Specification.
+  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture and the ASCP Bootstrapping and Channel Discovery Specification.
+  - Clients undergoing replica bootstrap MUST ultimately validate the identity and associated public key according to the ASCP Bootstrapping and Channel Discovery Specification.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1437,25 +1438,25 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
   - **MUST** be provided in the hello message, if not already provided by the sending peer in a previous message.
   - If previously provided, it MUST match any previously provided `identity_cert`. ie: Senders must not change their `identity_cert`key material during a session.
   - When provided, **MUST** contain the JWS self-signed JWK of the public idenity key of the sender
-  - When provided, **MUST** be used by the peer to authenticate and validate all JWS signatures during the session (Trust & Identity §7.2).
+  - When provided, **MUST** be used by the peer to authenticate and validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - **MUST** be consistent with the identity key implied by a provided `kid` placed into in the JWS protected headers.
   - The JWS signature of the included JWK and also all of the sender's ALSP message **MUST** be verifiable using this same public identity key, thereby proving possession of the corresponding private identity key.
 
 - **user\_auth**
   - Type: string
   - This field **MUST** be present. This field is ultimately used to properly authenticate a peer's public key and binding of that to their indicated identity. When a `kid` is provided here, the trust chain flows directly from the articulation log's root anchored trust model. When an **Identity Claim Bundle (ICB)** is provided, the trust stems from the associated identity provider and the peer's ability to show proof of possession of the private identity key.
-  - In **Challenge Flow**, the authenticating client **MUST** place a freshly generated **ICB** bound to the server's `session\_nonce`. The **ICB** provided **MUST** satisfy all requirements of Trust & Identity §9 and **MUST** be demonstrating proof of posession of the private identity key being used by the client for signing ALSP messages. This **ICB** is thereby providing binding of the client's identity to its identity key material.
-  - In **Immediate Flow**, the authenticating client **SHOULD** contain the JOSE key identifier (kid) of the form `ascp:cert:<uuid>` referencing the identity certificate UUID known already known to the server. If this is unknown or unavailable for some reason, the client then **MUST** _instead_ place the ICB into this field as if the authentication was following the **Challenge Flow**.
-  - Authenticating servers MUST always place the JOSE key identitfier (kid) of the form `ascp:cert:<uuid>` referencing the identity public key being used to sign all messages of this session. Logically, you can view this such that servers are always a peer who are authenticated using an Immediate Flow.
+  - In **Challenge Flow**, the authenticating client **MUST** place a freshly generated **ICB** bound to the server's `session\_nonce`. The **ICB** provided **MUST** satisfy all requirements of ASCP Trust & Identity Architecture §9 and **MUST** demonstrate proof of possession of the private identity key being used by the client to sign ALSP messages. This **ICB** thereby binds the client's identity to its identity key material.
+  - In **Immediate Flow**, the authenticating client **SHOULD** contain the JOSE key identifier (`kid`) of the form `ascp:cert:<uuid>` referencing the identity certificate UUID already known to the server. If this is unknown or unavailable, the client **MUST** instead place the ICB into this field as if the authentication were following the **Challenge Flow**.
+  - Authenticating servers **MUST** always place the JOSE key identifier (`kid`) of the form `ascp:cert:<uuid>` referencing the identity public key used to sign all messages in the session. Logically, servers are always authenticated using an Immediate Flow.
   - Receivers **MUST** validate the identity conveyed by this field. When an ICB is supplied, the receiver **MUST** validate the bundle and treat the contained certificate as authoritative for the session. When a kid is supplied, the receiver **MUST** resolve it to a validated certificate and **MUST NOT** accept the value if resolution is not possible.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be provided in the hello message, if not already provided by the sending peer in a previous message.
-  - If previously provided, it MUST match any previously provided `user_identity`. ie: Senders must not change their `user_identity` during a session.
-  - **MUST** contain a UTF-8 encoded client side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
+  - If previously provided, it MUST match the previously provided `user_identity`; senders MUST NOT change `user_identity` during a session.
+  - **MUST** contain a UTF-8 encoded client-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
-  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to both ASCP Trust and Identity Specification rules and also ASCP Bootstrapping and Channel Discovery rules.
-  - A sender **MUST** favor sending the user_identity as the UUID of its own Identity Artipoint, when known. The enables more direct authentication pathways via leveraging pre-existing bootstrapping materials.
+  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture and the ASCP Bootstrapping and Channel Discovery Specification.
+  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrapping materials.
 - **status\_message**
   - Type: string (UTF-8)
   - **MAY** be present.
@@ -1668,7 +1669,7 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 
 - **Type:** string (UTF-8)
 - **MUST** be present with contents as specified in Section 8.3.2.2.
-- Receivers **MUST** reject any message whose protected header contains an unexpected nonce to ensures session binding, replay protection, and cross-session separation.
+- Receivers **MUST** reject any message whose protected header contains an unexpected nonce to ensure session binding, replay protection, and cross-session separation.
 
 ### **10.4.2 JWS Payload**
 
@@ -1966,11 +1967,11 @@ ascp:<type>:<uuid>
 3. Extract the public key from the JWK representation
 4. Use for JWS signature verification
 
-This approach maintains consistency with Layer 1's key referencing model while operating within Layer 0's bootstrap-based key distribution mechanisms asa well.
+This approach maintains consistency with Layer 1's key referencing model while also operating within Layer 0's bootstrap-based key distribution mechanisms.
 
 ## **13.3 JWK Requirements**
 
-Just like **Layer-1 Channel Envelopes**—which may carry JOSE protected headers referencing the cryptographic material associated with the envelope’s signing/encryption—Layer-0 relies on a similar mechanism, but because the authentication and bootstrapping process may not afford immediate validation via the normal log anchored mechanisms. Please consult the ASCP Bootstrapping and Channel Discovery Specification in addition to the ASCP Trust and Identity Specification to fully understand how to properly authenticate ALSP messages and Channel Access Proofs.
+Just like **Layer-1 Channel Envelopes**—which may carry JOSE protected headers referencing the cryptographic material associated with the envelope’s signing or encryption—Layer-0 relies on a similar mechanism, but the authentication and bootstrapping process may not permit immediate validation through normal log-anchored mechanisms. Consult the ASCP Bootstrapping and Channel Discovery Specification together with the ASCP Trust & Identity Architecture for the procedures required to authenticate ALSP messages and Channel Access Proofs correctly.
 
 ### EC Public Key JWK Format:
 
