@@ -141,7 +141,7 @@ A uniquely identified Distribution Construct. The concrete replication substrate
 
 **Channel Log**
 
-An append-only log maintained for a specific Channel and replicated across Replicas using ALSP. A Channel Log contains an ordered sequence of Artipoint Records.
+An append-only log maintained for a specific Channel and replicated across Replicas using ALSP. A Channel Log contains an ordered sequence of Artipoint Records for that Channel.
 
 **Artipoint Record**
 
@@ -153,7 +153,7 @@ A Layer-1 produced cryptographic container (e.g., JOSE serialization) that encap
 
 **message\_id**
 
-A UUIDv7 identifier associated with an Artipoint Record for idempotence, deduplication, and canonical ordering. In the Layer-0 wrapper specified by Section 6.3, `message_id` is encoded as the raw 16-byte UUID value; textual UUID encodings are not permitted in that wrapper.
+A UUIDv7 identifier associated with an Artipoint Record for idempotence, deduplication, and canonical ordering. `message_id` values are expected to be globally unique across all Artipoint Records, independent of channel membership. In the Layer-0 wrapper specified by Section 6.3, `message_id` is encoded as the raw 16-byte UUID value; textual UUID encodings are not permitted in that wrapper.
 
 **payload**
 
@@ -341,7 +341,7 @@ Future revisions of this specification may define Merkle-based summary structure
 ALSP operates at the Layer boundary described in Section 3.2:
 
 - A **Channel** is the unit of distribution whose concrete substrate is a **Channel Log**.
-- A **Channel Log** is an append-only sequence of **Artipoint Records**.
+- A **Channel Log** is an append-only sequence of **Artipoint Records** for a specific Channel.
 - Each Artipoint Record includes Layer-0 synchronization metadata and an opaque Layer-1 Channel Envelope payload.
 
 ALSP synchronizes a Channel Log by exchanging Artipoint Records (or components sufficient to reconstruct them) and applying the Layer-0 validation, deduplication, and ordering rules defined by this specification. ALSP does not define what a Channel “means,” what authority any record carries, nor how Channel governance evolves; it specifies only the mechanisms by which admitted replicas exchange and converge on an identical log substrate.
@@ -367,7 +367,7 @@ Semantic interpretation, authority evaluation, governance enforcement, and lifec
 This subsection is **informative** and intended to assist implementers in reasoning about deployment and dataflow.
 
 - **channel\_id:** Identifies the Channel Log being synchronized and the scope of replication-admission verification.
-- **Channel Log:** An append-only log of Artipoint Records. ALSP’s only log-level processing is validation, deduplication, and insertion into Canonical Order.
+- **Channel Log:** The append-only log of Artipoint Records for a specific Channel. ALSP’s only log-level processing is validation, deduplication, and insertion into Canonical Order.
 - **Distribution:** Replicas may synchronize Channel Logs using centralized, peer-to-peer, or hybrid topologies. Topology affects liveness (i.e., which peers can exchange with which others, and how quickly records propagate) but does not change ALSP’s validation rules, ordering rules, or convergence properties.
 
 ALSP synchronization exchanges are scoped per channel. However, ALSP ordering state is not purely per-channel: conforming replicas maintain a single replica-wide Lamport counter across all channels, and protocol messages may propagate Lamport state that affects insertion ordering behavior beyond any one channel exchange. Any cross-channel projections, global timelines, or graph construction remain Layer-3 concerns and are not specified by ALSP.
@@ -494,7 +494,7 @@ Rejected entries MUST NOT affect Lamport counters or ordering. Implementations S
 ALSP's ordering architecture centers on a **logical clock mechanism** - a particular type of Lamport clock that establishes a consistent, deterministic sequence for all messages across distributed replicas. Rather than relying on synchronized wall clocks or centralized coordination, ALSP uses metadata embedded in each Channel Log entry to determine where new messages should appear relative to existing ones.
 
 - **Canonical ordering key:**(lamport\_time, message\_id) with message\_id compared as raw 16-byte lexicographic tie-breaker.
-- **Idempotence:** Receivers MUST de-duplicate **per channel** by `message_id`.
+- **Idempotence:** Receivers MUST de-duplicate by globally unique `message_id`; applying a per-channel projection does not alter message identity.
 - **Atomicity:** Each `L0-Entry` is self-contained; batch boundaries with ALSP messages have no semantics.
 
 This ordering mechanism is fundamental to Layer 0's core responsibility: ensuring that all replicas of a Channel Log converge to identical Artipoint Record sequences, regardless of network conditions, arrival order, or the timing of synchronization events. The architecture supports offline operation, concurrent authorship, and partial replication while maintaining deterministic logical ordering.
@@ -585,7 +585,7 @@ ALSP session authentication establishes a secure, replay-protected, identity-bou
 
 **Peer Authentication (Layer-0):** Each peer MUST validate that the remote endpoint controls the **Identity Key** asserted by the presented authentication materials, as evaluated under local trust policy anchored in the ASCP Trust & Identity Architecture. ALSP does not interpret the *meaning* of identity claims; it requires only that the peer’s authentication key material and associated proofs are verified before entering the AUTHENTICATED state.
 
-**Freshness and Replay Protection:** All authentication messages MUST include a `session_nonce` generated by the sender, and peers MUST validate that these nonces are fresh and not reused across sessions. Timestamp validation MUST be applied to authentication messages to prevent replay of stale credentials.
+**Freshness and Replay Protection:** All authentication messages MUST include a `session_nonce` freshly generated by the sender for that session, and senders MUST generate a new `session_nonce` for each new session. Receivers MUST validate that a peer's `session_nonce` remains consistent within the session. Timestamp validation MUST be applied to authentication messages to prevent replay of stale credentials.
 
 **Mutual Authentication:** Both parties MUST complete the authentication handshake and confirm each other’s identity before any Channel Log operations are permitted. Authentication MUST be mutual; unilateral authentication is not allowed.
 
@@ -601,7 +601,7 @@ Within the ALSP threat model, replay after session binding is **cryptographicall
 
 **No Session Resumption:** ALSP sessions MUST NOT be resumed across connections. After any disconnect, a new authentication handshake is required to ensure fresh nonces, updated trust validation, and replay resistance.
 
-**Single Authoritative Session:** At any given time, only one authenticated session MAY exist between two replicas. If a second connection attempt occurs while an authenticated session is active, the recipient MUST reject the new session or explicitly terminate the prior one before proceeding.
+**Single Authoritative Session:** At any given time, only one authenticated session SHOULD remain operational for a given authenticated `(local_node_id, remote_node_id)` pair. Implementations MUST apply this rule on a best-effort basis using the remote `node_id` once it has been authenticated during the handshake. If a new session reaches the point where its authenticated `node_id` duplicates that of an already operational session for the same pair, the recipient MUST reject the new session or explicitly terminate one of the sessions before proceeding.
 
 **Post-Authentication Requirements:** After the session is authenticated, all subsequent ALSP messages MUST be signed using the identity key validated during the handshake. Messages failing signature validation, nonce validation, or timestamp requirements MUST be rejected with an error and connection termination.
 
@@ -624,11 +624,11 @@ In both flows:
 - Each peer MUST validate the peer’s identity, `session_nonce`, and `timestamp` freshness before proceeding.
 - **No Channel Log operations of any kind MAY occur prior to successful session authentication**, including:
   - log synchronization,
-  - bootstrap artifact retrieval,
+  - higher-layer bootstrap processing that depends on trusted session completion,
   - channel discovery, or
   - replication-admission checks.
 
-This invariant ensures that ALSP never exposes log material or bootstrap state before establishing a mutually authenticated, replay-safe session.
+This invariant ensures that ALSP never exposes log material or permits reliance on bootstrap state before establishing a mutually authenticated session. Bootstrap artifacts MAY be carried during the final `hello` exchange, but they do not become eligible for higher-layer reliance until session authentication completes and those higher-layer validation procedures run.
 
 The handshake concludes when each side has received a valid `hello` from the other, at which point the session transitions to the AUTHENTICATED state (Section 8.4). After that transition, all ALSP messages MUST use the post-authentication signature and nonce-binding rules defined in Section 8.3.2.2.
 
@@ -667,7 +667,7 @@ Message-level authentication allows recipients to detect message tampering, spoo
 
 ### 8.3.2 Session-Level Authentication
 
-Session-level authentication establishes a mutually authenticated, replay-safe cryptographic session between two replicas. It enables privileged ALSP operations such as log synchronization, bootstrap artifact exchange, and channel interaction.
+Session-level authentication establishes a mutually authenticated cryptographic session between two replicas. It enables privileged ALSP operations such as log synchronization, bootstrap artifact exchange, and channel interaction.
 
 Session-level authentication is **session-oriented**, not trust- or policy-oriented. It establishes cryptographic continuity with a peer for the lifetime of a single session, but does **not** assert ASCP instance membership, Channel Log replication-admission authority, governance legitimacy, or long-term trust standing. Those determinations are made by higher layers after bootstrap artifacts are acquired and validated.
 
@@ -705,9 +705,13 @@ ALSP replay protection strengthens as session establishment progresses and addit
 - **Challenge phase (when applicable)**
   - The server introduces a fresh challenge nonce.
   - Identity material becomes bound to server-provided freshness.
-- **Session-bound phase (post-**`hello` **exchange)**
+- **Post-authentication rule-switch phase (immediately after** `hello` **exchange)**
   - Each peer possesses the other’s `session_nonce`.
-  - All messages are cryptographically bound to the authenticated session.
+  - The session enters AUTHENTICATED.
+  - Subsequent ALSP messages are required to use the peer’s `session_nonce` in the JWS protected header.
+- **Session-bound phase (after the first valid post-authentication message is received)**
+  - Each peer has observed at least one subsequent ALSP message validated under the post-authentication nonce rule.
+  - Session-bound message authentication is now confirmed in operation.
   - Replay across connections becomes impossible within the ALSP threat model.
 
 Replay exposure is limited exclusively to the pre-authentication phase; no synchronization, bootstrap retrieval, or **replication-admission-sensitive** operations are permitted during this phase.
@@ -783,14 +787,16 @@ Both peers have:
 - exchanged `hello` messages
 
 At this point, the session is fully authenticated.
+Reaching AUTHENTICATED switches the expected protected-header nonce behavior for subsequent messages from the sender’s own `session_nonce` to the peer’s `session_nonce`, as defined in Section 8.3.2.2.
 
 ### **SYNC\_READY**
 
 Entering SYNC\_READY means:
 
-- dual-nonce binding is in effect
-- message-level authentication operates in post-authentication mode
-- Channel Log synchronization messages MAY now be exchanged
+- the session is already AUTHENTICATED;
+- at least one subsequent ALSP message has been received and validated under the post-authentication nonce rule;
+- dual-nonce, session-bound message authentication has therefore been confirmed in operation; and
+- the first valid post-authentication ALSP message MAY itself be a Channel Log synchronization message, and successful validation of that message causes the transition to SYNC_READY.
 
 SYNC\_READY **MUST NOT** be entered until the session has reached AUTHENTICATED.
 
@@ -919,9 +925,9 @@ A peer MUST NOT consider the session AUTHENTICATED until it has both:
 1. **sent** its own `hello`, and
 2. **received** a valid `hello` from the peer.
 
-Once both conditions are met, the session transitions to AUTHENTICATED and the nonce binding rules defined in Section 8.3.2.2 take effect.
+Once both conditions are met, the session transitions to AUTHENTICATED and the nonce binding rules defined in Section 8.3.2.2 take effect for all subsequent messages.
 
-From AUTHENTICATED, the session may transition to SYNC\_READY when channel replication admission is established (Section 8.4).
+From AUTHENTICATED, the session transitions to SYNC\_READY only after receiving and validating at least one subsequent ALSP message under the post-authentication nonce rule.
 
 ### Post-Authentication Requirements
 
@@ -933,7 +939,7 @@ After the session enters AUTHENTICATED, all ALSP messages MUST follow the post-a
 
 These requirements apply to all messages sent in AUTHENTICATED and SYNC\_READY.
 
-*Non-normative note:* This transition model ensures that authentication is mutual and complete before any channel synchronization occurs and that all subsequent messages carry cryptographic proof of session binding through the cross-nonce mechanism.
+*Non-normative note:* This transition model ensures that authentication is mutual and complete before any channel synchronization occurs, that the nonce-usage rule switches cleanly at AUTHENTICATED, and that SYNC\_READY is reached only once post-authentication cross-nonce message binding has actually been observed on the wire.
 
 ## **8.7 Session Lifecycle and Resilience**
 
@@ -984,14 +990,16 @@ The complete specification for Channel Access Keys and Channel Access Proofs is 
 
 ## **9.1 Lamport Clock Model**
 
-ALSP uses **Lamport clocks** to provide ordering across all channel logs. Each replica MUST maintain a **single, unsigned 64-bit Lamport counter** that spans all channels.
+ALSP uses **Lamport clocks** to provide a single ordering domain across all Artipoint Records held within a Replica, independent of channel membership. Each replica MUST maintain a **single, unsigned 64-bit Lamport counter** that spans all channels.
+
+The canonical ordering relation defined by ALSP is global: it is computed over the tuple (`lamport_time`, `message_id`) without regard to `channel_id`. For any specific Channel Log, the order of its entries is the order induced by that global canonical relation, not a separately defined channel-specific ordering rule.
 
 All Channel Log entries MUST be ordered using the canonical tuple:
 
 1. `lamport_time` — unsigned integer (numeric ascending)
 2. `message_id` — deterministic tie-breaker (lexicographic ordering of the **raw 16-byte value**)
 
-This tuple defines a minimal set of metadata to create a **totally deterministic, replica‑independent ordering** across all Layer-0 wrappers without requiring synchronized wall clocks. Any two replicas possessing the same set of Layer-1 will converge on the same canonical ordering.
+This tuple defines a minimal set of metadata to create a **totally deterministic, replica-independent ordering** across all Layer-0 wrappers without requiring synchronized wall clocks. Any two replicas possessing the same set of valid Artipoint Records will converge on the same canonical ordering.
 
 ## **9.2 Canonical Ordering Definition**
 
@@ -1003,13 +1011,13 @@ ALSP implementations **MUST**:
 - Preserve this ordering for insertion, storage, synchronization, and retransmission
 - Treat this ordering as canonical and immutable once a message is inserted
 
-All replicas reading the same set of messages will converge to an identical canonical log order.
+All replicas reading the same set of Artipoint Records will converge to an identical canonical log order.
 
 Multiple messages MAY legitimately share the same Lamport value; this does not represent a conflict. Deterministic ordering is preserved through the message\_id tie‑breaker.
 
 ## **9.3 Global vs. Per-Channel Clock Semantics**
 
-ALSP uses a single, replica‑wide Lamport counter rather than maintaining separate counters per channel. This design enables consistent ordering across channels even when replicas:
+ALSP uses a single, replica-wide Lamport counter rather than maintaining separate counters per channel. This design enables consistent ordering across channels even when replicas:
 
 - Possess only a subset of channels,
 - Later gain access to older channels,
@@ -1017,6 +1025,8 @@ ALSP uses a single, replica‑wide Lamport counter rather than maintaining separ
 - Receive messages from peers with larger Lamport clocks.
 
 A replica **MUST NOT** maintain separate Lamport counters per channel.
+
+Implementations MAY physically store Artipoint Records in a single database or other shared persistence layer spanning multiple channels. Regardless of storage layout, conformance requires that ordering be derived from the single global Lamport domain and that any per-channel Channel Log view preserve the relative order induced by the canonical tuple (`lamport_time`, `message_id`).
 
 ## **9.4 Lamport Max Propagation**
 
@@ -1047,7 +1057,7 @@ Each replica maintains a single Lamport counter that persists across restarts.
 On startup, a replica MUST initialize its Lamport counter to the maximum of:
 
 - The persisted counter value (if available)
-- The highest Lamport value among locally stored messages
+- The highest Lamport value among locally stored Artipoint Records
 - Any previously preserved lamport\_max value
 - The value 0.
 
@@ -1080,20 +1090,20 @@ Implementations **MAY** reject received messages whose `lamport_time` or `lampor
 
 ## **9.6 Normative Insertion & Ordering Rules**
 
-During synchronization, replicas **MUST** insert all received messages into local logs strictly according to canonical ordering:
+During synchronization, replicas **MUST** insert all received Artipoint Records into local Channel Logs strictly according to canonical ordering:
 
 ```
 (lamport_time, message_id)
 ```
 
-Messages MAY arrive out of order due to batching or network conditions. Implementations MUST reorder them before insertion.
+Artipoint Records MAY arrive out of order due to batching or network conditions. Implementations MUST reorder them before insertion.
 
 Idempotence is required:
 
-- Replicas MUST deduplicate by `message_id` per channel.
+- Replicas MUST deduplicate by globally unique `message_id`.
 - Duplicate messages MUST NOT affect Lamport counters.
 
-Messages may only be inserted into the Channel Log at their canonical position. Deletion and reordering are not permitted.
+Artipoint Records may only be inserted into the Channel Log at their canonical position. Deletion and reordering are not permitted.
 
 ## **9.7 Rationale (Non-Normative)**
 
@@ -1107,7 +1117,7 @@ Lamport ordering provides **transport-level sequencing only**. Semantic causalit
 
 ## **9.8 Merkle-Based Replica Validation (Future)**
 
-ALSP’s deterministic Lamport ordering model ensures that any two replicas with the same set of messages will converge to identical Channel Logs without requiring auxiliary data structures. However, certain deployments may benefit from more efficient mechanisms for detecting localized divergence during synchronization.
+ALSP’s deterministic Lamport ordering model ensures that any two replicas with the same set of Artipoint Records will converge to identical Channel Logs without requiring auxiliary data structures. However, certain deployments may benefit from more efficient mechanisms for detecting localized divergence during synchronization.
 
 **Future revisions of this specification may define an optional per-channel Merkle summary**, allowing replicas to exchange compact proofs of log prefixes or ranges. Such structures would serve only as *replica health and convergence aids*, not as trust mechanisms:
 
@@ -2183,7 +2193,7 @@ ALSP can operate in a variety of network configurations due to the symmetry of t
 
 **Unless explicitly stated otherwise, topology descriptions in this section are informational; only statements using RFC 2119 terminology are normative.**
 
-Deterministic ordering (Section 12), authentication, and session semantics apply uniformly across all topologies. Each transport connection **MUST** establish a new ALSP session (Section 14).
+Deterministic ordering (Section 9), authentication, and session semantics apply uniformly across all topologies. Each transport connection **MUST** establish a new ALSP session (Section 8).
 
 ## **15.1 Client–Server Model (Informational)**
 
@@ -2404,11 +2414,11 @@ Implementations **SHOULD** periodically compute a deterministic digest represent
 
 - The digest **MUST** be sha256: followed by the hexadecimal SHA-256 output.
 - The digest **MUST** be computed over the concatenation of message\_id values (UUID value of 16 raw bytes) for all Layer-0 entries included in the Channel Log in **canonical log order**.
-- Canonical log order **MUST** be defined by the ordering rules of Section 12 (Lamport ordering with global tie-breaking).
+- Canonical log order **MUST** be defined by the ordering rules of Section 9 (Lamport ordering with global tie-breaking).
 
 Any implementation that includes log\_digest in a sync\_update message **MUST** follow this computation procedure.
 
-Any receiver of a log\_digest value in an ALSP message MUST compute the corresponding local log\_digest for the same set of messages its own replica, and if there is a mismatch, it MUST send a hash\_mismatch error to the original sender.
+Any receiver of a `log_digest` value in an ALSP message MUST compute the corresponding local `log_digest` over the same Channel Log prefix or range within its own Replica, and if there is a mismatch, it MUST send a `hash_mismatch` error to the original sender.
 
 No other actions are required, but the receiver MAY attempt a recovery operation per Section 17.3.
 
