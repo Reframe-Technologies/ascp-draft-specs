@@ -239,7 +239,7 @@ Recipient Sets define confidentiality scope for a given key version. Replication
 
 ### **Recovery Envelope**
 
-A **double-encrypted payload** attached to a Certificate Artipoint that contains encrypted private key material for secure recovery or device migration.
+A recovery payload attached to a Certificate Artipoint that contains encrypted private key material for secure recovery or device migration.
 
 Recovery Envelopes enable key recovery without exposing private keys to ASCP services or peers.
 
@@ -1494,9 +1494,9 @@ This model ensures long-term auditability, stable cryptographic execution, and s
 
 # **11. Key Escrow and Recovery Strategy**
 
-ASCP provides a secure and auditable approach to private key recovery that builds on the log-anchored trust foundation. This mechanism enables users to discover or recover their **identity private key** without ever exposing it in plaintext to any third party, supporting identity bootstrapping, device migration, key backup, and enterprise compliance scenarios.
+ASCP provides a secure, auditable mechanism for recovering an **identity private key** without exposing it in plaintext to third parties. It supports identity bootstrapping, device migration, key backup, and enterprise compliance scenarios while preserving the log-anchored trust model.
 
-The recovery strategy is designed to accommodate both personal recovery workflows—where users control their own recovery credentials—and enterprise-managed recovery policies. Recovery materials remain under the control of designated parties and are never accessible to ASCP infrastructure or log observers; the mechanism is **not escrow by default**.
+The recovery strategy supports both personal recovery workflows, in which users control their recovery credentials, and enterprise-managed policies. Recovery materials remain under the control of designated parties and are never accessible to ASCP infrastructure or passive log observers; the mechanism is **not escrow by default**.
 
 Key escrow and recovery is an **optional** capability. It does not affect trust evaluation of authorship except insofar as it enables key continuity across devices or recovery events.
 
@@ -1509,11 +1509,11 @@ Key escrow and recovery is an **optional** capability. It does not affect trust 
 
 ## 11.2 user-key-envelope
 
-The `user-key-envelope` is a JWE compact serialization string used to protect and store a user identity private key for recovery purposes. Depending on the `protection` set declared in the enclosing `recovery_envelope`, it MAY be constructed with one or two layers of JWE encryption.
+The `user-key-envelope` is a JWE compact serialization string that protects and stores a user identity private key for recovery. Depending on the `protection` set declared in the enclosing `recovery_envelope`, it MAY use one or two layers of JWE encryption.
 
 ### **11.2.1 Terminal payload format**
 
-Regardless of wrapping profile, the terminal decrypted payload of a `user-key-envelope` MUST be a private JWK representing the identity keypair being recovered.
+Regardless of wrapping profile, the terminal decrypted payload of a `user-key-envelope` MUST be a private JWK representing the recovered identity keypair.
 
 - The JWK MUST include the private key material and the corresponding public key members in normal JOSE form.
 - For EC keys, the JWK MUST include `kty`, `crv`, `x`, `y`, and `d`.
@@ -1522,7 +1522,7 @@ Regardless of wrapping profile, the terminal decrypted payload of a `user-key-en
 
 ### **11.2.2 Permitted wrapping profiles**
 
-The `protection` array in the enclosing `recovery_envelope` determines which construction is used:
+The `protection` array in the enclosing `recovery_envelope` determines the construction:
 
 1. `["password"]`
    - A single JWE compact object.
@@ -1559,9 +1559,9 @@ This strategy ensures:
 This procedure defines the normative steps for constructing a `recovery_envelope` attribute during identity bootstrap or key rotation. The resulting attribute structure is defined in Section 8.4.
 
 1. **Generate Identity Keypair (Key A)**
-   - An implementation MUST generate an EC keypair (P-256 or P-384) to serve as the original identity signing key
-   - The private key MUST be used to sign Artipoints and authenticate sessions
-   - The public key MUST be published in a Certificate Artipoint
+   - An implementation MUST generate an EC keypair (P-256 or P-384) to serve as the identity signing key.
+   - The private key MUST be used to sign Artipoints and authenticate sessions.
+   - The public key MUST be published in a Certificate Artipoint.
 2. **Establish Recovery Keypair (Key B)**
    - If recovery-key protection is used:
      - An implementation MUST generate or register a separate EC keypair for recovery purposes.
@@ -1569,8 +1569,8 @@ This procedure defines the normative steps for constructing a `recovery_envelope
      - The recovery public key MUST be published in a separate Certificate Artipoint.
      - The Certificate Artipoint MUST include the attribute `purpose::keyAgreement`.
 3. **Derive Password-Based Encryption Key (Key C)**
-   - If password protection is used, an implementation MUST derive an AES-256 key from a user-provided passphrase
-   - The derivation MUST use PBKDF2 (minimum 600,000 iterations) or Argon2id
+   - If password protection is used, an implementation MUST derive an AES-256 key from a user-provided passphrase.
+   - The derivation MUST use PBKDF2 (minimum 600,000 iterations) or Argon2id.
    - The salt and KDF parameters MUST be stored in the `kdf_params` field of the `recovery_envelope` attribute.
 4. **Construct user-key-envelope**
    - An implementation MUST construct the `user-key-envelope` as defined in Section 11.2:
@@ -1578,30 +1578,30 @@ This procedure defines the normative steps for constructing a `recovery_envelope
      - If `protection == ["password"]`, encrypt that private JWK using Key C with `alg: "dir"` and `enc: "A256GCM"`.
      - If `protection == ["recovery-key"]`, encrypt that private JWK using the recovery public key (Key B) with `alg: "ECDH-ES+A256KW"` and `enc: "A256GCM"`.
      - If `protection` includes both `password` and `recovery-key`, first encrypt the private JWK using Key C with `alg: "dir"` and `enc: "A256GCM"`, then encrypt the resulting inner JWE compact string using the recovery public key (Key B) with `alg: "ECDH-ES+A256KW"` and `enc: "A256GCM"`.
-   - The resulting JWE compact string IS the `user-key-envelope`
+   - The resulting JWE compact string is the `user-key-envelope`.
 5. **Construct recovery\_envelope Attribute**
    - An implementation MUST construct a JSON object conforming to the `recovery_envelope` schema defined in Section 8.4.
-   - The `user_key_jwe` field MUST contain the `user-key-envelope` string from step 4
-   - The `identity_cert_kid` field MUST identify the Certificate Artipoint containing the public key corresponding to Key A
-   - The `recovery_cert_kid` field MUST be present when `protection` includes `recovery-key` and the recovery public key (Key B) is represented by an ASCP Certificate Artipoint
-   - The `recovery_cert_kid` field MUST be omitted when the applicable recovery public key (Key B) is conveyed by enclosing protocol context or another out-of-band mechanism
-   - The `kdf_params` field MUST be present if and only if `protection` includes `password`
-   - The `created` field MUST contain an ISO-8601 UTC timestamp
+   - The `user_key_jwe` field MUST contain the `user-key-envelope` string from step 4.
+   - The `identity_cert_kid` field MUST identify the Certificate Artipoint containing the public key corresponding to Key A.
+   - The `recovery_cert_kid` field MUST be present when `protection` includes `recovery-key` and the recovery public key (Key B) is represented by an ASCP Certificate Artipoint.
+   - The `recovery_cert_kid` field MUST be omitted when the applicable recovery public key (Key B) is conveyed by enclosing protocol context or another out-of-band mechanism.
+   - The `kdf_params` field MUST be present if and only if `protection` includes `password`.
+   - The `created` field MUST contain an ISO-8601 UTC timestamp.
 6. **Attach to Certificate Artipoint**
-   - An implementation MUST attach the `recovery_envelope` JSON structure as an attribute to the Certificate Artipoint containing the identity public key (Key A)
-   - The attribute MUST use the `recovery_envelope` attribute name
-   - The annotated Certificate Artipoint MUST be published to the appropriate channel for replication
+   - An implementation MUST attach the `recovery_envelope` JSON structure as an attribute to the Certificate Artipoint containing the identity public key (Key A).
+   - The attribute MUST use the `recovery_envelope` attribute name.
+   - The annotated Certificate Artipoint MUST be published to the appropriate channel for replication.
 
 ### **11.3.2 Key Recovery Procedure**
 
-This procedure defines the normative steps for recovering an identity private key from a `recovery_envelope` attribute. This procedure is executed on a new device or after loss of the original private key.
+This procedure defines the normative steps for recovering an identity private key from a `recovery_envelope` attribute. It is executed on a new device or after loss of the original private key.
 
 1. **Locate Certificate and recovery\_envelope Attribute**
-   - An implementation MUST locate the user's Certificate Artipoint containing the identity public key (Key A)
-   - The implementation MUST retrieve the `recovery_envelope` attribute attached to that Certificate Artipoint
+   - An implementation MUST locate the user's Certificate Artipoint containing the identity public key (Key A).
+   - The implementation MUST retrieve the `recovery_envelope` attribute attached to that Certificate Artipoint.
 2. **Extract recovery\_envelope Structure**
    - An implementation MUST parse the `recovery_envelope` attribute value as JSON conforming to the schema defined in Section 8.4.
-   - The implementation MUST extract the `user_key_jwe` field value (the `user-key-envelope` string)
+   - The implementation MUST extract the `user_key_jwe` field value (the `user-key-envelope` string).
    - The implementation MUST extract and validate the `protection` array.
    - The implementation MUST extract the `identity_cert_kid` field value and resolve it to the Certificate Artipoint whose public key is expected to match the recovered JWK.
    - If `recovery_cert_kid` is present, the implementation MUST resolve it to a Certificate Artipoint and confirm that the referenced Certificate Artipoint declares `purpose::keyAgreement`.
@@ -1620,8 +1620,8 @@ This procedure defines the normative steps for recovering an identity private ke
    - The result MUST be a JWK-formatted EC private key (Key A) including its public key members.
 6. **Import Identity Private Key**
    - By the end of step 3 or step 5, the implementation MUST have recovered Key A as the private JWK defined in Section 11.2.1.
-   - An implementation MUST import Key A into secure storage (e.g., Secure Enclave, TPM, platform keychain)
-   - The implementation MUST verify that the public component of the recovered JWK corresponds to the public key in the Certificate Artipoint identified by `identity_cert_kid`
+   - An implementation MUST import Key A into secure storage (e.g., Secure Enclave, TPM, platform keychain).
+   - The implementation MUST verify that the public component of the recovered JWK corresponds to the public key in the Certificate Artipoint identified by `identity_cert_kid`.
 7. **Resume Normal Operations**
    - The implementation MAY now use Key A to:
      - Sign new Artipoints
@@ -1631,7 +1631,7 @@ This procedure defines the normative steps for recovering an identity private ke
 
 ## **11.4 Security Considerations**
 
-- **Passive log exposure**: Since the envelope is doubly encrypted and stored in the clear, even full replication of the log does not compromise user secrets
+- **Passive log exposure**: Recovery metadata is stored in the clear, but `user_key_jwe` remains protected by the declared wrapping profile. Full log replication does not by itself disclose the recovered private key.
 - **Key B storage**: Recovery key material must be protected via a second device, hardware token, or exportable file/QR code with strong local security
 - **Key C (password) complexity**: The passphrase should meet entropy guidelines and use a strong KDF like Argon2id
 - **No org access**: The organization cannot decrypt or recover a user's key unless explicitly granted access to Key B or Key C by the user
@@ -1968,7 +1968,7 @@ In ASCP, RootCA signing is intentionally optional. It is a mechanism for strengt
 
 Key recovery is an essential feature for both individuals and organizations, but the motivations differ. Individual users often require recovery mechanisms to protect against device loss or failure. Enterprises, meanwhile, may be legally or operationally compelled to ensure business continuity in the face of employee turnover, device loss, or forensic requirements.
 
-To accommodate these differing needs, ASCP introduces recovery envelopes as a flexible mechanism for encrypting private keys in a layered structure. The model preserves confidentiality through double encryption: once with a user-derived key and once with a recovery key stored separately. The log-anchored publication of the recovery envelope enables deterministic retrieval during a recovery operation while avoiding any exposure of sensitive material.
+To accommodate these differing needs, ASCP introduces recovery envelopes as a flexible mechanism for encrypting private keys under one or more recovery factors. The model preserves confidentiality through password-based wrapping, recovery-key wrapping, or both, depending on deployment needs. Log-anchored publication of the recovery envelope enables deterministic retrieval during a recovery operation without exposing sensitive material.
 
 For personal deployments, recovery keys typically reside on a secondary device or hardware token, reinforcing the principle that no centralized service should hold unilateral control over the participant’s private keys. In enterprise-managed deployments, recovery keys may be controlled by the organization, allowing recovery actions under well-defined governance policies. Even in those cases, ASCP emphasizes transparency: the fact of recovery, the scope of materials involved, and the provenance of recovery actions should appear in the log for auditability whenever appropriate to the deployment’s trust model.
 
@@ -1996,7 +1996,7 @@ ASCP is designed to operate across a wide spectrum of deployment environments, f
 
 In personal or small-team environments, ASCP typically begins with a single-user bootstrap, a self-generated RootCA, and a minimal identity and certificate set. The design philosophy in this context emphasizes privacy, autonomy, and resilience. Users generate their own identity keys locally, maintain exclusive control of private key material, and often employ a second device or hardware token as the recovery key for optional key backup.
 
-These deployments benefit from the self-sovereign nature of ASCP’s identity architecture. Because no external certificate authority or institutional identity provider is required, a user can operate an ASCP instance entirely offline or across intermittent connectivity. The log-anchored structure ensures that authorship and provenance remain verifiable even without access to external systems. Recovery workflows are similarly self-contained: a locally stored double-encrypted envelope, together with a recovery key kept on a trusted secondary device, enables secure device migration without reliance on third parties.
+These deployments benefit from the self-sovereign nature of ASCP’s identity architecture. Because no external certificate authority or institutional identity provider is required, a user can operate an ASCP instance entirely offline or across intermittent connectivity. The log-anchored structure ensures that authorship and provenance remain verifiable even without access to external systems. Recovery workflows are similarly self-contained: a locally stored recovery envelope, together with a recovery key kept on a trusted secondary device and any other required recovery factors, enables secure device migration without reliance on third parties.
 
 Personal deployments often evolve organically. Additional devices may join the trust domain over time, each establishing its own certificate and purpose bindings. Cross-device verification occurs through replication of the log and validation of historical signatures. These deployments illustrate ASCP’s capacity to support human-scale workflows where durability, sovereignty, and privacy are paramount.
 
