@@ -940,7 +940,7 @@ The value of the `recovery_envelope` attribute is a JSON structure as follows:
 - `type` — Identifies this as a recovery envelope
 - `version` — Schema version for forward compatibility
 - `identity_cert_kid` — ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key MUST match the public component of the recovered JWK.
-- `recovery_cert_kid` — ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key is used for recovery-key-based wrapping. This field MUST be present if and only if `protection` includes `recovery-key`.
+- `recovery_cert_kid` — Optional ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key is used for recovery-key-based wrapping. This field MUST be present when `protection` includes `recovery-key` and the recovery public key is represented by an ASCP Certificate Artipoint. It MUST be omitted when the applicable recovery key is conveyed by enclosing protocol context or another out-of-band mechanism.
 - `user_identity` - The UUID of the user identity whose identity key is wrapped into the `user_key_jwe`.
 - `user_key_jwe` — The value string holds the `user-key-envelope` defined in Section 11. It MUST be a JWE compact serialization string whose terminal decrypted payload is a private JWK representing the identity keypair. That JWK MUST include the corresponding public key members in the normal JOSE form.
 - `protection` — Non-empty array declaring the required recovery factors for `user_key_jwe`. Permitted values are `password` and `recovery-key`. Each value MUST appear at most once. The declared set MUST exactly match the wrapping construction used for `user_key_jwe`.
@@ -950,6 +950,8 @@ The value of the `recovery_envelope` attribute is a JSON structure as follows:
 - `created` — Timestamp when the recovery envelope was generated
 
 See Section 11 for all details around constructing the recovery envelope and in particular the construction and decoding process of the `user-key-envelope` populating the `user_key_jwe` JSON field.
+
+Some profiles MAY convey the applicable recovery public key outside the `recovery_envelope`, such as a provisioning or bootstrap protocol in which the requester supplies a transient recovery key for one-time use. In such profiles, `recovery_cert_kid` MAY be omitted and the applicable recovery key is determined by the enclosing protocol context.
 
 ## **8.5 Key Usage Evaluation Summary (Normative)**
 
@@ -1539,12 +1541,12 @@ The `protection` array in the enclosing `recovery_envelope` determines which con
    - A single JWE compact object.
    - Algorithm: `alg: "ECDH-ES+A256KW"`, `enc: "A256GCM"`.
    - Payload: the private JWK defined in Section 11.2.1.
-   - The recipient public key is the recovery certificate identified by `recovery_cert_kid`.
+   - The recipient public key is either the recovery certificate identified by `recovery_cert_kid` or a recovery public key supplied by the enclosing protocol context.
 3. `["password", "recovery-key"]` or `["recovery-key", "password"]`
    - A nested JWE construction.
    - Inner JWE: `alg: "dir"`, `enc: "A256GCM"`, payload is the private JWK defined in Section 11.2.1.
    - Outer JWE: `alg: "ECDH-ES+A256KW"`, `enc: "A256GCM"`, payload is the complete inner JWE compact string.
-   - The inner layer uses the password-derived key from `kdf_params`; the outer layer uses the recovery certificate identified by `recovery_cert_kid`.
+   - The inner layer uses the password-derived key from `kdf_params`; the outer layer uses either the recovery certificate identified by `recovery_cert_kid` or a recovery public key supplied by the enclosing protocol context.
 
 In all cases, the `user-key-envelope` is the final JWE compact serialization string emitted by the selected profile.
 
@@ -1589,7 +1591,8 @@ This procedure defines the normative steps for constructing a `recovery_envelope
    - An implementation MUST construct a JSON object conforming to the `recovery_envelope` schema defined in Section 8.4.
    - The `user_key_jwe` field MUST contain the `user-key-envelope` string from step 4
    - The `identity_cert_kid` field MUST identify the Certificate Artipoint containing the public key corresponding to Key A
-   - The `recovery_cert_kid` field MUST identify the Certificate Artipoint containing the recovery public key (Key B) if and only if `protection` includes `recovery-key`
+   - The `recovery_cert_kid` field MUST be present when `protection` includes `recovery-key` and the recovery public key (Key B) is represented by an ASCP Certificate Artipoint
+   - The `recovery_cert_kid` field MUST be omitted when the applicable recovery public key (Key B) is conveyed by enclosing protocol context or another out-of-band mechanism
    - The `kdf_params` field MUST be present if and only if `protection` includes `password`
    - The `created` field MUST contain an ISO-8601 UTC timestamp
 6. **Attach to Certificate Artipoint**
@@ -1609,10 +1612,11 @@ This procedure defines the normative steps for recovering an identity private ke
    - The implementation MUST extract the `user_key_jwe` field value (the `user-key-envelope` string)
    - The implementation MUST extract and validate the `protection` array.
    - The implementation MUST extract the `identity_cert_kid` field value and resolve it to the Certificate Artipoint whose public key is expected to match the recovered JWK.
-   - If `protection` includes `recovery-key`, the implementation MUST extract the `recovery_cert_kid` field value and confirm that the referenced Certificate Artipoint declares `purpose::keyAgreement`.
+   - If `recovery_cert_kid` is present, the implementation MUST resolve it to a Certificate Artipoint and confirm that the referenced Certificate Artipoint declares `purpose::keyAgreement`.
+   - If `protection` includes `recovery-key` and `recovery_cert_kid` is absent, the implementation MUST obtain the applicable recovery key from the enclosing protocol context or other out-of-band configuration.
    - If `protection` includes `password`, the implementation MUST extract the `kdf_params` field for password derivation.
 3. **Apply recovery-key decryption when required**
-   - If `protection` includes `recovery-key`, an implementation MUST locate the Certificate Artipoint referenced by `recovery_cert_kid` and retrieve the recovery private key (Key B).
+   - If `protection` includes `recovery-key`, an implementation MUST obtain the recovery private key (Key B) corresponding either to `recovery_cert_kid` or to the recovery public key identified by enclosing protocol context.
    - The implementation MUST decrypt the outer JWE layer of the `user-key-envelope` using Key B.
    - If `protection` includes both `recovery-key` and `password`, the result of this step MUST be a compact JWE string (the inner JWE).
    - If `protection == ["recovery-key"]`, the result of this step MUST be the private JWK defined in Section 11.2.1, and that JWK becomes Key A for the remaining steps.
