@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.53 — Informational (Pre-RFC Working Draft)  
+Version: 0.54 — Informational (Pre-RFC Working Draft)  
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -920,10 +920,18 @@ The value of the `recovery_envelope` attribute is a JSON structure as follows:
 {
   "type": "recovery-envelope",
   "version": "1.0",
-  "recovery_cert": "ascp:cert:<uuid>",
+  "identity_cert_kid": "ascp:cert:<uuid>",
+  "recovery_cert_kid": "ascp:cert:<uuid>",
+  "user_identity": "<uuidv7>",
   "user_key_jwe": "<user-key-envelope>",
   "protection": ["recovery-key", "password"],
-  "recovery_purpose": "device-migration | local-backup",
+  "kdf_params": {
+    "kdf": "PBKDF2 | Argon2id",
+    "salt": "<base64url>",
+    "iterations": 600000,
+    "hash": "SHA-256"
+  },
+  "recovery_purpose": "device-migration | local-backup | initial-provisioning",
   "rotation_id": "v1",
   "created": "<ISO-8601 UTC>"
 }
@@ -931,11 +939,14 @@ The value of the `recovery_envelope` attribute is a JSON structure as follows:
 
 - `type` — Identifies this as a recovery envelope
 - `version` — Schema version for forward compatibility
-- `recovery_cert` — Reference to the recovery public key (Key B) used for outer encryption. See Section 11.
-- `user_key_jwe` — The value string holds the  `user-key-envelope` per Section 11 which is the double-encrypted identity private key written in JWE compact serialization form.
-- `protection` — Array indicating the protection factors required for decryption
+- `identity_cert_kid` — ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key MUST match the public component of the recovered JWK.
+- `recovery_cert_kid` — ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key is used for recovery-key-based wrapping. This field MUST be present if and only if `protection` includes `recovery-key`.
+- `user_identity` - The UUID of the user identity whose identity key is wrapped into the `user_key_jwe`.
+- `user_key_jwe` — The value string holds the `user-key-envelope` defined in Section 11. It MUST be a JWE compact serialization string whose terminal decrypted payload is a private JWK representing the identity keypair. That JWK MUST include the corresponding public key members in the normal JOSE form.
+- `protection` — Non-empty array declaring the required recovery factors for `user_key_jwe`. Permitted values are `password` and `recovery-key`. Each value MUST appear at most once. The declared set MUST exactly match the wrapping construction used for `user_key_jwe`.
+- `kdf_params` — Parameters used to derive the password-based content-encryption key. This field MUST be present if and only if `protection` includes `password`. It MUST contain sufficient information for interoperable derivation, including the KDF algorithm identifier, salt, and work-factor parameters.
 - `rotation_id` — Human-readable identifier for tracking key rotations
-- `recovery_purpose` (optional) — Intended use case for this recovery envelope
+- `recovery_purpose` (optional) — Intended use case for this recovery envelope. Multiple options MAY be specified.
 - `created` — Timestamp when the recovery envelope was generated
 
 See Section 11 for all details around constructing the recovery envelope and in particular the construction and decoding process of the `user-key-envelope` populating the `user_key_jwe` JSON field.
@@ -1489,7 +1500,7 @@ This model ensures long-term auditability, stable cryptographic execution, and s
 
 # **11. Key Escrow and Recovery Strategy**
 
-ASCP provides a secure and auditable approach to private key recovery that builds on the log-anchored trust foundation. This mechanism enables users to recover their **identity private key** without ever exposing it in plaintext to any third party, supporting device migration, key backup, and enterprise compliance scenarios.
+ASCP provides a secure and auditable approach to private key recovery that builds on the log-anchored trust foundation. This mechanism enables users to discover or recover their **identity private key** without ever exposing it in plaintext to any third party, supporting identity bootstrapping, device migration, key backup, and enterprise compliance scenarios.
 
 The recovery strategy is designed to accommodate both personal recovery workflows—where users control their own recovery credentials—and enterprise-managed recovery policies. Recovery materials remain under the control of designated parties and are never accessible to ASCP infrastructure or log observers; the mechanism is **not escrow by default**.
 
@@ -1504,29 +1515,48 @@ Key escrow and recovery is an **optional** capability. It does not affect trust 
 
 ## 11.2 user-key-envelope
 
-The `user-key-envelope` is a **double-encrypted JWE object** used to protect and store a user identity private key for recovery purposes. It is constructed through two layers of JWE encryption, both using **compact serialization**:
+The `user-key-envelope` is a JWE compact serialization string used to protect and store a user identity private key for recovery purposes. Depending on the `protection` set declared in the enclosing `recovery_envelope`, it MAY be constructed with one or two layers of JWE encryption.
 
-### **Construction (inner to outer)**
+### **11.2.1 Terminal payload format**
 
-1. **Inner JWE** (compact serialization): The identity private key (Key A) is formatted as a JWK and encrypted using a password-derived AES key (Key C)
-   - Algorithm: `alg: "dir"`, `enc: "A256GCM"`
-   - Payload: JWK-formatted EC private key (Key A)
-   - Output: A compact JWE string (five base64url segments)
-2. **Outer JWE** (compact serialization): The inner JWE compact string is encrypted using the recovery public key (Key B)
-   - Algorithm: `alg: "ECDH-ES+A256KW"`, `enc: "A256GCM"`
-   - Payload: The complete inner JWE compact string
-   - Output: A compact JWE string (five base64url segments)
+Regardless of wrapping profile, the terminal decrypted payload of a `user-key-envelope` MUST be a private JWK representing the identity keypair being recovered.
 
-**The** `user-key-envelope` **is the compact serialization string of the outer JWE.**
+- The JWK MUST include the private key material and the corresponding public key members in normal JOSE form.
+- For EC keys, the JWK MUST include `kty`, `crv`, `x`, `y`, and `d`.
+- The recovered JWK public component MUST match the public key published by the Certificate Artipoint identified by `identity_cert_kid` in the enclosing `recovery_envelope`.
+- Optional JWK members such as `kid`, `alg`, `key_ops`, and `use` MAY be present when consistent with the enclosing certificate and local JOSE profile.
 
-### **Security properties**
+### **11.2.2 Permitted wrapping profiles**
 
-This double-encryption strategy ensures:
+The `protection` array in the enclosing `recovery_envelope` determines which construction is used:
 
-- Only a party with the recovery key **and** the password can recover the private key
-- Even if one factor is compromised, the identity key remains secure
-- All encryption uses authenticated encryption (AES-GCM) via standard JOSE mechanisms
-- Both layers use compact serialization, not JSON serialization
+1. `["password"]`
+   - A single JWE compact object.
+   - Algorithm: `alg: "dir"`, `enc: "A256GCM"`.
+   - Payload: the private JWK defined in Section 11.2.1.
+   - The content-encryption key is derived from the user passphrase using `kdf_params`.
+2. `["recovery-key"]`
+   - A single JWE compact object.
+   - Algorithm: `alg: "ECDH-ES+A256KW"`, `enc: "A256GCM"`.
+   - Payload: the private JWK defined in Section 11.2.1.
+   - The recipient public key is the recovery certificate identified by `recovery_cert_kid`.
+3. `["password", "recovery-key"]` or `["recovery-key", "password"]`
+   - A nested JWE construction.
+   - Inner JWE: `alg: "dir"`, `enc: "A256GCM"`, payload is the private JWK defined in Section 11.2.1.
+   - Outer JWE: `alg: "ECDH-ES+A256KW"`, `enc: "A256GCM"`, payload is the complete inner JWE compact string.
+   - The inner layer uses the password-derived key from `kdf_params`; the outer layer uses the recovery certificate identified by `recovery_cert_kid`.
+
+In all cases, the `user-key-envelope` is the final JWE compact serialization string emitted by the selected profile.
+
+### **11.2.3 Security properties**
+
+This strategy ensures:
+
+- password-only recovery remains possible when a recovery key is not used,
+- recovery-key-only provisioning remains possible when no password factor is required,
+- dual-factor recovery requires both the recovery key and the password,
+- all encryption uses authenticated encryption (AES-GCM) via standard JOSE mechanisms,
+- all layers use compact serialization, not JSON serialization.
 
 ## **11.3 Normative Procedures**
 
@@ -1539,24 +1569,28 @@ This procedure defines the normative steps for constructing a `recovery_envelope
    - The private key MUST be used to sign Artipoints and authenticate sessions
    - The public key MUST be published in a Certificate Artipoint
 2. **Establish Recovery Keypair (Key B)**
-   - An implementation MUST generate or register a separate EC keypair for recovery purposes
-   - The recovery private key MUST be stored in a secure location distinct from the identity key (e.g., second device, hardware token, secure backup)
-   - The recovery public key MUST be published in a separate Certificate Artipoint
-   - The Certificate Artipoint MUST include the attribute `purpose::keyAgreement`.
+   - If recovery-key protection is used:
+     - An implementation MUST generate or register a separate EC keypair for recovery purposes.
+     - The recovery private key MUST be stored in a secure location distinct from the identity key (e.g., second device, hardware token, secure backup).
+     - The recovery public key MUST be published in a separate Certificate Artipoint.
+     - The Certificate Artipoint MUST include the attribute `purpose::keyAgreement`.
 3. **Derive Password-Based Encryption Key (Key C)**
-   - An implementation MUST derive an AES-256 key from a user-provided passphrase
+   - If password protection is used, an implementation MUST derive an AES-256 key from a user-provided passphrase
    - The derivation MUST use PBKDF2 (minimum 600,000 iterations) or Argon2id
-   - The salt and KDF parameters SHOULD be stored in the `recovery_envelope` attribute for interoperability.
-4. **Construct user-key-envelope (Double Encryption)**
+   - The salt and KDF parameters MUST be stored in the `kdf_params` field of the `recovery_envelope` attribute.
+4. **Construct user-key-envelope**
    - An implementation MUST construct the `user-key-envelope` as defined in Section 11.2:
-     - **Inner JWE**: Encrypt the identity private key (Key A, formatted as JWK) using Key C with `alg: "dir"` and `enc: "A256GCM"`, producing a compact JWE string
-     - **Outer JWE**: Encrypt the inner JWE compact string using the recovery public key (Key B) with `alg: "ECDH-ES+A256KW"` and `enc: "A256GCM"`, producing a compact JWE string
-   - The resulting outer JWE compact string IS the `user-key-envelope`
+     - The terminal plaintext MUST be a private JWK representing Key A and including the corresponding public key members.
+     - If `protection == ["password"]`, encrypt that private JWK using Key C with `alg: "dir"` and `enc: "A256GCM"`.
+     - If `protection == ["recovery-key"]`, encrypt that private JWK using the recovery public key (Key B) with `alg: "ECDH-ES+A256KW"` and `enc: "A256GCM"`.
+     - If `protection` includes both `password` and `recovery-key`, first encrypt the private JWK using Key C with `alg: "dir"` and `enc: "A256GCM"`, then encrypt the resulting inner JWE compact string using the recovery public key (Key B) with `alg: "ECDH-ES+A256KW"` and `enc: "A256GCM"`.
+   - The resulting JWE compact string IS the `user-key-envelope`
 5. **Construct recovery\_envelope Attribute**
    - An implementation MUST construct a JSON object conforming to the `recovery_envelope` schema defined in Section 8.4.
    - The `user_key_jwe` field MUST contain the `user-key-envelope` string from step 4
-   - The `recovery_cert` field MUST reference the UUID of the Certificate Artipoint containing the recovery public key (Key B)
-   - The `kdf_params` field SHOULD contain the salt and parameters used in step 3
+   - The `identity_cert_kid` field MUST identify the Certificate Artipoint containing the public key corresponding to Key A
+   - The `recovery_cert_kid` field MUST identify the Certificate Artipoint containing the recovery public key (Key B) if and only if `protection` includes `recovery-key`
+   - The `kdf_params` field MUST be present if and only if `protection` includes `password`
    - The `created` field MUST contain an ISO-8601 UTC timestamp
 6. **Attach to Certificate Artipoint**
    - An implementation MUST attach the `recovery_envelope` JSON structure as an attribute to the Certificate Artipoint containing the identity public key (Key A)
@@ -1573,21 +1607,25 @@ This procedure defines the normative steps for recovering an identity private ke
 2. **Extract recovery\_envelope Structure**
    - An implementation MUST parse the `recovery_envelope` attribute value as JSON conforming to the schema defined in Section 8.4.
    - The implementation MUST extract the `user_key_jwe` field value (the `user-key-envelope` string)
-   - The implementation MUST extract the `recovery_cert` field value (UUID of the recovery Certificate Artipoint) which MUST be confirmed to already include the attribute `purpose::keyAgreement`.
-   - The implementation SHOULD extract the `kdf_params` field for password derivation
-3. **Decrypt Outer JWE Layer**
-   - An implementation MUST locate the Certificate Artipoint referenced by `recovery_cert` and retrieve the recovery private key (Key B)
-   - The implementation MUST decrypt the outer JWE layer of the `user-key-envelope` using Key B
-   - The result MUST be a compact JWE string (the inner JWE)
-4. **Derive Password-Based Key**
-   - An implementation MUST prompt the user for the recovery passphrase
-   - The implementation MUST derive Key C using the KDF parameters from step 2 (or from `kdf_params` if available)
-5. **Decrypt Inner JWE Layer**
-   - An implementation MUST decrypt the inner JWE using Key C
-   - The result MUST be a JWK-formatted EC private key (Key A)
+   - The implementation MUST extract and validate the `protection` array.
+   - The implementation MUST extract the `identity_cert_kid` field value and resolve it to the Certificate Artipoint whose public key is expected to match the recovered JWK.
+   - If `protection` includes `recovery-key`, the implementation MUST extract the `recovery_cert_kid` field value and confirm that the referenced Certificate Artipoint declares `purpose::keyAgreement`.
+   - If `protection` includes `password`, the implementation MUST extract the `kdf_params` field for password derivation.
+3. **Apply recovery-key decryption when required**
+   - If `protection` includes `recovery-key`, an implementation MUST locate the Certificate Artipoint referenced by `recovery_cert_kid` and retrieve the recovery private key (Key B).
+   - The implementation MUST decrypt the outer JWE layer of the `user-key-envelope` using Key B.
+   - If `protection` includes both `recovery-key` and `password`, the result of this step MUST be a compact JWE string (the inner JWE).
+   - If `protection == ["recovery-key"]`, the result of this step MUST be the private JWK defined in Section 11.2.1, and that JWK becomes Key A for the remaining steps.
+4. **Derive Password-Based Key when required**
+   - If `protection` includes `password`, an implementation MUST prompt the user for the recovery passphrase.
+   - The implementation MUST derive Key C using the `kdf_params` extracted in step 2.
+5. **Apply password decryption when required**
+   - If `protection` includes `password`, an implementation MUST decrypt the password-protected JWE using Key C.
+   - The result MUST be a JWK-formatted EC private key (Key A) including its public key members.
 6. **Import Identity Private Key**
+   - By the end of step 3 or step 5, the implementation MUST have recovered Key A as the private JWK defined in Section 11.2.1.
    - An implementation MUST import Key A into secure storage (e.g., Secure Enclave, TPM, platform keychain)
-   - The implementation SHOULD verify that the imported key corresponds to the public key in the Certificate Artipoint
+   - The implementation MUST verify that the public component of the recovered JWK corresponds to the public key in the Certificate Artipoint identified by `identity_cert_kid`
 7. **Resume Normal Operations**
    - The implementation MAY now use Key A to:
      - Sign new Artipoints
