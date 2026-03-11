@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.60 — Informational (Pre-RFC Working Draft)
+Version: 0.61 — Informational (Pre-RFC Working Draft)
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -201,7 +201,11 @@ A proof object (carried as a JOSE object as specified by this document) demonstr
 
 **Identity Key**
 
-A long-term cryptographic key pair used to authenticate ALSP protocol messages at the node/identity level. Identity semantics and binding rules are defined outside this specification; ALSP validates only the cryptographic properties required for protocol authentication.
+A long-term signing key pair used to authenticate ALSP protocol messages. Its public component is conveyed by `identity_cert` and referenced by `kid` values of the form `ascp:cert:<uuid>`. Identity semantics and binding rules are defined outside this specification; ALSP validates only the cryptographic properties required for protocol authentication.
+
+**user\_identity**
+
+A sender-supplied identity reference naming the principal associated with an Identity Key. In ALSP, `user_identity` is carried as a UTF-8 identity reference and may be either an Identity Artipoint UUID or the associated Identity Artipoint `payload` value, as permitted by the ASCP Trust & Identity Architecture.
 
 **Challenge Flow**
 
@@ -603,7 +607,7 @@ Within the ALSP threat model, replay after session binding is **cryptographicall
 
 **Single Authoritative Session:** At any given time, only one authenticated session SHOULD remain operational for a given authenticated `(local_node_id, remote_node_id)` pair. Implementations MUST apply this rule on a best-effort basis using the remote `node_id` once it has been authenticated during the handshake. If a new session reaches the point where its authenticated `node_id` duplicates that of an already operational session for the same pair, the recipient MUST reject the new session or explicitly terminate one of the sessions before proceeding.
 
-**Post-Authentication Requirements:** After the session is authenticated, all subsequent ALSP messages MUST be signed using the identity key validated during the handshake. Messages failing signature validation, nonce validation, or timestamp requirements MUST be rejected with an error and connection termination.
+**Post-Authentication Requirements:** After the session is authenticated, all subsequent ALSP messages MUST be signed using the Identity Key validated during the handshake. Messages failing signature validation, nonce validation, or timestamp requirements MUST be rejected with an error and connection termination.
 
 **_Non-normative note_:** These requirements ensure that ALSP does not rely on transport features for security, that all post-authentication messages are tightly bound to a specific session, and that session establishment remains distinct from ongoing log replication.
 
@@ -1312,7 +1316,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
 
 The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material beyond what the client provided in the initial `auth_request`. In Direct Mode, this MAY occur when the presented identity certificate is not already known to the server and additional identity-binding evidence is required. An `auth_challenge` is always required in Provisioned Mode.
 
-The server **MUST** include its identity key in any `auth_challenge` it sends. The server **MUST** sign all ALSP messages with the corresponding private identity key. During bootstrapping, the client **MUST** treat this key as the server's provisional session identity key, but **MUST NOT** complete bootstrap until the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification have completed.
+The server **MUST** include its public Identity Key in any `auth_challenge` it sends via `identity_cert`. The server **MUST** sign all ALSP messages with the corresponding private Identity Key. During bootstrapping, the client **MUST** treat this key as the server's provisional session signing key, but **MUST NOT** complete bootstrap until the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification have completed.
 
 In Provisioned Mode, the server uses `auth_challenge` to send the bootstrapping client a `recovery_envelope` JSON object conforming to ASCP Trust & Identity Architecture §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
 
@@ -1463,7 +1467,7 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
 - **user\_auth**
   - Type: string
   - **MUST** be present.
-  - This field binds the sender's public key to the indicated identity.
+  - This field binds the sender's public Identity Key to the indicated `user_identity`.
   - When it carries a `kid`, trust flows from repository-anchored certificate state. When it carries an **Identity Claim Bundle (ICB)**, trust flows from the associated identity provider together with proof of possession of the private identity key.
   - In **Challenge Flow**, the authenticating client **MUST** place a freshly generated ICB bound to the server's `session_nonce`. The ICB **MUST** satisfy ASCP Trust & Identity Architecture §9 and **MUST** prove possession of the private identity key used to sign ALSP messages.
   - For first-contact Direct Mode using a newly generated sovereign identity certificate, the ICB is the normal mechanism for supplying identity-to-key binding evidence when no prior repository-anchored `kid` resolution is available.
@@ -1682,7 +1686,7 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 - For Direct Mode, the `kid` value presented by the client **MUST** identify the certificate carried in or referenced by the client's authentication materials.
 - If that Direct Mode `kid` already resolves to existing repository or bootstrap-visible certificate state, the presented certificate material **MUST** match the certificate bound to that `kid`; otherwise authentication **MUST** fail.
 - If that Direct Mode `kid` does not yet resolve and the server later accepts onboarding, any durable Certificate Artipoint created for that presented certificate **MUST** use that same client-presented certificate UUID.
-- When present, **MUST** uniquely reference the signing key (identity key) as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
+- When present, **MUST** uniquely reference the signing Identity Key as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
 - Implementations **MUST** emit a proper `kid` for all messages once authentication completes.
 - The receiver **MUST** use the `kid` value to resolve the appropriate public key for signature verification.
 - The sender **MUST** ensure that the referenced key is the same key whose private component generated the JWS signature of the message.
