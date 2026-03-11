@@ -1555,7 +1555,7 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 - **log\_digest**
   - Type: string ("sha256:\<hex>")
   - **MAY** be present.
-  - When present, **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly before from\_lamport, in canonical log order. See Section 17.1 for detailed semantics.
+  - When present, **MUST** contain a SHA-256 digest encoded as `sha256:<hex>`, computed according to Section 17.1.
   - Receivers **MAY** use this digest for log health checking and divergence detection per Section 17.1.
 
 ### **10.3.2 Sync Response**
@@ -1595,7 +1595,7 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 - **log\_digest**
   - Type: string ("sha256:\<hex>")
   - **MUST** be present if the most recent triggering "sync\_request" message included its own log\_digest field.
-  - When present, **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17.1 for detailed semantics.
+  - When present, **MUST** contain a SHA-256 digest encoded as `sha256:<hex>`, computed according to Section 17.1.
   - Receivers **MAY** use this digest for log health checking and divergence detection per Section 17.1.
 - **more**
   - Type: boolean
@@ -1642,7 +1642,7 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 - **log\_digest**
   - Type: string ("sha256:\<hex>")
   - **MUST** always be present.
-  - **MUST** be computed as the SHA-256 digest over the concatenation of UTF-8 message\_id values for all Layer-0 entries in the channel log strictly up to and including the Layer-0 entries included in this message, in canonical log order. See Section 17.1 for detailed semantics.
+  - **MUST** contain a SHA-256 digest encoded as `sha256:<hex>`, computed according to Section 17.1.
   - Receivers **MUST** use this digest for log health checking and divergence detection per Section 17.1.
 
 ## **10.4 Message Authentication**
