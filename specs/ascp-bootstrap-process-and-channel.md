@@ -1019,7 +1019,7 @@ The joining replica MUST perform the following validation:
 
 2\. The peer authenticates using an identity and public key during ALSP session establishment.
 
-3\. The joining replica MUST locate a corresponding **Identity Reference Artipoint** in the validated @bootstrap channel whose `<identity-uuid>` matches the peer’s asserted identity.
+3\. The joining replica MUST resolve the peer’s asserted ALSP identity reference to the corresponding ASCP Identity Artipoint UUID and then locate a matching **Identity Reference Artipoint** in the validated @bootstrap channel whose `<identity-uuid>` equals that resolved identity UUID.
 
 4\. The joining replica MUST verify that the public key presented during ALSP authentication matches the `cert_public_jwk` recorded in the matching identity-ref.
 

@@ -251,7 +251,7 @@ JSON Web Token, used within ASCP for claims and bundles. JWT content is not inte
 
 **kid (Key Identifier)**
 
-A structured key identifier used in JOSE protected headers to reference key material provisioned out-of-band or via higher layers.
+A structured key identifier used in JOSE protected headers to reference key material provisioned out-of-band, obtained from bootstrap artifacts, or presented during ALSP session establishment.
 
 ## **4.7 ALSP Message Types and Sync Modes**
 
@@ -1259,10 +1259,10 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be present.
-  - **MUST** contain a UTF-8 encoded client-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
+  - **MUST** contain a UTF-8 encoded sender-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
   - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture.
-  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrapping materials.
+  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrap and repository materials.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1329,7 +1329,8 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
 - **user\_identity**
   - Type: string (UTF-8 UUIDv7 string)
   - **MUST** be present.
-  - **MUST** contain a UTF-8 encoded server-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be the UUID of the Identity Artipoint itself.
+  - **MUST** contain a UTF-8 encoded server-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2.
+  - In `auth_challenge`, this value **MUST** be the UUID of the sender's own Identity Artipoint.
   - **MUST** match, or be resolvable to, the identity bound to identity\_cert or the identity resulting from the provisioned identity flow.
   - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture and the ASCP Bootstrapping and Channel Discovery Specification.
   - Clients undergoing replica bootstrap MUST ultimately validate the identity and associated public key according to the ASCP Bootstrapping and Channel Discovery Specification.
@@ -1438,10 +1439,10 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
   - Type: string (UTF-8)
   - **MUST** be provided in the hello message, if not already provided by the sending peer in a previous message.
   - If previously provided, it MUST match the previously provided `user_identity`; senders MUST NOT change `user_identity` during a session.
-  - **MUST** contain a UTF-8 encoded client-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
+  - **MUST** contain a UTF-8 encoded sender-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
   - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture and the ASCP Bootstrapping and Channel Discovery Specification.
-  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrapping materials.
+  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrap and repository materials.
 - **status\_message**
   - Type: string (UTF-8)
   - **MAY** be present.
@@ -1931,7 +1932,7 @@ ALSP’s role is limited to **opaque, authenticated transport** of the Bootstrap
 
 # **13. Key Identifiers and  `kid` Resolution**
 
-ALSP uses structured `kid` values in JWS headers to reference cryptographic material obtained through the bootstrap process. The `kid` format follows the same pattern as Layer 1 but resolves through different mechanisms appropriate to Layer 0's requirements.
+ALSP uses structured `kid` values in JWS headers to reference cryptographic material used for message authentication and replication admission. The `kid` format follows the same pattern as Layer 1 but resolves through different mechanisms appropriate to Layer 0's requirements.
 
 ## **13.1 Format & Semantics**
 
@@ -1943,7 +1944,7 @@ ascp:<type>:<uuid>
 
 - `ascp:cert:<uuid>` - References an ASCP authentication certificate for message authentication
   - Used in JWS protected headers for peer authentication
-  - Resolved from the bootstrap process certificate directory
+  - Resolved either from previously validated bootstrap/repository-visible certificate state or from certificate material presented during ALSP session establishment, as permitted by Section 10.4.1.
   - References the public key corresponding to the `identity_cert` exchanged during authentication.
 - `ascp:cak:<uuid>` - References a keyframe-bound Channel Access Key for Channel Log replication admission
   - Used in JWS protected headers for Channel Access Proofs (CAP)
@@ -1952,10 +1953,15 @@ ascp:<type>:<uuid>
 
 ## **13.2 Resolution Rules**
 
-1. Parse the `kid` to extract type and UUID
-2. Look up the key material in the appropriate authenticated key directory.
-3. Extract the public key from the JWK representation
-4. Use for JWS signature verification
+1. Parse the `kid` to extract type and UUID.
+2. Determine the applicable ALSP context for the message being verified.
+3. Resolve the key material according to that context:
+   - for the initial Provisioned Mode `auth_request`, do not perform `kid`-based resolution and instead use `recovery_cert` as defined in Section 10.4.1;
+   - for Direct Mode authentication messages, use the presented `kid` to identify the certificate being authenticated for the session and, if existing state is already available for that `kid`, confirm that the presented certificate material matches it;
+   - for post-authentication ALSP messages using `ascp:cert:<uuid>`, resolve the certificate from validated session/bootstrap/repository-visible state;
+   - for CAP verification using `ascp:cak:<uuid>`, resolve the CAK from the current bootstrap manifest as defined in Section 11.
+4. Extract the public key from the resolved or presented JWK representation.
+5. Use that public key for signature verification.
 
 This approach maintains consistency with Layer 1's key referencing model while also operating within Layer 0's bootstrap-based key distribution mechanisms.
 
@@ -1970,8 +1976,7 @@ Just like **Layer-1 Channel Envelopes**—which may carry JOSE protected headers
   "kty": "EC",
   "crv": "P-256",
   "x": "<base64url X-coordinate>",
-  "y": "<base64url Y-coordinate>",
-  "alg": "ECDH-ES"
+  "y": "<base64url Y-coordinate>"
 }
 
 ```
@@ -1979,9 +1984,9 @@ Just like **Layer-1 Channel Envelopes**—which may carry JOSE protected headers
 - `kty`: Key type (Elliptic Curve)
 - `crv`: Curve (NIST P-256)
 - `x`, `y`: Coordinates of the EC public key
-- `alg`: Suggested algorithm (ECDH-ES)
+- `alg`: MAY be omitted. When present, it MUST be consistent with the key's actual use in the enclosing artifact.
 
-**Note:** The `use` field is intentionally omitted. This allows the same key to be used for both signature verification in JWS or key agreement in JWE.
+**Note:** The `use` field is intentionally omitted. This allows the same key material to appear in different JOSE artifacts without over-constraining the JWK. For ALSP authentication certificates, implementations MUST follow the algorithm and key-use rules of the enclosing certificate or JWS artifact rather than inferring them solely from the JWK.
 
 This is compliant with RFC 7517 §4.2, which permits keys to omit the use field to avoid unnecessary restriction.
 
@@ -2004,19 +2009,19 @@ This is compliant with RFC 7517 §4.2, which permits keys to omit the use field 
 
 **Session-Based Key Resolution**:
 
-- Layer 0 implementations should resolve JWK keys from the authentication and bootstrap process/channel manifest at the time of use
-- All cached keys should be purged at the start of each new ALSP session
-- Keys must be resolved and validated during from previously logged articulation and/or the authentication and bootstrapping materal as encountered during each session.
+- Layer 0 implementations SHOULD resolve JWK keys from session authentication material and applicable bootstrap/channel manifests at the time of use.
+- All cached keys SHOULD be purged at the start of each new ALSP session.
+- Keys MUST be resolved and validated from previously logged articulation and/or the authentication and bootstrap material encountered during each session.
 
 **Security-Based Cache Management**: For security best practices, any private keys cached by an implementation should be purged as soon as possible, ensuring that Layer 0 operates with fresh key material and thereby reducing the window for potential key compromise.
 
-**JWK Validation**: When resolving a key via a `kid`, Layer 0 must verify that the key material referenced by the `kid` matches the session provided JWK encoded key to prevent key confusion attacks. ie: Just because the`kid` matches the expected value, one must also confirm the key material itself matches the keys actually being used in the session.
+**JWK Validation**: When resolving a key via a `kid`, Layer 0 MUST verify that the key material referenced by the `kid` matches any session-provided JWK-encoded key material for that same identifier in order to prevent key confusion attacks. A matching `kid` value alone is insufficient.
 
 **Active session handling during CAK rotation:** Active sessions MUST NOT rely on session-cached replication-admission state from an earlier CAP verification; each CAP MUST be verified against currently resolved CAK material as specified in Section 11.
 
 ## **13.5 Relationship to Bootstrap Artifacts (Informative)**
 
-Layer 0 relies on key material introduced via the ASCP bootstrap process to perform deterministic signature verification and **replication-admission checks** during the lifetime of an authenticated session.
+Layer 0 relies on key material introduced via the ASCP bootstrap process and, where explicitly permitted by this specification, key material presented during session establishment to perform deterministic signature verification and **replication-admission checks** during the lifetime of an authenticated session.
 
 ALSP:
 
@@ -2024,7 +2029,10 @@ ALSP:
 - Does **not** perform revocation checking or policy interpretation
 - Does **not** reason about historical or future validity of keys
 
-Instead, ALSP assumes that any key material it is asked to resolve via a supported `kid` was already validated, authorized, and published according to higher-layer rules at the time it was made available from bootstrap artifacts (e.g., certificate directories or channel manifests).
+Instead, ALSP assumes that any key material it is asked to resolve via a supported `kid` is either:
+
+- already validated, authorized, and published according to higher-layer rules at the time it was made available from bootstrap artifacts or repository-visible state, or
+- being presented during the current authenticated session under the first-contact rules defined elsewhere in this specification.
 
 This design allows Layer 0 to:
 
@@ -2559,7 +2567,7 @@ BASE64URL(UTF8({
   "alg": "ES256",
   "kid": "ascp:cert:550e8400-e29b-41d4-a716-446655440001",
   "typ": "alsp",
-  "nonce": "peer_session_nonce_here"
+  "nonce": "peer_session_nonce_here" // Post-authentication JWS nonce
 }))
 ```
 
@@ -2605,9 +2613,11 @@ Client                       Server
   |                            |
   | <------ auth_challenge --- |
   |                            |
-  | -- hello (nonce=S) ------> |
+  | -- auth_request ---------> |
   |                            |
-  | <------ hello (nonce=C) -- |
+  | <------ hello -----------  |
+  |                            |
+  | -- hello --------------->  |
   |                            |
   | --------- sync_request --> |
   |                            |
@@ -2626,8 +2636,9 @@ Client                       Server
 ### **Notes**
 
 - auth\_request is always required and initiated by connecting party
-- auth\_challenge only happens if/as needed
-- hello is always required and a symmetric to complete mutual authentication
+- auth\_challenge only occurs when the server requires additional identity material or must return a `recovery_envelope`
+- after an auth\_challenge, the client sends a second auth\_request before the hello exchange
+- hello is always required and symmetric to complete mutual authentication
 - sync\_request initiates pull of sync information.
 - sync\_update is optional and used for live push.
 - error may be sent at any phase to signal a problem.
@@ -2737,9 +2748,8 @@ In the Immediate Flow, the receiving replica has sufficient trust material cache
 
 **Preconditions**
 
-- The client constructs an auth\_request containing either:
-  - all required identity materials (Direct Mode), or
-  - an identity reference (Provisioned Mode), which the server already trusts.
+- The client is operating in Direct Mode.
+- The client constructs an auth\_request containing all required identity materials.
 - The server already possesses the necessary trust anchors, claim bundles, or certificate chains.
 
 **Sequence Explanation**
@@ -2747,29 +2757,31 @@ In the Immediate Flow, the receiving replica has sufficient trust material cache
 1. The client sends an auth\_request containing its own session\_nonce (C\_nonce).
 2. The server successfully validates the request using its cached trust materials.
 3. The server responds directly with hello, carrying its own session\_nonce (S\_nonce).
-4. When the client receives the server’s hello, it sends its own hello containing S\_nonce.
+4. When the client receives the server’s hello, it sends its own hello carrying its client session\_nonce (C\_nonce).
 5. At this point, both peers have exchanged hello messages, and the session enters the AUTHENTICATED state.
-6. All subsequent messages use post-authentication mode, where each side signs using the peer’s session\_nonce.
+6. All subsequent messages use post-authentication mode, where the JWS protected header carries the peer’s session\_nonce.
 
 ## **A.2 Challenge Flow Example (Informative)**
 
-In the Challenge Flow, the server cannot validate the identity presented in the initial auth\_request with its local trust material. The server requests additional information.
+In the Challenge Flow, the server cannot validate the identity presented in the initial auth\_request with its local trust material or must provision additional identity material. The server requests additional information.
 
 **Preconditions**
 
 - The client may be operating in Direct or Provisioned Mode.
-- The server requires more identity materials than were included in the initial auth\_request.
+- The server requires more identity materials than were included in the initial auth\_request, or must return a `recovery_envelope` in Provisioned Mode.
 
 **Sequence Explanation**
 
 1. The client sends an initial auth\_request with its own C\_nonce.
 2. The server attempts validation but lacks some identity information.
-3. The server sends an auth\_challenge, including S\_nonce and requests for missing credential elements.
-4. The client responds with a second auth\_request, providing all requested identity materials.
-5. The server validates the response using its trust mechanisms.
-6. The server sends hello with its S\_nonce.
-7. The client, upon receiving this hello, sends its own hello echoing S\_nonce.
-8. The session transitions to AUTHENTICATED, and post-authentication message rules apply.
+3. The server sends an auth\_challenge, including S\_nonce and any required credential requests. In Provisioned Mode, this message also carries the `recovery_envelope`.
+4. The client processes the challenge. In Provisioned Mode, it decrypts `recovery_envelope.user_key_jwe`, recovers the provisioned identity private key, and prepares subsequent ALSP messages using `recovery_envelope.identity_cert_kid`.
+5. The client responds with a second auth\_request, providing the requested identity materials for the Challenge Flow.
+6. The server validates the response using its trust mechanisms.
+7. In Direct Mode with a newly introduced sovereign identity certificate, successful validation typically includes the identity-binding evidence provided through the subsequent `hello.user_auth` ICB and completion of the `hello` exchange.
+8. The server sends hello with its S\_nonce.
+9. The client, upon receiving this hello, sends its own hello with its client session\_nonce (C\_nonce).
+10. The session transitions to AUTHENTICATED, and post-authentication message rules apply.
 
 ## **A.3 Post-Authentication Message Exchange (Informative)**
 
@@ -2810,7 +2822,7 @@ Modes describe **what the client sends**.
 
 Flows describe **what the server needs**.
 
-They are independent.
+Direct Mode may use either Immediate Flow or Challenge Flow. Provisioned Mode requires Challenge Flow because the server must return a `recovery_envelope` in `auth_challenge`.
 
 # **Appendix B — Authentication Flow Tutorial (Informative)**
 
@@ -2822,7 +2834,7 @@ The Challenge Flow is used for first-time connections where a new identity-certi
 
 The message sequence proceeds as follows:
 
-- Client sends auth\_request with their identity information and JWK for their public identity key (direct mode) or their public recovery key (provisioned mode). The JWS protected header typically omits the `kid` field since no binding exists yet.
+- Client sends `auth_request` with their identity information and JWK for their public identity key (Direct Mode) or their public recovery key (Provisioned Mode). In Direct Mode, the JWS protected header carries the `kid` of the presented signing certificate. In the initial Provisioned Mode `auth_request`, the JWS protected header uses an empty `kid` and the receiver verifies against `recovery_cert`.
 - Server responds with auth\_challenge, which provides the server's session nonce and, in Provisioned Mode, includes the `recovery_envelope` carrying the provisioned identity recovery material. The client decrypts `recovery_envelope.user_key_jwe` using its recovery private key and then uses `identity_cert_kid` for subsequent ALSP message signing.
 - Client sends hello, including the JWS-signed Identity Claim Bundle in the `user_auth` field to establish identity-certificate relationship evidence.
 - Server responds with hello to complete mutual authentication, or sends an error if identity-certificate relationship validation fails.
