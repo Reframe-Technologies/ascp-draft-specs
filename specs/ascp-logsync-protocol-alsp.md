@@ -820,7 +820,7 @@ Direct Mode is appropriate for clients that have been fully provisioned by their
 
 ### **8.5.2 Provisioned Mode**
 
-In **Provisioned Mode**, the client does not yet possess its long-term identity credentials and relies on the server to provision them during authentication. The client initiates authentication using a recovery certificate that permits the server to deliver identity key material securely.
+In **Provisioned Mode**, the client does not yet possess its long-term identity credentials and relies on the server to provision them during authentication. The client initiates authentication using a transient recovery keypair whose public key is conveyed in `recovery_cert`.
 
 A client operating in Provisioned Mode:
 
@@ -834,12 +834,13 @@ A server processing the initial Provisioned Mode authentication request:
 - **MUST** verify the request signature immediately using the public key contained in `recovery_cert`.
 - **MUST NOT** defer signature verification for this message.
 - **MUST** reject the request with `invalid_auth` if recovery-certificate parsing, key extraction, or signature verification fails.
+- **MUST** use the public recovery key contained in `recovery_cert` when constructing the `user_key_jwe` value carried in the `recovery_envelope` returned by `auth_challenge`.
 
 If the server determines that additional identity material is required, it **MUST** issue an authentication challenge. The client’s response to this challenge:
 
-- **MUST** include its newly provisioned identity certificate or identity package.
-- **MUST** immediately switch to signing messages using the newly provisioned identity key.
-- **MUST** include a key identifier referencing that identity key.
+- **MUST** be signed using the newly provisioned identity private key recovered from `recovery_envelope.user_key_jwe`.
+- **MUST** use `recovery_envelope.identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
+- **MUST** include its newly provisioned identity certificate or identity package as required by the Challenge Flow.
 - **MUST NOT** include the recovery certificate.
 
 Provisioned Mode allows clients without preexisting identity credentials to participate in Session Authentication using identity materials issued securely during the session establishment.
@@ -1261,7 +1262,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - A JWS-encoded JWK containing the client’s public identity key. This field **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
   - The JWS signature of the included JWK and also all of the sender's ALSP message **MUST** be verifiable using this same public identity key, thereby proving possession of the corresponding private identity key.
   - When included, this JWK **SHALL** be used by the server to authenticate the client and to validate all JWS signatures during the session (Trust & Identity §7.2).
-  - Informational Note: In **Provisioned Mode**, the identity will be provisioned by server via `client_key_env` in a subsequent message.
+  - Informational Note: In **Provisioned Mode**, the identity will be provisioned by the server via `recovery_envelope` in a subsequent message.
 - **recovery\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded public recovery key)
   - This field is used exclusively in **Provisioned Mode** (Section 8.5.2).
@@ -1270,7 +1271,8 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - The recovery public JWK **MUST** use `kty = "EC"` and **MUST** declare `crv = "P-256"`.
   - The JWS protected header for `recovery_cert` **MUST** use `alg = "ES256"`; `ES384` and other signature algorithms are not permitted for this artifact.
   - The JWS signature of the included JWK and also the entire ALSP message itself **MUST** be verifiable using this same recovery public key, thereby proving possession of the corresponding recovery private key.
-  - This artifact is a Provisioned-Mode bootstrap credential for ALSP transport. It is not itself required to be a pre-existing Certificate Artipoint in ASCP logs; higher layers MAY later materialize corresponding Artipoints during provisioning workflows.
+  - This artifact is a Provisioned-Mode bootstrap credential for ALSP transport. It supplies the recovery public key used by the server when constructing the `user_key_jwe` field inside the `recovery_envelope` returned by `auth_challenge`.
+  - This artifact is not itself required to be a pre-existing Certificate Artipoint in ASCP logs.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be present.
@@ -1290,14 +1292,14 @@ The `auth_challenge` message is sent by the server during the Challenge Flow whe
 
 The server **MUST** include its identity key in any `auth_challenge` message it send. The server must also sign all ALSP messages with the private identity key correspnding to the included public identity key. During bootstrapping operations, the client **MUST** assume this key is a valid identity key of the sender by almost must not complete bootstrapping process until fully completely the validation process outlined in ASCP Bootrapping and Channel Discovery Specification.
 
-In Provisioned Mode, the server user the `auth_challenge` message to send the bootstrapping client the encrypted client key envelope (`client_key_env`). This encoded identity enables the client to establish its own identity and complete authentication.
+In Provisioned Mode, the server uses the `auth_challenge` message to send the bootstrapping client a `recovery_envelope` JSON object conforming to Trust & Identity §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
 
 ```json
 {
   "alsp_msg_type": "auth_challenge",     // Explicit ALSP Auth Challenge
   "timestamp": "<timestamp>",            // RFC 3339 UTC
   "session_nonce": "utf-8-string",       // Server's session nonce
-  "client_key_env": "<JWE-encoded UKE>", // JWE of user-key-envelope
+  "recovery_envelope": { ... },          // Trust & Identity recovery_envelope JSON object
   "identity_cert": "<JWK+JWS>",          // Self-Signed JWK of public identity key
   "user_identity": "utf-8-string",       // Server’s user identity as a UUID
   "node_id": "uuid"                      // Server’s replica node UUID
@@ -1321,10 +1323,17 @@ In Provisioned Mode, the server user the `auth_challenge` message to send the bo
   - **MUST** be freshly generated by the server for this session.
   - **MUST** be treated as the server's session nonce and used for subsequent JWS nonce values according to the rules in Section 8.3.2.2.
   - This value serves as the challenge nonce for identity and key-binding proof, as defined in the Trust & Identity Architecture.
-- **client\_key\_env**
-  - Type: string (JWE compact serialization of the recovery-envelope of the provised identity)
+- **recovery\_envelope**
+  - Type: object (JSON object conforming to Trust & Identity `recovery_envelope`)
   - In **Direct Mode**, this field **MUST** be omitted.
-  - In **Provisioned Mode**, **MUST** be present and the server **MUST** encrypt the recovery-envelope with the `recovery_cert` supplied in the initial authentication request with the structure and validation done as governed exclusively by Trust & Identity Specification (§8.4 and  §11).
+  - In **Provisioned Mode**, this field **MUST** be present.
+  - The object **MUST** conform to the `recovery_envelope` structure defined by the ASCP Trust & Identity Architecture (§8.4 and §11).
+  - For Provisioned Mode, the object **MUST** use the `["recovery-key"]` protection profile.
+  - For Provisioned Mode, the object **MUST** include `identity_cert_kid`.
+  - For Provisioned Mode, the object **MUST NOT** include `recovery_cert_kid`.
+  - For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
+  - The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
+  - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
   - **MUST** be the server's JWS self-signed JWK of the public idenity key of the server.
@@ -1640,6 +1649,7 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 - **Type:** string
 - **MUST** be present on all ALSP messages except when constructing the initial auth\_request in Provisioned Mode, where it **MUST** be an empty string.
 - For the initial Provisioned Mode auth\_request, receivers **MUST** verify the JWS using the public key in `recovery_cert` and **MUST NOT** perform `kid`-based key resolution for that message.
+- After the client processes a Provisioned Mode `recovery_envelope`, subsequent client-authored ALSP messages in that session **MUST** use the `identity_cert_kid` value carried in that `recovery_envelope`.
 - When present, **MUST** uniquely reference the signing key (identity key) as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
 - Implementations **MUST** emit proper kid for all messages once the authentication completes.
 - The receiver **MUST** use the kid value to resolve the appropriate public key for signature verification.
@@ -1686,6 +1696,8 @@ Receivers **MUST** validate, in order:
 8. Timestamp validation per Section 10.4.5
 
 For the initial Provisioned Mode auth\_request, key resolution in step 5 **MUST** use the public key carried in `recovery_cert`, and step 7 **MUST** be performed immediately using that key.
+
+For subsequent client-authored messages in a Provisioned Mode session, key resolution in step 5 **MUST** use the `identity_cert_kid` conveyed in the `recovery_envelope` returned by `auth_challenge`, and step 7 **MUST** be performed using the corresponding provisioned identity public key.
 
 Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
 
@@ -2798,8 +2810,8 @@ The following combinations are all valid:
 | ---------------- | --------------- | ------------- | ------------------------------------------------------------ |
 | Direct Mode      | Immediate Flow  | ✔ Common      | Server already trusts client credentials.                    |
 | Direct Mode      | Challenge Flow  | ✔ Possible    | Server may require updated or additional trust material.     |
-| Provisioned Mode | Immediate Flow  | NO            | Server needs to provide user-key-envelope in auth_challenge. |
-| Provisioned Mode | Challenge Flow  | YES           | Server provides the client identity information.             |
+| Provisioned Mode | Immediate Flow  | NO            | Server needs to provide `recovery_envelope` in auth\_challenge. |
+| Provisioned Mode | Challenge Flow  | YES           | Server provides the client's provisioned recovery material.     |
 
 Modes describe **what the client sends**.
 
@@ -2818,7 +2830,7 @@ The Challenge Flow is used for first-time connections where a new identity-certi
 The message sequence proceeds as follows:
 
 - Client sends auth\_request with their identity information and JWK for their public identity key (direct mode) or their public recovery key (provisioned mode). The JWS protected header typically omits the `kid` field since no binding exists yet.
-- Server responds with auth\_challenge, which provides the server's session nonce and, in provisioned mode, may include the **client\_key\_env** JWE containing the generated or recovered client identity encrypted using the `recovery_cert` from the auth\_request.
+- Server responds with auth\_challenge, which provides the server's session nonce and, in Provisioned Mode, includes the `recovery_envelope` carrying the provisioned identity recovery material. The client decrypts `recovery_envelope.user_key_jwe` using its recovery private key and then uses `identity_cert_kid` for subsequent ALSP message signing.
 - Client sends hello, including the JWS-signed Identity Claim Bundle in the `user_auth` field to establish identity-certificate relationship evidence.
 - Server responds with hello to complete mutual authentication, or sends an error if identity-certificate relationship validation fails.
 
