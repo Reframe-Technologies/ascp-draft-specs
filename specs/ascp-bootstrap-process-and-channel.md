@@ -987,6 +987,8 @@ The detailed mechanics of session establishment, authentication, and log replica
 
 During this sequence, ALSP Direct Mode MAY be used either with identity material already known to the serving replica or with newly generated sovereign identity material not yet anchored in repository history. In the latter case, ALSP establishes provisional cryptographic session authentication only.
 
+When onboarding requires new identity or certificate state to be introduced into repository history, the bootstrap-serving side that accepts the onboarding operation is responsible for ensuring that the necessary Identity Artipoints, Certificate Artipoints, and any required bindings are articulated into repository history, subject to the ASCP Trust & Identity Architecture and the ASCP Governance and Access Control specification.
+
 ### **10.4.1 Provisional Trust Semantics**
 
 Until validation of the @bootstrap channel and establishment of the Bootstrap Trust Anchor (RootCA) have completed successfully, all replicated coordination state acquired during join bootstrap MUST be treated as **provisional and untrusted**.
@@ -996,6 +998,8 @@ Replicated data obtained prior to authoritative trust establishment MUST NOT be 
 If authoritative validation fails at any point, the join bootstrap attempt MUST be aborted, and any provisionally acquired state MUST NOT be reused without revalidation.
 
 When a joining replica authenticates using newly generated sovereign identity material that is not yet reflected in repository history, the resulting ALSP identity binding MUST also be treated as provisional until it is validated or incorporated through normal ASCP trust and articulation procedures.
+
+Such durable onboarding articulations MUST NOT occur before the ALSP session has entered the `AUTHENTICATED` state. The bootstrap-serving side MUST wait until the session-authenticated identity-to-key binding is complete before articulating durable repository state for the joining replica.
 
 ### **10.4.2 Bootstrap Peer Authentication via identity-ref**
 
@@ -1258,13 +1262,15 @@ Join bootstrap over ALSP supports the following first-contact client authenticat
 
 In all of these patterns, ALSP session authentication provides cryptographic protection for bootstrap transport, but authoritative trust in the organizational instance is established only after the procedures of Section 10 complete.
 
+Where onboarding requires new durable identity or certificate state, the bootstrap-serving side MUST perform or cause the required repository articulations only after the ALSP session has entered `AUTHENTICATED`.
+
 The following table summarizes the allowed first-contact patterns during join bootstrap:
 
 | Pattern | Initial credential presented by joiner | Additional evidence during ALSP | Session status after ALSP authentication | Durable identity source / binding path |
 |---------|----------------------------------------|---------------------------------|------------------------------------------|----------------------------------------|
-| Provisioned Mode | Self-generated recovery key in `recovery_cert` | `recovery_envelope` returned by server in `auth_challenge` | Provisional authenticated session | Server-provisioned identity keypair and `identity_cert_kid`, followed by normal bootstrap and trust validation |
+| Provisioned Mode | Self-generated recovery key in `recovery_cert` | `recovery_envelope` returned by server in `auth_challenge` | Provisional authenticated session until ALSP reaches `AUTHENTICATED` under the provisioned identity | Server-provisioned identity keypair and `identity_cert_kid`, followed by bootstrap-serving-side articulation of any required durable identity state and then normal bootstrap/trust validation |
 | Direct Mode, known certificate | Existing identity keypair and `identity_cert` | `kid` and, when needed, other ALSP authentication materials | Authenticated session; still provisional for bootstrap until Section 10 completes | Existing identity certificate already known to the serving replica and later validated in bootstrap context |
-| Direct Mode, new sovereign certificate | Newly generated self-signed `identity_cert` and corresponding private key | Challenge Flow with `ICB` in `hello.user_auth` when prior `kid` resolution is unavailable | Provisional authenticated session | Later ASCP articulation, trust evaluation, and any applicable governance-controlled publication into repository history |
+| Direct Mode, new sovereign certificate | Newly generated self-signed `identity_cert` and corresponding private key | Challenge Flow with `ICB` in `hello.user_auth` when prior `kid` resolution is unavailable | Provisional authenticated session until ALSP reaches `AUTHENTICATED` after successful `ICB` validation and `hello` exchange | Later bootstrap-serving-side articulation, using the client-presented certificate UUID, plus normal trust evaluation and any applicable governance-controlled publication into repository history |
 
 ## **11.3 Bootstrap Channel Replication Sequence**
 

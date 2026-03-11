@@ -796,6 +796,8 @@ A client operating in Direct Mode:
 - **MUST NOT** include a recovery certificate in the initial authentication request.
 - **MUST** continue to supply identity material in any retransmission of the authentication request.
 
+For first-contact Direct Mode using newly generated sovereign identity material, the client-declared certificate `kid` is authoritative for that presented certificate. If the server later accepts onboarding and creates durable repository state for that certificate, it MUST use that same certificate UUID. If repository state already exists for that `kid`, the presented certificate material MUST match it; otherwise the server MUST reject authentication.
+
 If the server possesses sufficient trust metadata to validate the client’s identity, it MAY complete authentication immediately using the Immediate Flow defined in Section 8.2. Otherwise, it MAY issue an authentication challenge to request additional identity artifacts.
 
 Direct Mode is appropriate for clients that already possess long-term identity credentials, whether previously provisioned by their operators, acquired through prior participation in the ASCP Bootstrap Process, or newly self-generated for sovereign bootstrap.
@@ -1239,6 +1241,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - This field carries a JWS-encoded JWK containing the client’s public identity key.
   - It **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
   - In Direct Mode, this field MAY carry either an identity certificate already known to the server or a newly generated self-signed identity certificate being introduced for first-contact authentication.
+  - When this field introduces a newly generated sovereign identity certificate, the certificate `kid` presented by the client **MUST** identify that certificate for the session and for any later durable publication of the corresponding Certificate Artipoint.
   - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable using this same public identity key, proving possession of the corresponding private identity key.
   - When included, the server **SHALL** use this JWK to authenticate the client and validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - Informational Note: In **Provisioned Mode**, the identity will be provisioned by the server via `recovery_envelope` in a subsequent message.
@@ -1635,6 +1638,9 @@ The **JWS Protected Header** MUST be a JSON object containing the fields defined
 - **MUST** be present on all ALSP messages except when constructing the initial auth\_request in Provisioned Mode, where it **MUST** be an empty string.
 - For the initial Provisioned Mode auth\_request, receivers **MUST** verify the JWS using the public key in `recovery_cert` and **MUST NOT** perform `kid`-based key resolution for that message.
 - After the client processes a Provisioned Mode `recovery_envelope`, subsequent client-authored ALSP messages in that session **MUST** use the `identity_cert_kid` value carried in that `recovery_envelope`.
+- For Direct Mode, the `kid` value presented by the client **MUST** identify the certificate carried in or referenced by the client's authentication materials.
+- If that Direct Mode `kid` already resolves to existing repository or bootstrap-visible certificate state, the presented certificate material **MUST** match the certificate bound to that `kid`; otherwise authentication **MUST** fail.
+- If that Direct Mode `kid` does not yet resolve and the server later accepts onboarding, any durable Certificate Artipoint created for that presented certificate **MUST** use that same client-presented certificate UUID.
 - When present, **MUST** uniquely reference the signing key (identity key) as defined by Section 13 and the **ASCP Trust & Identity Architecture**.
 - Implementations **MUST** emit a proper `kid` for all messages once authentication completes.
 - The receiver **MUST** use the `kid` value to resolve the appropriate public key for signature verification.
@@ -1683,6 +1689,8 @@ Receivers **MUST** validate, in order:
 For the initial Provisioned Mode auth\_request, key resolution in step 5 **MUST** use the public key carried in `recovery_cert`, and step 7 **MUST** be performed immediately using that key.
 
 For subsequent client-authored messages in a Provisioned Mode session, key resolution in step 5 **MUST** use the `identity_cert_kid` conveyed in the `recovery_envelope` returned by `auth_challenge`, and step 7 **MUST** be performed using the corresponding provisioned identity public key.
+
+For Direct Mode messages, step 5 **MUST** treat the presented `kid` as identifying the certificate being authenticated for the session. If existing state is resolved for that `kid`, the receiver **MUST** confirm that the presented certificate material matches it before proceeding with signature validation.
 
 Messages failing any requirement **MUST** be rejected with an ALSP error message per Section 10.5.
 
