@@ -824,7 +824,7 @@ If the server determines that additional identity material is required, it **MUS
 
 - **MUST** be signed using the newly provisioned identity private key recovered from `recovery_envelope.user_key_jwe`.
 - **MUST** use `recovery_envelope.identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
-- **MUST** include its newly provisioned identity certificate or identity package, as required by the Challenge Flow.
+- **MUST** include its newly provisioned identity certificate or identity package, as required by the Challenge Flow. That certificate or package **MUST** correspond to `recovery_envelope.identity_cert_kid`.
 - **MUST NOT** include the recovery certificate.
 
 Provisioned Mode allows clients without preexisting identity credentials to participate in Session Authentication using identity materials issued securely during the session establishment.
@@ -1260,7 +1260,8 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - Type: string (UTF-8)
   - **MUST** be present.
   - **MUST** contain a UTF-8 encoded sender-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
-  - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
+  - In Direct Mode, this value **MUST** match, or be resolvable to, the identity bound to the included `identity_cert`.
+  - In Provisioned Mode, this value **MUST** identify the user identity for which provisioning is being requested in the current session.
   - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture.
   - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrap and repository materials.
 - **node\_id**
@@ -1312,13 +1313,14 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
   - In **Provisioned Mode**, this field **MUST** be present.
   - The object **MUST** conform to the `recovery_envelope` structure defined by the ASCP Trust & Identity Architecture (§8.4 and §11).
   - For Provisioned Mode, the object **MUST** use the `["recovery-key"]` protection profile.
-  - For Provisioned Mode, the object **MUST** include `identity_cert_kid`.
-  - For Provisioned Mode, the object **MUST NOT** include `recovery_cert_kid`.
-  - For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
-  - The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
-  - The `user_identity` value within the object identifies the identity the server is provisioning for the client in that session and is treated as provisional session state at this stage.
-  - Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust & Identity Architecture.
-  - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
+- For Provisioned Mode, the object **MUST** include `identity_cert_kid`.
+- For Provisioned Mode, the object **MUST NOT** include `recovery_cert_kid`.
+- For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
+- The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
+- The `identity_cert_kid` value within the object **MUST** identify the Certificate Artipoint corresponding to the provisioned identity public key recovered from `user_key_jwe`.
+- The `user_identity` value within the object identifies the identity the server is provisioning for the client in that session and is treated as provisional session state at this stage.
+- Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust & Identity Architecture.
+- The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
   - **MUST** be the server's JWS self-signed JWK of the server's public identity key.
@@ -1423,6 +1425,7 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
   - When provided, **MUST** contain the JWS self-signed JWK of the sender's public identity key.
   - When provided, **MUST** be used by the peer to authenticate and validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - **MUST** be consistent with the identity key implied by any `kid` placed in the JWS protected headers.
+  - In Provisioned Mode, any `identity_cert` or identity package presented after processing `recovery_envelope` **MUST** correspond to `recovery_envelope.identity_cert_kid`.
   - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable using this same public identity key, proving possession of the corresponding private identity key.
 
 - **user\_auth**
