@@ -151,7 +151,7 @@ The cryptographic root of trust for an ASCP organizational instance. The RootCA 
 
 ### **Bootstrap Channel (@bootstrap)**
 
-A mandatory ASCP channel that anchors the organizational trust root and contains the minimum information required for a replica to begin safe initialization. The bootstrap channel is designed to be readable prior to full authorization in order to resolve initial trust dependencies.
+A mandatory ASCP channel that anchors the organizational trust root and contains the minimum information required for a replica to begin safe initialization. The bootstrap channel is designed to be readable prior to full authorization in order to resolve initial trust dependencies. Its channel UUID is permanently reserved as `ffffffff-ffff-7000-8000-000000000000`.
 
 ### **References Channel (@references)**
 
@@ -464,6 +464,8 @@ The @bootstrap channel serves three primary purposes:
 The @bootstrap channel is intentionally minimal. It is not a general coordination channel and MUST NOT be used to convey ordinary application, governance, or workflow data.
 
 Visibility seeding for encrypted discovery artifacts, where required, is performed via bootstrap session mechanisms and not via content recorded in the @bootstrap channel.
+
+The @bootstrap channel UUID is permanently reserved as `ffffffff-ffff-7000-8000-000000000000`. This value is a valid UUIDv7 and MUST identify the unique @bootstrap channel in every ASCP organizational instance. No other channel MAY use this UUID.
 
 ## **7.2 Required Contents**
 
@@ -956,6 +958,8 @@ This model provides strong security guarantees and is RECOMMENDED for enterprise
 ### **10.3.2 Invitation Artifact**
 
 The replica is provisioned with a signed bootstrap artifact (e.g., file, QR code, or secure bundle) containing sufficient information to authenticate the organizational instance and retrieve the @bootstrap channel.
+
+Because the @bootstrap channel UUID is fixed by this specification, invitation artifacts need not carry a separate @bootstrap `channel_id`. They MUST still provide sufficient information to reach a bootstrap-serving replica and authenticate the organizational instance.
 
 Invitation artifacts MUST be verifiable against the organizational trust anchor once bootstrap validation completes.
 
