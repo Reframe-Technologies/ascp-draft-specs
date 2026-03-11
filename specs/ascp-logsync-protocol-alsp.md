@@ -11,7 +11,7 @@ March 2026
 
 ## **1. Status of This Document**
 
-This document is part of the ASCP specification suite and specifies the **ASCP LogSync Protocol (ALSP)**, the **Layer-0** replication protocol for synchronizing **Channel Logs** between ASCP replicas. ALSP defines message formats, replication procedures, and validation requirements used to exchange and converge on an append-only log of **Artipoint Records**, where each Artipoint Record consists of **Layer-0 replication metadata** and an opaque **Layer-1 Channel Envelope** payload.
+This document is part of the ASCP specification suite and specifies the **ASCP LogSync Protocol (ALSP)**, the **Layer-0** replication protocol for synchronizing **Channel Logs** between ASCP replicas. ALSP defines message formats, replication procedures, and validation requirements used to exchange and converge on an append-only log of **Artipoint Records**, where each Artipoint Record consists of **Layer-0 replication metadata** and an opaque **Layer-1 Channel Envelope** payload. ALSP also defines the Layer-0 message-authentication, session-establishment, replication-admission verification, and bootstrap-artifact carriage mechanisms required to operate that replication substrate, while leaving higher-layer trust meaning, governance meaning, and bootstrap interpretation to companion specifications.
 
 This document is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is published solely for early review and experimentation. Implementations based on this document are **experimental**.
 
@@ -23,7 +23,7 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 The ASCP LogSync Protocol (ALSP) specifies **Layer-0** transport and replication procedures for the Agents Shared Cognition Protocol (ASCP). ALSP synchronizes append-only **Channel Logs** across replicas. Each log entry is an immutable, semantically opaque **Artipoint Record** that binds **Layer-0 synchronization metadata** (e.g., identifiers and ordering fields) to a **Layer-1 Channel Envelope** (a JOSE serialization) carried without semantic interpretation.
 
-ALSP defines message formats, authentication and replication-admission procedures, replica behavior, and transport bindings for reliable log replication in centralized, partially connected, and fully distributed environments. It normatively defines a deterministic **CBOR** message envelope and **Dot-Preserving Binary (DPB)** encoding for conveying Layer-1 JOSE compact serialization opaquely, and specifies pull- and push-based synchronization mechanisms, replay protection, and deterministic convergence using **Lamport-clock ordering** with a stable global tie-break rule.
+ALSP defines message formats, authentication and replication-admission procedures, replica behavior, and transport bindings for reliable log replication in centralized, partially connected, and fully distributed environments. It normatively defines a deterministic **CBOR** message envelope and **Dot-Preserving Binary (DPB)** encoding for conveying Layer-1 JOSE compact serialization opaquely, and specifies pull- and push-based synchronization mechanisms, replay protection, authenticated session establishment, bootstrap-artifact carriage, and deterministic convergence using **Lamport-clock ordering** with a stable global tie-break rule.
 
 # **3. Introduction**
 
@@ -53,7 +53,7 @@ These properties provide a stable substrate upon which higher ASCP layers can de
 
 ASCP is defined as a layered protocol suite with strict responsibility boundaries. ALSP occupies **Layer-0**, directly above the physical transport and below all semantic layers. Its role is to replicate and order **Artipoint Records** and to convey the embedded Layer-1 Channel Envelope payload opaquely.
 
-- **Layer-0 Replication Substrate — ALSP (This Specification):** Defines synchronization of append-only Channel Logs; specifies canonical ordering and convergence rules; defines on-wire protocol messages and transport bindings; and provides protocol-level authentication, integrity checks, replay protection, and replication-admission proof verification.
+- **Layer-0 Replication Substrate — ALSP (This Specification):** Defines synchronization of append-only Channel Logs; specifies canonical ordering and convergence rules; defines on-wire protocol messages and transport bindings; and provides protocol-level authentication, authenticated session establishment, integrity checks, replay protection, replication-admission proof verification, and carriage of bootstrap artifacts required by higher layers.
 - **Layer-1 Channel Codecs:** Produces and consumes **Layer-1 Channel Envelopes** using cryptographic protection (e.g., signing and optional encryption), and verifies the protected representation it carries.
 - **Layer-2 Artipoint Grammar:** Defines the syntactic representation of articulated coordination (e.g., Artipoint expressions and structural constraints). Layer-0 does not parse or depend on Layer-2 structures.
 - **Layer-3 Semantic Evaluation:** Defines how meaning, authority, governance state, and application-specific views are derived from articulated history over time. Layer-3 provisions channels and credentials and determines what enforcement or consequences follow from the log.
@@ -78,10 +78,10 @@ This document specifies the requirements for interoperable ALSP implementations,
 The following are explicitly out of scope for ALSP and are defined by other ASCP specifications or by applications:
 
 - **Semantic interpretation of payloads:** ALSP does not inspect or interpret Layer-1 Channel Envelopes or any protected Layer-2 content.
-- **Identity and trust semantics:** ALSP may validate cryptographic material and protocol artifacts used for admission, but the meaning of identity claims, trust relationships, and the rules determining which replicas are admitted to synchronize a given Channel Log are defined outside Layer-0.
+- **Identity and trust semantics:** ALSP may validate cryptographic material and protocol artifacts used for session authentication, bootstrap transport, and replication admission, but the meaning of identity claims, trust relationships, and the higher-layer policies that determine whether a replica ought to be admitted to synchronize a given Channel Log are defined outside Layer-0.
 - **Channel definition, governance, and membership semantics:** Channel manifests, governance rules, membership policy, and key lifecycle semantics are not defined by ALSP. ALSP may require proofs or identifiers to admit synchronization, but does not define their higher-level meaning or enforcement consequences.
 - **Artipoint grammar and structured cognition model:** The structure, interpretation, and validation rules for articulated representations are defined at Layer-2 and above.
-- **Peer discovery, routing, and topology management:** ALSP assumes an established connection between replicas and does not define discovery protocols, overlay routing, or network coordination.
+- **Peer discovery, routing, and topology management:** ALSP may carry bootstrap artifacts used by higher layers during onboarding, but it assumes an established connection between replicas and does not define discovery protocols, overlay routing, or network coordination semantics.
 
 By limiting ALSP to synchronization, deterministic ordering, and protocol-level validation, this specification defines a narrow, stable contract between the replication substrate and the higher semantic layers.
 
@@ -153,7 +153,7 @@ A Layer-1 produced cryptographic container (e.g., JOSE serialization) that encap
 
 **message\_id**
 
-A 16-byte identifier associated with an Artipoint Record for idempotence, deduplication, and canonical ordering. The construction and uniqueness requirements for message\_id are specified by this document.
+A UUIDv7 identifier associated with an Artipoint Record for idempotence, deduplication, and canonical ordering. In the Layer-0 wrapper specified by Section 6.3, `message_id` is encoded as the raw 16-byte UUID value; textual UUID encodings are not permitted in that wrapper.
 
 **payload**
 
@@ -257,7 +257,7 @@ A structured key identifier used in JOSE protected headers to reference key mate
 
 **Hello Message (hello)**
 
-A post-authentication message used to negotiate session parameters, exchange lamport maxima, advertise capabilities, and establish readiness to synchronize.
+A session-establishment message exchanged during authentication after initial credential validation. The `hello` message completes mutual authentication once both peers have sent and validated one `hello` message, and is also used to negotiate session parameters, exchange lamport maxima, advertise capabilities, and establish readiness to synchronize.
 
 **Pull Sync**
 
@@ -332,7 +332,7 @@ ALSP is commonly deployed over TLS-protected transports. TLS can provide confide
 
 ### **5.1.4 Transparency Systems (Informative)**
 
-ALSP is not a public transparency system. Unlike Certificate Transparency and other verifiable-data-structure (VDS) designs, ALSP does not assume an untrusted global log operator, and it does not require globally comparable Merkle tree commitments as a trust anchor. Trust in ASCP derives from (a) the cryptographic properties of **Layer-1 Channel Envelopes carried within Artipoint Records**, and (b) scoped replication admission.
+ALSP is not a public transparency system. Unlike Certificate Transparency and other verifiable-data-structure (VDS) designs, ALSP does not assume an untrusted global log operator, and it does not require globally comparable Merkle tree commitments as a trust anchor. Within the ASCP suite, ALSP contributes transport/session integrity, scoped replication admission, and deterministic convergence for replicated Channel Logs; trust in ASCP is evaluated from log-anchored evidence and local policy by higher-layer specifications.
 
 Future revisions of this specification may define Merkle-based summary structures strictly as **Layer-0 convergence aids** (e.g., compact divergence detection), without altering Layer-1/Layer-2 semantics or introducing a new global transparency trust model.
 
@@ -352,8 +352,9 @@ Within the ASCP protocol stack, **Layer-0 (ALSP) is the authoritative protocol l
 
 Specifically:
 
-- Layer-0 **MUST** govern the admissibility, ordering, deduplication, and replication of Artipoint Records within a Channel Log.
+- Layer-0 **MUST** govern the replication-layer admissibility, ordering, deduplication, and replication of Artipoint Records within a Channel Log.
 - Once accepted by Layer-0, an Artipoint Record **MUST NOT** be modified, reordered, or removed.
+- Layer-0 **MUST** ensure that any Artipoint Record it accepts into the Channel Log is durably available as the immutable log entry passed upward to Layer-1 processing.
 - Layer-0 **MUST** ensure deterministic convergence such that any two replicas possessing the same set of accepted Artipoint Records compute an identical Channel Log in Canonical Order.
 
 Layer-0 authority over Channel Logs is **structural and protocol-scoped only**.
@@ -369,7 +370,7 @@ This subsection is **informative** and intended to assist implementers in reason
 - **Channel Log:** An append-only log of Artipoint Records. ALSP’s only log-level processing is validation, deduplication, and insertion into Canonical Order.
 - **Distribution:** Replicas may synchronize Channel Logs using centralized, peer-to-peer, or hybrid topologies. Topology affects liveness (i.e., which peers can exchange with which others, and how quickly records propagate) but does not change ALSP’s validation rules, ordering rules, or convergence properties.
 
-ALSP operates on a per-channel basis. Any cross-channel projections, global timelines, or graph construction are Layer-3 concerns and are not specified by ALSP.
+ALSP synchronization exchanges are scoped per channel. However, ALSP ordering state is not purely per-channel: conforming replicas maintain a single replica-wide Lamport counter across all channels, and protocol messages may propagate Lamport state that affects insertion ordering behavior beyond any one channel exchange. Any cross-channel projections, global timelines, or graph construction remain Layer-3 concerns and are not specified by ALSP.
 
 ## **5.4 Consistency and Convergence Guarantees**
 
@@ -389,7 +390,7 @@ Non-goals at Layer-0 include:
 
 ## **6.1 Encapsulation of Layer-1 Channel Envelopes**
 
-This section specifies how **Layer-1 Channel Envelopes** are carried within **Artipoint Records** as opaque byte sequences. A Layer-1 Channel Envelope is a JOSE serialization produced by Layer-1 and MAY encapsulate protected **Layer-2 Articulation Sequences**. ALSP (Layer-0) transports the Layer-1 Channel Envelope without semantic interpretation.
+This section specifies how **Layer-1 Channel Envelopes** are carried within **Artipoint Records** as opaque byte sequences. For ALSP transport, the Layer-1 Channel Envelope is the JOSE compact serialization produced by Layer-1 and MAY encapsulate protected **Layer-2 Articulation Sequences**. ALSP (Layer-0) transports the Layer-1 Channel Envelope without semantic interpretation.
 
 A conforming Layer-0 implementation **MUST NOT** inspect, parse, or interpret Layer-1 Channel Envelopes or any protected Layer-2 content they may encapsulate.
 
@@ -420,7 +421,7 @@ A Layer-0 entry represents exactly one **Artipoint Record**. Each Artipoint Reco
 ; Integer-keyed, compact map
 L0-Entry = {
   0: lamport-time,       ; uint / uint64
-  1: bstr .size 16,      ; message_id (UUID, raw 16 bytes per RFC 4122)
+  1: bstr .size 16,      ; message_id (UUIDv7, raw 16-byte UUID value)
   2: bstr                ; Channel Envelope payload as opaque DPB bytes
 }
 
@@ -431,7 +432,7 @@ lamport-time = uint      ; producers/consumers MUST support up to 64-bit
 #### **Field Semantics**
 
 - **0 — lamport\_time (uint) -** Lamport clock tick for deterministic ordering. MUST be treated as an **unsigned 64-bit** value (even if many entries fit in 32 bits).
-- **1 — message\_id (bstr .size 16) -** Message UUID encoded as **16 raw bytes** (RFC 4122 canonical byte order). **Textual UUIDs are not permitted** in this wrapper.
+- **1 — message\_id (bstr .size 16) -** Message UUIDv7 encoded as **16 raw bytes** in standard UUID byte order. **Textual UUIDs are not permitted** in this wrapper.
 - **2 — payload (bstr) -** Opaque DPB bytes (the exact Layer-1 JOSE compact serialization encoded via DPB).
 
 ### **Deterministic CBOR Requirements (normative)**
@@ -448,7 +449,7 @@ To ensure signatures and hashes are stable:
 Given:
 
 - lamport\_time = 1\_345\_678
-- message\_id = 550e8400-e29b-41d4-a716-446655440000 (raw 16 bytes)
+- message\_id = 018f0d5c-8b72-7d11-a8c3-5f7c9e120004 (raw 16 bytes)
 - payload = h'65794a2e686247382e736967' (example DPB)
 
 #### **Diagnostic notation:**
@@ -456,7 +457,7 @@ Given:
 ```
 {
  0: 1345678,
- 1: h'550e8400e29b41d4a716446655440000',
+ 1: h'018f0d5c8b727d11a8c35f7c9e120004',
  2: h'65794a2e686247382e736967'
 }
 ```
@@ -469,8 +470,8 @@ A3                                  # map(3)
   1A 00 14 88 8E                    # uint32 1,345,678  (shortest form)
   01                                # key: 1
   50                                # bstr, length 16
-     55 0E 84 00 E2 9B 41 D4
-     A7 16 44 66 55 44 00 00
+     01 8F 0D 5C 8B 72 7D 11
+     A8 C3 5F 7C 9E 12 00 04
   02                                # key: 2
   4C                                # bstr, length 12
      65 79 4A 2E 68 62 47 38 2E 73 69 67
@@ -480,7 +481,7 @@ A3                                  # map(3)
 
 Receivers MUST reject (and not insert) an entry if any of the following hold:
 
-- The map is not exactly 3 keys {0,1,2} in ascending order.
+- The encoded map is not exactly 3 keys {0,1,2} serialized in ascending order.
 - lamport\_time is not an unsigned integer or exceeds 64-bit range supported by the implementation.
 - message\_id is not a 16-byte bstr.
 - payload is not a definite-length bstr (zero length is permitted but discouraged).
@@ -496,7 +497,7 @@ ALSP's ordering architecture centers on a **logical clock mechanism** - a partic
 - **Idempotence:** Receivers MUST de-duplicate **per channel** by `message_id`.
 - **Atomicity:** Each `L0-Entry` is self-contained; batch boundaries with ALSP messages have no semantics.
 
-This ordering mechanism is fundamental to Layer 0's core responsibility: ensuring that all replicas of a Channel Log converge to identical Artipoint Record sequences, regardless of network conditions, arrival order, or the timing of synchronization events. The architecture supports offline operation, concurrent authorship, and partial replication while maintaining causal consistency.
+This ordering mechanism is fundamental to Layer 0's core responsibility: ensuring that all replicas of a Channel Log converge to identical Artipoint Record sequences, regardless of network conditions, arrival order, or the timing of synchronization events. The architecture supports offline operation, concurrent authorship, and partial replication while maintaining deterministic logical ordering.
 
 The detailed specifications for how this ordering works—including clock advancement rules, insertion algorithms, and tie-breaking procedures—are provided in Section 9.
 
@@ -510,15 +511,26 @@ Other encodings for the Layer-1 Channel Envelope payload are **non-conformant**.
 
 ## **7.1 Encoding Rules**
 
-The transformation follows these principles:
+DPB is defined over JOSE compact serialization strings consisting of dot-separated Base64url segments. For ALSP, each segment of the input compact serialization **MUST** be Base64url-encoded; RFC 7797 unencoded-payload JWS compact serialization is **not supported**.
 
-1. **Dot preservation**: Literal dot characters (0x2E) remain unchanged to preserve segment boundaries
-2. **Base64url segment conversion**: Each Base64url segment is converted to a binary block consisting of:
-   - An escape header (0x1F)
-   - The segment length encoded in ULEB128 format
-   - The raw decoded bytes from the Base64url segment
-3. **Empty segment handling**: Empty segments between consecutive dots require no encoding (dots remain consecutive)
-4. **Raw ASCII segments**: Raw ASCII middle segments as defined in RFC 7797 remain as literal text without binary block encoding
+The encoder **MUST** process the JOSE compact serialization left-to-right and produce a DPB byte sequence as follows:
+
+1. Parse the input as a sequence of segments separated by literal `.` characters (0x2E), preserving empty segments if present.
+2. For each segment:
+   - If the segment is empty, emit no bytes for the segment itself.
+   - Otherwise, Base64url-decode the segment to raw bytes. Failure to decode **MUST** be treated as an error.
+   - Emit a binary block consisting of:
+     - the escape octet `0x1F`;
+     - the ULEB128 encoding of the decoded byte length; and
+     - the decoded raw bytes.
+3. Between adjacent segments, emit a literal `.` octet (0x2E).
+
+The encoder **MUST NOT** emit any bytes other than:
+
+- binary blocks beginning with `0x1F`, and
+- literal dot separators `0x2E`.
+
+The decoder **MUST** interpret any non-dot octet outside a binary block as an error.
 
 ## **7.2 ULEB128 Encoding**
 
@@ -526,16 +538,38 @@ The segment length uses ULEB128 (Unsigned Little Endian Base 128), a variable-le
 
 For example, the value 1 encodes as a single byte 0x01, while 128 requires two bytes: 0x80 0x01 (the first byte's high bit indicates continuation, its low 7 bits represent zero, and the second byte contains the remaining value 1). The value 624485 encodes as 0xE5 0x8E 0x26, demonstrating the format's efficiency for larger integers.
 
+For DPB:
+
+- The ULEB128 value **MUST** encode the exact number of raw decoded bytes in the following binary block payload.
+- ULEB128 encodings **MUST** use the shortest form.
+- A decoder **MUST** reject a ULEB128 value that is truncated, overlong, or exceeds implementation-supported length bounds.
+
 ## **7.3 Reversibility Requirements**
 
-1. Scan for 0x1F escape sequences and literal dots
-2. For each binary block: decode ULEB128 length, extract raw bytes, re-encode as Base64url
-3. Reconstruct JOSE compact serialization with original dot separators
-4. Result is bit-for-bit identical to original JOSE string
+DPB decoding **MUST** reconstruct the JOSE compact serialization exactly.
+
+The decoder **MUST** process the DPB octet stream left-to-right:
+
+1. If the next octet is `0x2E`, emit `.` into the reconstructed compact serialization and continue.
+2. Otherwise, the next octet **MUST** be `0x1F`; any other value **MUST** be rejected.
+3. Decode the following ULEB128 length value.
+4. Read exactly that many raw payload bytes from the input. If insufficient bytes remain, decoding **MUST** fail.
+5. Base64url-encode those raw payload bytes without padding and append the resulting segment text to the reconstructed compact serialization.
+6. Continue until the input is exhausted.
+
+An implementation **MUST** reject DPB input if any of the following occur:
+
+- a non-dot octet appears where a binary block opener is required;
+- a binary block opener is not followed by a valid shortest-form ULEB128 length;
+- the stated length exceeds the remaining input;
+- reconstruction would require emitting characters outside valid JOSE compact serialization segment syntax;
+- any additional trailing octets remain after a malformed or truncated block.
+
+For a valid input, the decoded result **MUST** be bit-for-bit identical to the original JOSE compact serialization from which the DPB form was produced.
 
 ## **7.4 Example (Non-Normative)**
 
-Please see Section 21.3 for a fully worked example of DPD encoding.
+Please see Section 21.3 for a fully worked example of DPB encoding.
 
 # **8. Session Establishment and Lifecycle**
 
@@ -2697,7 +2731,7 @@ c7 89 7f 7e 8f 3a 4e b2 25 5f da 75 0b 2c c3 97
 
 ### **Notes:**
 
-- This example shows a JWS with header, payload and signature in JOSE compact serialization form, but DPB encoding is format-agnostic—any sequence of dot-separated Base64url encoded streams can be represented in DPB format
+- This example shows a JWS with header, payload, and signature in JOSE compact serialization form, which is the form DPB operates on in ALSP
 - `1f 1b` → binary block opener (0x1F) + ULEB128(27) indicating 27-byte segment length
 - Dots (0x2E) remain as literal separators preserving JOSE structure
 - All Base64url segments round-trip perfectly via raw bytes and canonical Base64url re-encoding (no padding required)
