@@ -1279,7 +1279,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - **MUST** contain a UTF-8 encoded client side identity reference conforming to the Identity Artipoint structure defined in Trust & Identity §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
   - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
   - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to ASCP Trust and Identity Specification rules.
-  - A sender **MUST** favor sending the user_identity as the UUID of its own Identity Artipoint, when known. The enables more direct authentication pathways via leveraging pre-existing bootstrapping materials.
+  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrapping materials.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1290,7 +1290,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
 
 The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material from the client beyond what was provided in the initial `auth_request`. An `auth_challenge` is always required in Provisioned Mode.
 
-The server **MUST** include its identity key in any `auth_challenge` message it send. The server must also sign all ALSP messages with the private identity key correspnding to the included public identity key. During bootstrapping operations, the client **MUST** assume this key is a valid identity key of the sender by almost must not complete bootstrapping process until fully completely the validation process outlined in ASCP Bootrapping and Channel Discovery Specification.
+The server **MUST** include its identity key in any `auth_challenge` message it sends. The server **MUST** also sign all ALSP messages with the private identity key corresponding to the included public identity key. During bootstrapping operations, the client **MUST** treat this key as the sender's provisional identity key for the session, but **MUST NOT** complete the bootstrap process until it has completed the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification.
 
 In Provisioned Mode, the server uses the `auth_challenge` message to send the bootstrapping client a `recovery_envelope` JSON object conforming to Trust & Identity §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
 
@@ -1336,7 +1336,7 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
   - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
-  - **MUST** be the server's JWS self-signed JWK of the public idenity key of the server.
+  - **MUST** be the server's JWS self-signed JWK of the server's public identity key.
   - This JWK encoded public identity key **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (Trust & Identity §7.2).
   - **MUST** be consistent with the kid used in the JWS protected header for this and all following messages.
   - The JWS signature of the included JWK and also all of the sender's ALSP message **MUST** be verifiable using this same public identity key, thereby proving possession of the corresponding private identity key.
