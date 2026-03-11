@@ -1353,22 +1353,18 @@ In Provisioned Mode, the server uses `auth_challenge` to send the bootstrapping 
   - In **Direct Mode**, this field **MUST** be omitted.
   - In **Provisioned Mode**, this field **MUST** be present.
   - The object **MUST** conform to the `recovery_envelope` structure defined by the ASCP Trust & Identity Architecture (§8.4 and §11).
-  - In Provisioned Mode, the object **MUST** use the `["recovery-key"]` protection profile.
-- For Provisioned Mode, the object **MUST** include `identity_cert_kid`.
-- For Provisioned Mode, the object **MUST NOT** include `recovery_cert_kid`.
-- For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
-- The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
-- The `identity_cert_kid` value within the object **MUST** identify the Certificate Artipoint corresponding to the provisioned identity public key recovered from `user_key_jwe`.
-- The `user_identity` value within the object identifies the identity the server is provisioning for the client in that session and is treated as provisional session state at this stage.
-- Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust & Identity Architecture.
-- The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
+  - In Provisioned Mode, the object **MUST** use the `["recovery-key"]` protection profile, **MUST** include `identity_cert_kid`,  **MUST NOT** include `recovery_cert_kid`, and **MUST NOT** include `kdf_params`.
+  - The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
+  - The `identity_cert_kid` value within the object **MUST** identify the Certificate Artipoint corresponding to the provisioned identity public key recovered from `user_key_jwe`.
+  - The `user_identity` value within the object identifies the identity the server is provisioning for the client in that session and is treated as provisional session state at this stage.
+  - Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust & Identity Architecture.
+  - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
   - Type: string (JWS compact serialization carrying a JWK-encoded self-signed public identity key)
   - **MUST** contain the server's public identity key.
   - The client **MUST** use this key to authenticate the server and validate ALSP JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - **MUST** be consistent with the `kid` used in the JWS protected header for this and subsequent messages.
   - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable with this public identity key, proving possession of the corresponding private identity key.
-
 - **user\_identity**
   - Type: string (UTF-8 UUIDv7 string)
   - **MUST** be present.
@@ -1570,7 +1566,7 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
   "timestamp": "<timestamp>",       // RFC 3339 UTC
   "lamport_max": 16569909,          // Responder's Lamport global max
   "channel_id": "uuid",             // Channel being supplied
-  "log_digest": "sha256:abcd..."    // Optional log digest up to from_lamport
+  "log_digest": "sha256:abcd...",   // Optional log digest up to from_lamport
   "more": false                     // Additional responses to follow?
 }
 ```
@@ -1616,7 +1612,7 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
   "alsp_msg_type": "sync_update",  // Asynchronous live update
   "timestamp": "<timestamp>",      // RFC 3339 UTC
   "lamport_max": 16569909,         // Sender's Lamport global max value
-  "channel_id": "uuid"             // Channel being supplied (optional)
+  "channel_id": "uuid",            // Channel being supplied (optional)
   "log_digest": "sha256:abcd..."   // Optional log digest up to from_lamport
 }
 ```
