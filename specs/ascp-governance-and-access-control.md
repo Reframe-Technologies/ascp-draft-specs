@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.34 — Informational (Pre-RFC Working Draft)  
+Version: 0.35 — Informational (Pre-RFC Working Draft)  
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -163,6 +163,8 @@ These attributes:
 - Participate in inheritance, override, denial, and expiration semantics
 - MUST be respected by ASCP-compliant applications and agents **when determining semantic effect**, including when emitting new articulations, accepting or acting upon received articulations, and rendering views of participation and responsibility
 
+The same rule applies when introducing, endorsing, or binding new identity or certificate material into repository history. Such articulations are governed by the ordinary authoring authority of the target Structure; no special exemption exists merely because the identity material was first encountered during bootstrap or ALSP session establishment.
+
 Governance permissions are **semantic**, not cryptographic. An articulation authored by a non-writer may exist immutably in a log, but applications and agents MAY treat it as invalid, ignore it, or surface it as a governance violation.
 
 ### **Non-authoritative articulations are expected and safe**
@@ -188,6 +190,8 @@ Responsibility is intentionally separated across layers:
   - Performs append-only replication without semantic interpretation
 
 This separation ensures that governance meaning remains human and agent interpretable while cryptographic execution remains deterministic and semantically agnostic.
+
+Accordingly, ALSP session authentication MAY establish provisional cryptographic authenticity for a newly encountered sovereign identity, but durable acceptance or publication of that identity into repository history remains a governance-controlled semantic decision evaluated from articulated authority and applicable trust rules.
 
 ## **5.5 Effective Governance Set**
 
@@ -999,6 +1003,8 @@ Governance requires verified identities. All Articulation Sequences carrying gov
 # 14. Interaction with Bootstrap
 
 Bootstrap establishes the initial trust root and authoritative governance metadata. Clients MUST follow policies and procedures defined by **ASCP: Bootstrap Process and Channel Discovery**. Incorrect bootstrap may result in incorrect governance state.
+
+Bootstrap and ALSP MAY introduce provisional identity material needed for first contact, including newly generated sovereign identity credentials. However, any durable repository recognition, binding, or publication of that identity material MUST follow normal governance authority and trust evaluation after bootstrap validation completes. If such an articulation is authored without the required governance authority, compliant systems MAY treat it as non-operative under the ordinary rules for non-authoritative articulations.
 
 # Appendix A — Examples (Informative)
 

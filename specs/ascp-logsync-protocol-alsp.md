@@ -786,6 +786,8 @@ The server determines the client’s mode from the presence or absence of specif
 
 In **Direct Mode**, the client already possesses its long-term identity credentials. The client authenticates by presenting its identity certificate (or equivalent identity package) in the initial authentication request.
 
+Direct Mode MAY be used both by clients whose identity certificate is already known to the server and by clients presenting newly generated sovereign identity material for first-contact bootstrap. When the identity material is not already known, the server MAY require Challenge Flow and additional identity-binding evidence.
+
 A client operating in Direct Mode:
 
 - **MUST** include its identity certificate field in the initial authentication request.
@@ -796,7 +798,7 @@ A client operating in Direct Mode:
 
 If the server possesses sufficient trust metadata to validate the client’s identity, it MAY complete authentication immediately using the Immediate Flow defined in Section 8.2. Otherwise, it MAY issue an authentication challenge to request additional identity artifacts.
 
-Direct Mode is appropriate for clients that have been fully provisioned by their operators or by prior participation in the ASCP Bootstrap Process.
+Direct Mode is appropriate for clients that already possess long-term identity credentials, whether previously provisioned by their operators, acquired through prior participation in the ASCP Bootstrap Process, or newly self-generated for sovereign bootstrap.
 
 ### **8.5.2 Provisioned Mode**
 
@@ -1236,6 +1238,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - Type: string (JWS compact serialization carrying a JWK encoded public identity key)
   - This field carries a JWS-encoded JWK containing the client’s public identity key.
   - It **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
+  - In Direct Mode, this field MAY carry either an identity certificate already known to the server or a newly generated self-signed identity certificate being introduced for first-contact authentication.
   - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable using this same public identity key, proving possession of the corresponding private identity key.
   - When included, the server **SHALL** use this JWK to authenticate the client and validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
   - Informational Note: In **Provisioned Mode**, the identity will be provisioned by the server via `recovery_envelope` in a subsequent message.
@@ -1265,7 +1268,7 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
 
 ### **10.2.2 Auth Challenge Message**
 
-The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material beyond what the client provided in the initial `auth_request`. An `auth_challenge` is always required in Provisioned Mode.
+The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material beyond what the client provided in the initial `auth_request`. In Direct Mode, this MAY occur when the client's presented identity certificate is not already known to the server and additional identity-binding evidence is required. An `auth_challenge` is always required in Provisioned Mode.
 
 The server **MUST** include its identity key in any `auth_challenge` message it sends. The server **MUST** sign all ALSP messages with the private identity key corresponding to that public identity key. During bootstrapping operations, the client **MUST** treat this key as the server's provisional identity key for the session, but **MUST NOT** complete the bootstrap process until it has completed the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification.
 
@@ -1423,9 +1426,11 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
   - This field **MUST** be present.
   - It is used to authenticate a peer's public key and bind it to the indicated identity. When a `kid` is provided, the trust chain flows directly from the articulation log's root-anchored trust model. When an **Identity Claim Bundle (ICB)** is provided, the trust flows from the associated identity provider and the peer's proof of possession of the private identity key.
   - In **Challenge Flow**, the authenticating client **MUST** place a freshly generated **ICB** bound to the server's `session_nonce`. The **ICB** **MUST** satisfy all requirements of ASCP Trust & Identity Architecture §9 and **MUST** demonstrate proof of possession of the private identity key used by the client to sign ALSP messages.
+  - For first-contact Direct Mode using a newly generated sovereign identity certificate, the ICB is the normal mechanism by which the client supplies identity-to-key binding evidence when no prior repository-anchored `kid` resolution is available.
   - In **Immediate Flow**, the authenticating client **SHOULD** place the JOSE key identifier (`kid`) of the form `ascp:cert:<uuid>` referencing the identity certificate UUID already known to the server. If this is unknown or unavailable, the client **MUST** instead place an ICB into this field as if authentication were following the **Challenge Flow**.
   - Authenticating servers **MUST** always place the JOSE key identifier (`kid`) of the form `ascp:cert:<uuid>` referencing the identity public key used to sign all messages in the session. Logically, servers are always authenticated using an Immediate Flow.
   - Receivers **MUST** validate the identity conveyed by this field. When an ICB is supplied, the receiver **MUST** validate the bundle and treat the contained certificate as authoritative for the session. When a kid is supplied, the receiver **MUST** resolve it to a validated certificate and **MUST NOT** accept the value if resolution is not possible.
+  - Successful validation of `identity_cert` and `user_auth` establishes ALSP session authentication for that session. Durable acceptance, publication, or governance-level recognition of the associated identity certificate is outside ALSP and follows the ASCP Trust & Identity Architecture together with the ASCP Bootstrapping and Channel Discovery Specification.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be provided in the hello message, if not already provided by the sending peer in a previous message.

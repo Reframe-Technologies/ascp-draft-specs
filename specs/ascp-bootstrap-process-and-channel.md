@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.35 — Informational (Pre-RFC Working Draft)
+Version: 0.40 — Informational (Pre-RFC Working Draft)
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -935,6 +935,8 @@ Specifically, a joining replica MUST possess either:
 - self-generated identity credentials suitable for ALSP Direct Mode authentication, or
 - a self-generated recovery key sufficient for participation in Provisioned Mode.
 
+For purposes of join bootstrap, self-generated identity credentials suitable for ALSP Direct Mode authentication MAY consist of a newly generated sovereign identity keypair together with a corresponding self-signed `identity_cert`. Such credentials need not already be present in repository history when join bootstrap begins.
+
 Bootstrap procedures MUST NOT depend on the prior acquisition of @bootstrap content to satisfy ALSP authentication requirements.
 
 Initial Trust Inputs are obtained **out of band** from ASCP and ALSP. This document does not mandate a single trust model but defines acceptable categories of inputs.
@@ -983,7 +985,9 @@ Using the selected Initial Trust Input, the replica performs the following high-
 
 The detailed mechanics of session establishment, authentication, and log replication are defined by ALSP and are not redefined here.
 
-### 10.4.1 Provisional Trust Semantics
+During this sequence, ALSP Direct Mode MAY be used either with identity material already known to the serving replica or with newly generated sovereign identity material not yet anchored in repository history. In the latter case, ALSP establishes provisional cryptographic session authentication only.
+
+### **10.4.1 Provisional Trust Semantics**
 
 Until validation of the @bootstrap channel and establishment of the Bootstrap Trust Anchor (RootCA) have completed successfully, all replicated coordination state acquired during join bootstrap MUST be treated as **provisional and untrusted**.
 
@@ -991,7 +995,9 @@ Replicated data obtained prior to authoritative trust establishment MUST NOT be 
 
 If authoritative validation fails at any point, the join bootstrap attempt MUST be aborted, and any provisionally acquired state MUST NOT be reused without revalidation.
 
-### 10.4.2 Bootstrap Peer Authentication via identity-ref
+When a joining replica authenticates using newly generated sovereign identity material that is not yet reflected in repository history, the resulting ALSP identity binding MUST also be treated as provisional until it is validated or incorporated through normal ASCP trust and articulation procedures.
+
+### **10.4.2 Bootstrap Peer Authentication via identity-ref**
 
 During join bootstrap, a replica MAY connect to an existing replica that does not possess the private key of the Bootstrap Trust Anchor (RootCA). Bootstrap peer authentication occurs in two phases:
 
@@ -1018,6 +1024,8 @@ The joining replica MUST perform the following validation:
 If any of the above checks fail, the joining replica MUST treat the peer as ineligible to serve join bootstrap and MUST NOT proceed with bootstrap using that peer.
 
 Successful validation establishes that the peer’s identity is **RootCA-traceable via log-anchored bootstrap history**, without requiring the peer to possess RootCA private key material.
+
+These identity-ref checks govern the serving peer's eligibility to provide bootstrap content. They do not require the joining replica's own newly presented identity certificate to already appear in repository history.
 
 ## **10.5 Validation and Failure Handling**
 
@@ -1242,6 +1250,21 @@ ALSP session establishment during bootstrap MUST provide:
 The specific mechanisms used to satisfy these requirements are defined by ALSP and MAY vary by implementation.
 
 A replica MUST NOT replicate any non-bootstrap channels prior to successful session establishment.
+
+Join bootstrap over ALSP supports the following first-contact client authentication patterns:
+
+- **Provisioned Mode** - the joining replica authenticates initially using a self-generated recovery key, receives a `recovery_envelope` from the server, and then switches to the provisioned identity key for subsequent ALSP messages.
+- **Direct Mode** - the joining replica authenticates using self-generated or previously provisioned long-term identity credentials. When the presented identity certificate is not already known to the serving replica, ALSP Challenge Flow and an Identity Claim Bundle (ICB) provide the session-time identity-to-key binding evidence.
+
+In all of these patterns, ALSP session authentication provides cryptographic protection for bootstrap transport, but authoritative trust in the organizational instance is established only after the procedures of Section 10 complete.
+
+The following table summarizes the allowed first-contact patterns during join bootstrap:
+
+| Pattern | Initial credential presented by joiner | Additional evidence during ALSP | Session status after ALSP authentication | Durable identity source / binding path |
+|---------|----------------------------------------|---------------------------------|------------------------------------------|----------------------------------------|
+| Provisioned Mode | Self-generated recovery key in `recovery_cert` | `recovery_envelope` returned by server in `auth_challenge` | Provisional authenticated session | Server-provisioned identity keypair and `identity_cert_kid`, followed by normal bootstrap and trust validation |
+| Direct Mode, known certificate | Existing identity keypair and `identity_cert` | `kid` and, when needed, other ALSP authentication materials | Authenticated session; still provisional for bootstrap until Section 10 completes | Existing identity certificate already known to the serving replica and later validated in bootstrap context |
+| Direct Mode, new sovereign certificate | Newly generated self-signed `identity_cert` and corresponding private key | Challenge Flow with `ICB` in `hello.user_auth` when prior `kid` resolution is unavailable | Provisional authenticated session | Later ASCP articulation, trust evaluation, and any applicable governance-controlled publication into repository history |
 
 ## **11.3 Bootstrap Channel Replication Sequence**
 
