@@ -1129,17 +1129,17 @@ Any incorporation of Merkle summaries would therefore be **purely a Layer-0 opti
 
 # **10. ALSP Protocol Messages**
 
-This section defines the complete Layer-0 ALSP message model and on-wire encodings used to exchange Layer-0 Artipoint Records. All ALSP messages are integrity-protected by JWS as defined in Section 6 and Section 7. Transport bindings such as WebSocket carry these messages as opaque binary units, as specified in Section 14.
+This section defines the complete Layer-0 ALSP message model and on-wire encodings used to exchange Layer-0 Artipoint Records. All ALSP messages are integrity-protected by JWS as defined in Section 10.4, with session semantics defined in Section 8. Transport bindings such as WebSocket carry these messages as opaque binary units, as specified in Section 14.
 
 ## **10.1 ALSP Message Encoding**
 
-This section specifies the on‑wire encoding for ALSP messages. It defines a compact CBOR envelope that batches Layer‑0 entries while carrying a flexible message header as a JSON blob. The CBOR envelope serves as the JWS payload and is integrity-protected by a JWS signature that signs the entire CBOR byte sequence verbatim.
+This section specifies the on-wire encoding for ALSP messages. ALSP uses a compact CBOR envelope that batches Layer-0 entries while carrying a flexible JSON message header. The CBOR envelope serves as the JWS payload and is signed verbatim.
 
 - **Message:** The ALSP message is encoded as **deterministic CBOR**.
 - **Header:** `alsp_msg_header` is a **CBOR byte string** whose contents are **UTF-8 JSON**. The CBOR layer treats it as opaque.
 - **Payload:** `alsp_msg_payload` is an optional **CBOR array** of Layer-0 entries for efficient batching.
 
-This design yields a compact, canonical, and extensible envelope while preserving maximum flexibility for header fields.
+This design yields a compact, canonical, and extensible envelope while preserving header flexibility.
 
 ### **CDDL (normative)**
 
@@ -1166,15 +1166,15 @@ ALSP-Envelope = {
 3. Arrays and byte strings **MUST** use **definite lengths**.
 4. Implementations **MUST NOT** use semantic tags or indefinite-length items in the envelope.
 
-These requirements ensure that all implementations produce comparable encodings for the same logical envelope, which is helpful for stable hashing, signatures, and comparison between implementations.
+These requirements ensure that implementations produce comparable encodings for the same logical envelope, which is helpful for stable hashing, signatures, and interoperation.
 
 ### **Encoding the JSON alsp\_msg\_header**
 
-- JSON is embedded as a CBOR byte string (bstr) to ensure deterministic encoding and avoid whitespace or ordering variability per RFC 8785.
+- JSON is embedded as a CBOR byte string (bstr), isolating it from CBOR-level reserialization concerns.
 - The value of `alsp_msg_header` **MUST** be a valid **UTF‑8** encoded **JSON** document (RFC 8259). I‑JSON (RFC 7493) is RECOMMENDED.
 - To promote stable signatures and easy comparisons between implementations, producers **SHOULD** serialize this JSON in **canonical form** (e.g., JCS / RFC 8785).
 - Receivers **MUST** treat the header as an **opaque byte string** at the CBOR layer and **MUST NOT** re‑serialize it when verifying signatures.
-- The schema of the JSON header is intentionally flexible but MUST NOT be reserialized when verfied. It is the entire CBOR envelope that MUST be signed as sent and verified as received.
+- The schema of the JSON header is intentionally flexible. The entire CBOR envelope **MUST** be signed as sent and verified as received.
 
 The JSON schema for `alsp_msg_header` is defined in the remainder of this section 10 for each concrete ALSP message type (e.g., hello, sync\_request, sync\_response, sync\_update, error).
 
@@ -1191,7 +1191,7 @@ This example is informative only. The normative encoding is defined by the CDDL 
        0392C226D6F7265223A66616C73657D',
   2: [
     { 0: 1345678,
-      1: h'550e8400e29b41d4a716446655440000',
+      1: h'018f0d5c8b727d11a8c35f7c9e120004',
       2: h'...DPB bytes...' }
   ]
 }
@@ -1209,9 +1209,9 @@ This example is informative only. The normative encoding is defined by the CDDL 
 #         00                  : key 0 (uint 0)
 #           1a 00 14 88 8e    : uint(1345678)
 #         01                  : key 1 (uint 1)
-#           50                : bstr len=16 (UUID)
-#             55 0e 84 00 e2 9b 41 d4 a7 16 44 66 55 44 00 00
-#                             : 16 bytes UUID
+#           50                : bstr len=16 (UUIDv7)
+#             01 8f 0d 5c 8b 72 7d 11 a8 c3 5f 7c 9e 12 00 04
+#                             : 16 raw UUID bytes
 #         02                  : key 2 (uint 2)
 #           44                : bstr len=4 (DPB bytes)
 #             de ad be ef     : example DPB payload bytes
@@ -1230,7 +1230,7 @@ All multi-byte integers in CBOR use network byte order (big-endian) as per RFC 8
 
 ## **10.2 Authentication Messages**
 
-Authentication messages establish a mutually authenticated ALSP session prior to any Channel Log synchronization. Authentication semantics are defined in **Section 8**; this section defines the **message-specific JSON fields** that MUST appear in the `alsp_msg_header` for each authentication message type.
+Authentication messages establish a mutually authenticated ALSP session before any Channel Log synchronization. Authentication semantics are defined in **Section 8**; this section defines the JSON fields that **MUST** appear in `alsp_msg_header` for each authentication message type.
 
 All authentication messages:
 
@@ -1240,13 +1240,13 @@ All authentication messages:
 - MUST NOT include message header fields other than those explicitly defined in this section unless negotiated by future protocol extensions.
 - MUST reference identity and key material in accordance with **ASCP Trust & Identity Architecture.**
 
-Authentication messages do **not** grant channel access; they only establish the authenticated session.
+Authentication messages do **not** grant channel access; they only establish the session.
 
 See Section 8.5.4 for normative constraints on valid and invalid field combinations in authentication messages. Implementations MUST reject any combination that violates those constraints.
 
 ### **10.2.1 Auth Request Message**
 
-The `auth_request` message initiates the ALSP session handshake. The client sends it to establish its identity with the server and begin mutual authentication.
+The `auth_request` message initiates the ALSP session handshake. The client sends it to identify itself to the server and begin mutual authentication.
 
 Field requirements depend on the client's credential-supply mode (Direct Mode or Provisioned Mode), as defined in Section 8.5. Implementations MUST enforce the mode-specific constraints in Section 8.5 when constructing or validating this message.
 
@@ -1268,59 +1268,56 @@ Field requirements depend on the client's credential-supply mode (Direct Mode or
   - Type: string
   - **MUST** be present.
   - **MUST** equal "auth\_request".
-  - Identifies this header as an ALSP authentication request.
 - **timestamp**
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
-  - **MUST** contain the time at which the message was generated.
-  - Receivers **MUST** apply freshness and replay checks as specified in Section 8.3.
+  - **MUST** contain the message generation time.
+  - Receivers **MUST** apply freshness and replay checks per Section 8.3 and Section 10.4.5.
 - **session\_nonce**
   - Type: string (UTF-8, fixed length as specified in Section 8)
   - **MUST** be present.
-  - **MUST** be freshly generated for this session by the sender and MUST be the same in all messages of the session.
-  - **MUST** be used in the JWS protected headers according to the nonce rules defined in Section 8.3.2.2.
-  - Receivers **MUST** treat this value as the sender’s session nonce for the entire session and **MUST** validate that it does not change in future messages.
+  - **MUST** be freshly generated for this session by the sender and remain unchanged for that sender throughout the session.
+  - **MUST** be used in the JWS protected header according to Section 8.3.2.2.
+  - Receivers **MUST** treat this as the sender’s session nonce for the session and **MUST** reject later changes.
 - **identity\_cert**
-  - Type: string (JWS compact serialization carrying a JWK encoded public identity key)
-  - This field carries a JWS-encoded JWK containing the client’s public identity key.
-  - It **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
-  - In Direct Mode, this field MAY carry either an identity certificate already known to the server or a newly generated self-signed identity certificate being introduced for first-contact authentication.
-  - When this field introduces a newly generated sovereign identity certificate, the certificate `kid` presented by the client **MUST** identify that certificate for the session and for any later durable publication of the corresponding Certificate Artipoint.
-  - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable using this same public identity key, proving possession of the corresponding private identity key.
-  - When included, the server **SHALL** use this JWK to authenticate the client and validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
-  - Informational Note: In **Provisioned Mode**, the identity will be provisioned by the server via `recovery_envelope` in a subsequent message.
+  - Type: string (JWS compact serialization carrying a JWK-encoded public identity key)
+  - **MUST** be included in the initial authentication request for **Direct Mode** (Section 8.5.1) and **MUST NOT** be included in the initial authentication request for **Provisioned Mode**.
+  - In Direct Mode, it MAY carry either an identity certificate already known to the server or a newly generated self-signed identity certificate introduced for first-contact authentication.
+  - If it introduces a newly generated sovereign identity certificate, the presented certificate `kid` **MUST** identify that certificate for the session and for any later durable publication of the corresponding Certificate Artipoint.
+  - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable with this public identity key, proving possession of the corresponding private identity key.
+  - When included, the server **SHALL** use this JWK to authenticate the client and validate ALSP JWS signatures for the session (ASCP Trust & Identity Architecture §7.2).
 - **recovery\_cert**
-  - Type: string (JWS compact serialization carrying a JWK encoded public recovery key)
-  - This field is used exclusively in **Provisioned Mode** (Section 8.5.2).
-  - A recovery certificate **MUST** be included in the initial authentication request for **Provisioned Mode** and **MUST NOT** be included in **Direct Mode**.
+  - Type: string (JWS compact serialization carrying a JWK-encoded public recovery key)
+  - **MUST** be included in the initial authentication request for **Provisioned Mode** and **MUST NOT** be included in **Direct Mode**.
   - The JWS payload **MUST** contain the recovery public key as a valid JWK.
   - The recovery public JWK **MUST** use `kty = "EC"` and **MUST** declare `crv = "P-256"`.
-  - The JWS protected header for `recovery_cert` **MUST** use `alg = "ES256"`; `ES384` and other signature algorithms are not permitted for this artifact.
-  - The JWS signature on the included JWK and the ALSP message itself **MUST** both be verifiable using this same recovery public key, proving possession of the corresponding recovery private key.
-  - This artifact is a Provisioned-Mode bootstrap credential for ALSP transport. It supplies the recovery public key used by the server when constructing the `user_key_jwe` field inside the `recovery_envelope` returned by `auth_challenge`.
-  - This field is distinct from the optional `recovery_cert_kid` field inside a Trust & Identity `recovery_envelope`; `recovery_cert` carries the bootstrap recovery public key directly in the ALSP message.
-  - This artifact is not itself required to be a pre-existing Certificate Artipoint in ASCP logs.
+  - The JWS protected header for `recovery_cert` **MUST** use `alg = "ES256"`; other signature algorithms are not permitted for this artifact.
+  - The JWS signature on the included JWK and the ALSP message itself **MUST** both be verifiable with this public recovery key, proving possession of the corresponding recovery private key.
+  - This field supplies the recovery public key used by the server when constructing `recovery_envelope.user_key_jwe`.
+  - This field is distinct from the optional `recovery_cert_kid` inside a Trust & Identity `recovery_envelope`; `recovery_cert` carries the bootstrap recovery public key directly in the ALSP message.
+  - This artifact need not already exist as a Certificate Artipoint in ASCP logs.
 - **user\_identity**
   - Type: string (UTF-8)
   - **MUST** be present.
-  - **MUST** contain a UTF-8 encoded sender-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
-  - In Direct Mode, this value **MUST** match, or be resolvable to, the identity bound to the included `identity_cert`.
-  - In Provisioned Mode, this value **MUST** identify the user identity for which provisioning is being requested in the current session.
-  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture.
-  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrap and repository materials.
+  - **MUST** contain a sender identity reference conforming to ASCP Trust & Identity Architecture §7.1.2.
+  - The reference **MUST** be either the associated Identity Artipoint `payload` value (for example, an email address or URN) or the UUID of the Identity Artipoint itself.
+  - In Direct Mode, it **MUST** match or resolve to the identity bound to `identity_cert`.
+  - In Provisioned Mode, it **MUST** identify the user identity for which provisioning is being requested.
+  - It **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without certificate validation.
+  - When known, senders **MUST** prefer the UUID of their own Identity Artipoint.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
   - **MUST** uniquely identify the sender’s replica node within the ALSP deployment.
-  - Implementations **MUST** use this identifier in connection- and session-management logic (for example, enforcing single active session per pair of replicas).
+  - Implementations **MUST** use it in connection- and session-management logic, including single-session enforcement.
 
 ### **10.2.2 Auth Challenge Message**
 
-The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material beyond what the client provided in the initial `auth_request`. In Direct Mode, this MAY occur when the client's presented identity certificate is not already known to the server and additional identity-binding evidence is required. An `auth_challenge` is always required in Provisioned Mode.
+The `auth_challenge` message is sent by the server during the Challenge Flow when it requires additional identity material beyond what the client provided in the initial `auth_request`. In Direct Mode, this MAY occur when the presented identity certificate is not already known to the server and additional identity-binding evidence is required. An `auth_challenge` is always required in Provisioned Mode.
 
-The server **MUST** include its identity key in any `auth_challenge` message it sends. The server **MUST** sign all ALSP messages with the private identity key corresponding to that public identity key. During bootstrapping operations, the client **MUST** treat this key as the server's provisional identity key for the session, but **MUST NOT** complete the bootstrap process until it has completed the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification.
+The server **MUST** include its identity key in any `auth_challenge` it sends. The server **MUST** sign all ALSP messages with the corresponding private identity key. During bootstrapping, the client **MUST** treat this key as the server's provisional session identity key, but **MUST NOT** complete bootstrap until the validation procedures defined in the ASCP Bootstrapping and Channel Discovery Specification have completed.
 
-In Provisioned Mode, the server uses the `auth_challenge` message to send the bootstrapping client a `recovery_envelope` JSON object conforming to ASCP Trust & Identity Architecture §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
+In Provisioned Mode, the server uses `auth_challenge` to send the bootstrapping client a `recovery_envelope` JSON object conforming to ASCP Trust & Identity Architecture §8.4. This object enables the client to recover its provisioned identity keypair and complete authentication.
 
 ```json
 {
@@ -1344,19 +1341,19 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
   - **MUST** contain the generation time.
-  - Receivers **MUST** apply freshness and replay validation as specified for authentication messages.
+  - Receivers **MUST** apply authentication-message freshness and replay validation.
 - **session\_nonce**
   - Type: string (UTF-8, fixed length as specified in Section 8)
   - **MUST** be present.
   - **MUST** be freshly generated by the server for this session.
-  - **MUST** be treated as the server's session nonce and used for subsequent JWS nonce values according to the rules in Section 8.3.2.2.
-  - This value serves as the challenge nonce for identity and key-binding proof, as defined in the ASCP Trust & Identity Architecture.
+  - **MUST** be treated as the server's session nonce and used in subsequent JWS protected headers according to Section 8.3.2.2.
+  - This value serves as the challenge nonce for identity and key-binding proof.
 - **recovery\_envelope**
   - Type: object (JSON object conforming to ASCP Trust & Identity `recovery_envelope`)
   - In **Direct Mode**, this field **MUST** be omitted.
   - In **Provisioned Mode**, this field **MUST** be present.
   - The object **MUST** conform to the `recovery_envelope` structure defined by the ASCP Trust & Identity Architecture (§8.4 and §11).
-  - For Provisioned Mode, the object **MUST** use the `["recovery-key"]` protection profile.
+  - In Provisioned Mode, the object **MUST** use the `["recovery-key"]` protection profile.
 - For Provisioned Mode, the object **MUST** include `identity_cert_kid`.
 - For Provisioned Mode, the object **MUST NOT** include `recovery_cert_kid`.
 - For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
@@ -1366,20 +1363,19 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
 - Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust & Identity Architecture.
 - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
-  - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
-  - **MUST** be the server's JWS self-signed JWK of the server's public identity key.
-  - This JWK encoded public identity key **MUST** be used by the client to authenticate the server and to validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
-  - **MUST** be consistent with the kid used in the JWS protected header for this and all following messages.
-  - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable using this same public identity key, proving possession of the corresponding private identity key.
+  - Type: string (JWS compact serialization carrying a JWK-encoded self-signed public identity key)
+  - **MUST** contain the server's public identity key.
+  - The client **MUST** use this key to authenticate the server and validate ALSP JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
+  - **MUST** be consistent with the `kid` used in the JWS protected header for this and subsequent messages.
+  - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable with this public identity key, proving possession of the corresponding private identity key.
 
 - **user\_identity**
   - Type: string (UTF-8 UUIDv7 string)
   - **MUST** be present.
-  - **MUST** contain a UTF-8 encoded server-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2.
-  - In `auth_challenge`, this value **MUST** be the UUID of the sender's own Identity Artipoint.
-  - **MUST** match, or be resolvable to, the identity bound to identity\_cert or the identity resulting from the provisioned identity flow.
-  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture and the ASCP Bootstrapping and Channel Discovery Specification.
-  - Clients undergoing replica bootstrap MUST ultimately validate the identity and associated public key according to the ASCP Bootstrapping and Channel Discovery Specification.
+  - **MUST** contain the UUID of the sender's own Identity Artipoint.
+  - **MUST** match or resolve to the identity bound to `identity_cert` or produced by the provisioned identity flow.
+  - It **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without certificate validation and, where applicable, bootstrap validation.
+  - Clients undergoing replica bootstrap **MUST** ultimately validate the identity and associated public key according to the ASCP Bootstrapping and Channel Discovery Specification.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1388,9 +1384,9 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
 
 ### **10.2.3 Hello Message**
 
-The `hello` message completes mutual authentication and establishes the authenticated session between two ALSP replicas. Both client and server exchange `hello` messages to finalize authentication and transition the session to AUTHENTICATED as defined in Section 8.4.
+The `hello` message completes mutual authentication and establishes the authenticated session between two ALSP replicas. Both client and server exchange `hello` messages to finalize authentication and transition the session to `AUTHENTICATED` as defined in Section 8.4.
 
-A hello message MUST only be sent or processed during session establishment and MUST NOT be sent after the session has entered SYNC\_READY.
+A `hello` message **MUST** only be sent or processed during session establishment and **MUST NOT** be sent after the session has entered `SYNC_READY`.
 
 The sender MUST include the full identity certificate or a `kid` referencing a certificate already available to the receiver via bootstrap. A `kid` reference MUST NOT be used unless the receiver has previously obtained and validated the referenced certificate through out-of-band provisioning or prior credential exchange.
 
@@ -1422,23 +1418,23 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
   - **MUST** contain the generation time.
-  - Receivers **MUST** apply the same freshness and replay checks as for other authenticated messages.
+  - Receivers **MUST** apply the freshness and replay checks for authenticated messages.
 - **session\_nonce**
   - Type: string (UTF-8)
   - **MUST** be present.
-  - **MUST** equal the sender’s session nonce used during the authentication handshake (see Section 8).
-  - After both peers have exchanged hello messages, all subsequent ALSP messages **MUST** use the peer’s session\_nonce in the JWS protected header as specified in Section 8.3.2.2.
+  - **MUST** equal the sender’s session nonce established during the authentication handshake (see Section 8).
+  - After both peers have exchanged `hello` messages, subsequent ALSP messages **MUST** use the peer’s `session_nonce` in the JWS protected header as specified in Section 8.3.2.2.
 - **boot\_keys\_jwe**
   - Type: string (JWE compact serialization)
   - **MAY** be present.
   - When present, **MUST** contain a Bootstrap Key Package (BKP).
-  - The BKP payload structure, semantics, and lifecycle constraints are defined by the **ASCP Bootstrap Process** specification (Bootstrap Section 10.7.6).
-  - ALSP treats the decrypted BKP payload as **semantically opaque** and uses it only as an out-of-band bootstrap visibility seed required by higher layers to decrypt encrypted @references entries for deterministic discovery.
+  - The BKP payload structure, semantics, and lifecycle constraints are defined outside ALSP by the ASCP bootstrap specification.
+  - ALSP transports this value opaquely.
 - **lamport\_max**
   - Type: integer (unsigned)
   - **MUST** be present.
-  - **MUST** represent the sender’s current global Lamport maximum, as defined in the Lamport ordering section.
-  - Receivers **MUST** use this value when updating local Lamport counters according to the rules in Section 9.
+  - **MUST** represent the sender’s current global Lamport maximum.
+  - Receivers **MUST** process this value according to Section 9.
 - **node\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1447,54 +1443,55 @@ The sender MUST include the full identity certificate or a `kid` referencing a c
 - **push\_enabled**
   - Type: boolean
   - **MAY** be present.
-  - When present in an initiating hello, it **MUST** indicate the sender’s request to enable push mode for this session.
-  - When present in a responding hello, it **MUST** indicate whether push mode is accepted (true) or declined (false) for this session, as specified in the sync mode negotiation rules.
-  - If omitted, receivers **MUST** treat it as false (pull-only mode).
+  - In an initiating `hello`, it **MUST** indicate the sender’s request to enable push mode for the session.
+  - In a responding `hello`, it **MUST** indicate whether push mode is accepted (`true`) or declined (`false`).
+  - If omitted, receivers **MUST** treat it as `false` (pull-only mode).
 - **node\_description**
   - Type: string (UTF-8)
   - **MAY** be present.
-  - When present, **MUST** be treated as informational metadata only (for logging, diagnostics, or UI); it has no protocol semantics.
+  - When present, it is informational only and has no protocol semantics.
 - **max\_alsp\_length**
   - Type: integer (unsigned 32-bit)
   - **MAY** be present.
-  - When present, **MUST** indicate the maximum ALSP envelope size in bytes that the sender is willing to receive on this session.
+  - When present, **MUST** indicate the maximum ALSP envelope size in bytes that the sender is willing to receive on the session.
   - Implementations **MUST** support at least 32 KiB and **SHOULD** support at least 128 KiB.
   - If omitted, peers **MUST** assume a default maximum of 131072 bytes (128 KiB).
   - Senders **MUST NOT** exceed the peer’s advertised limit.
 
 - **identity\_cert**
-  - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
-  - **MUST** be provided in the hello message, if not already provided by the sending peer in a previous message.
-  - If previously provided, it MUST match the previously provided `identity_cert`; senders MUST NOT change their `identity_cert` key material during a session.
-  - When provided, **MUST** contain the JWS self-signed JWK of the sender's public identity key.
-  - When provided, **MUST** be used by the peer to authenticate and validate all JWS signatures during the session (ASCP Trust & Identity Architecture §7.2).
-  - **MUST** be consistent with the identity key implied by any `kid` placed in the JWS protected headers.
+  - Type: string (JWS compact serialization carrying a JWK-encoded self-signed public identity key)
+  - **MUST** be provided in `hello` if not already provided by the sender in an earlier message.
+  - If previously provided, it **MUST** match the earlier `identity_cert`; senders **MUST NOT** change identity key material during a session.
+  - When provided, it **MUST** contain the sender's public identity key and **MUST** be usable by the peer to validate ALSP JWS signatures for the session (ASCP Trust & Identity Architecture §7.2).
+  - It **MUST** be consistent with the identity key implied by any `kid` in the JWS protected headers.
   - In Provisioned Mode, any `identity_cert` or identity package presented after processing `recovery_envelope` **MUST** correspond to `recovery_envelope.identity_cert_kid`.
-  - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable using this same public identity key, proving possession of the corresponding private identity key.
+  - The JWS signature on the included JWK and the sender's ALSP messages **MUST** both be verifiable with this public identity key, proving possession of the corresponding private identity key.
 
 - **user\_auth**
   - Type: string
-  - This field **MUST** be present.
-  - It is used to authenticate a peer's public key and bind it to the indicated identity. When a `kid` is provided, the trust chain flows directly from the articulation log's root-anchored trust model. When an **Identity Claim Bundle (ICB)** is provided, the trust flows from the associated identity provider and the peer's proof of possession of the private identity key.
-  - In **Challenge Flow**, the authenticating client **MUST** place a freshly generated **ICB** bound to the server's `session_nonce`. The **ICB** **MUST** satisfy all requirements of ASCP Trust & Identity Architecture §9 and **MUST** demonstrate proof of possession of the private identity key used by the client to sign ALSP messages.
-  - For first-contact Direct Mode using a newly generated sovereign identity certificate, the ICB is the normal mechanism by which the client supplies identity-to-key binding evidence when no prior repository-anchored `kid` resolution is available.
-  - In **Immediate Flow**, the authenticating client **SHOULD** place the JOSE key identifier (`kid`) of the form `ascp:cert:<uuid>` referencing the identity certificate UUID already known to the server. If this is unknown or unavailable, the client **MUST** instead place an ICB into this field as if authentication were following the **Challenge Flow**.
-  - Authenticating servers **MUST** always place the JOSE key identifier (`kid`) of the form `ascp:cert:<uuid>` referencing the identity public key used to sign all messages in the session. Logically, servers are always authenticated using an Immediate Flow.
-  - Receivers **MUST** validate the identity conveyed by this field. When an ICB is supplied, the receiver **MUST** validate the bundle and treat the contained certificate as authoritative for the session. When a kid is supplied, the receiver **MUST** resolve it to a validated certificate and **MUST NOT** accept the value if resolution is not possible.
-  - Successful validation of `identity_cert` and `user_auth` establishes ALSP session authentication for that session. Durable acceptance, publication, or governance-level recognition of the associated identity certificate is outside ALSP and follows the ASCP Trust & Identity Architecture together with the ASCP Bootstrapping and Channel Discovery Specification.
+  - **MUST** be present.
+  - This field binds the sender's public key to the indicated identity.
+  - When it carries a `kid`, trust flows from repository-anchored certificate state. When it carries an **Identity Claim Bundle (ICB)**, trust flows from the associated identity provider together with proof of possession of the private identity key.
+  - In **Challenge Flow**, the authenticating client **MUST** place a freshly generated ICB bound to the server's `session_nonce`. The ICB **MUST** satisfy ASCP Trust & Identity Architecture §9 and **MUST** prove possession of the private identity key used to sign ALSP messages.
+  - For first-contact Direct Mode using a newly generated sovereign identity certificate, the ICB is the normal mechanism for supplying identity-to-key binding evidence when no prior repository-anchored `kid` resolution is available.
+  - In **Immediate Flow**, the authenticating client **SHOULD** place a JOSE key identifier of the form `ascp:cert:<uuid>` referencing the identity certificate UUID already known to the server. If this is unknown or unavailable, the client **MUST** instead place an ICB in this field as in Challenge Flow.
+  - Authenticating servers **MUST** always place a JOSE key identifier of the form `ascp:cert:<uuid>` referencing the identity public key used to sign the session's messages.
+  - Receivers **MUST** validate the identity conveyed by this field. When an ICB is supplied, the receiver **MUST** validate the bundle and treat the contained certificate as authoritative for the session. When a `kid` is supplied, the receiver **MUST** resolve it to a validated certificate and **MUST NOT** accept the value if resolution fails.
+  - Successful validation of `identity_cert` and `user_auth` establishes ALSP session authentication. Durable acceptance, publication, or governance-level recognition of the associated identity certificate is outside ALSP.
 - **user\_identity**
   - Type: string (UTF-8)
-  - **MUST** be provided in the hello message, if not already provided by the sending peer in a previous message.
-  - If previously provided, it MUST match the previously provided `user_identity`; senders MUST NOT change `user_identity` during a session.
-  - **MUST** contain a UTF-8 encoded sender-side identity reference conforming to the Identity Artipoint structure defined in ASCP Trust & Identity Architecture §7.1.2. The reference **MUST** be _either_ the `payload` field content (email address or URN, typically) from the associated Identity Artipoint, OR the UUID of the Identity Artipoint itself.
-  - **MUST** match, or be resolvable to, the identity bound to the included identity\_cert or the identity that will result from a Provisioned Mode identity flow.
-  - **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without validation of the underlying certificate according to the ASCP Trust & Identity Architecture and the ASCP Bootstrapping and Channel Discovery Specification.
-  - A sender **MUST** favor sending `user_identity` as the UUID of its own Identity Artipoint, when known. This enables more direct authentication pathways by leveraging pre-existing bootstrap and repository materials.
+  - **MUST** be provided in `hello` if not already provided by the sender in an earlier message.
+  - If previously provided, it **MUST** match the earlier `user_identity`; senders **MUST NOT** change it during a session.
+  - It **MUST** contain a sender identity reference conforming to ASCP Trust & Identity Architecture §7.1.2.
+  - The reference **MUST** be either the associated Identity Artipoint `payload` value or the UUID of the Identity Artipoint itself.
+  - It **MUST** match or resolve to the identity bound to `identity_cert` or produced by a Provisioned Mode identity flow.
+  - It **SHALL** be used for correlation with certificate material but **SHALL NOT** be treated as authoritative without certificate validation.
+  - When known, senders **MUST** prefer the UUID of their own Identity Artipoint.
 - **status\_message**
   - Type: string (UTF-8)
   - **MAY** be present.
-  - When present, **MUST** be treated as informational or diagnostic text.
-  - If the sender is rejecting or degrading capabilities for the session (for example, refusing push mode or indicating a constraint), it **SHOULD** set status\_message to describe the reason and **SHOULD** follow with an ALSP error message if the session cannot proceed.
+  - When present, it is informational or diagnostic text.
+  - If the sender is rejecting or degrading session capabilities (for example, refusing push mode or indicating a constraint), it **SHOULD** describe the reason here and **SHOULD** follow with an ALSP error message if the session cannot proceed.
 
 ## **10.3 Synchronization Phase**
 
@@ -1525,18 +1522,19 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 - **credentials**
   - Type: string (JWS compact serialization)
   - **MUST** be present.
-  - **MUST** contain a channel access proof whose payload and signing semantics are defined in the **ASCP Trust & Identity Architecture** (Channel Access Key / CAK).
-  - The JWS payload **MUST** at minimum contain the channel\_id, a freshness timestamp, and the peer session nonce as required by the Trust & Identity Architecture.
+  - **MUST** contain a Channel Access Proof (CAP) as defined in Section 11.
+  - The JWS payload **MUST** at minimum contain the `channel_id`, a freshness timestamp, and the peer session nonce as required by Section 11.
   - Receivers **MUST** validate this JWS before processing the request.
 - **timestamp**
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
-  - **MUST** contain the message generation time and is subject to standard replay-protection checks.
+  - **MUST** contain the message generation time.
+  - Receivers **MUST** apply the standard replay-protection checks.
 - **lamport\_max**
   - Type: integer
   - **MUST** be present.
   - **MUST** represent the requester’s current global Lamport maximum.
-  - Receivers **SHOULD** use this to reconcile Lamport counters following the rules in Section 9.
+  - Receivers **SHOULD** use it to reconcile Lamport counters according to Section 9.
 - **from\_lamport**
   - Type: integer
   - **MUST** be present.
@@ -1547,12 +1545,12 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
   - Type: integer
   - **MAY** be present.
   - When present, **MUST** specify the inclusive upper bound of the requested Lamport range.
-  - When omitted, receivers **MUST** interpret the request as covering the range from `from_lamport` to the end of the channel log.
+  - When omitted, receivers **MUST** interpret the request as covering the range from `from_lamport` to the end of the Channel Log.
 - **node\_id**
   - Type: string (UUID)
   - **MAY** be present.
-  - When present, receivers **MUST** use this to exclude messages originated by the requesting node from the response (to avoid redundant transmission).
-  - When omitted, receivers **MUST** treat the request as asking for all matching messages, regardless of origin.
+  - When present, receivers **MUST** use it to exclude entries originated by the requesting node from the response.
+  - When omitted, receivers **MUST** treat the request as asking for all matching entries regardless of origin.
 - **channel\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1586,12 +1584,13 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 - **timestamp**
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
-  - **MUST** contain the generation time and is subject to replay checks.
+  - **MUST** contain the generation time.
+  - Receivers **MUST** apply replay checks.
 - **lamport\_max**
   - Type: integer
   - **MUST** be present.
   - **MUST** represent the responder’s current global Lamport maximum.
-  - Receivers **MUST** process this value using the same Lamport counter rules as other messages (Section 9).
+  - Receivers **MUST** process it using the same Lamport counter rules as other messages (Section 9).
 - **channel\_id**
   - Type: string (UUID)
   - **MUST** be present.
@@ -1631,12 +1630,13 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 - **timestamp**
   - Type: string (RFC 3339 UTC)
   - **MUST** be present.
-  - **MUST** contain the generation time and participates in replay protection.
+  - **MUST** contain the generation time.
+  - Receivers **MUST** apply replay protection.
 - **lamport\_max**
   - Type: integer
   - **MUST** be present.
   - **MUST** represent the sender’s current global Lamport maximum.
-  - Receivers **MUST** use this value when updating local Lamport counters and **SHOULD** enforce any safety thresholds defined for large counter jumps.
+  - Receivers **MUST** use it when updating local Lamport counters and **SHOULD** enforce any safety thresholds defined for large counter jumps.
 - **channel\_id**
   - Type: string (UUID)
   - **MUST** be present when the `alsp_msg_payload` contains channel log entries.
@@ -1651,9 +1651,9 @@ Receipt of any `sync_request`, `sync_response`, or `sync_update` message prior t
 
 ## **10.4 Message Authentication**
 
-ALSP protects message integrity and authenticity by wrapping each message in a JWS signature. The complete ALSP Envelope, including both the message header and any payload entries, is signed using the sender's private key, creating cryptographic proof of origin and binding it to the active session. The resulting signed structure is then encoded using DPB (Section 7) to produce the final ALSP frame for transmission over the underlying transport (Section 14).
+ALSP protects message integrity and authenticity by wrapping each message in a JWS signature. The complete ALSP Envelope, including both the message header and any payload entries, is signed using the sender's private key, creating cryptographic proof of origin and binding it to the active session. The resulting JWS compact serialization is then encoded using DPB (Section 7) to produce the final ALSP frame for transmission over the underlying transport (Section 14).
 
-This allows every message to be verified against the sender's registered public key, establishing both identity proof and session binding throughout the connection lifecycle. The authentication flows, nonce generation rules, and session establishment procedures that govern this signing process are defined in Section 8.
+This allows every message to be verified against the sender's authenticated public key, establishing both identity proof and session binding throughout the connection lifecycle. The authentication flows, nonce generation rules, and session establishment procedures that govern this signing process are defined in Section 8.
 
 ### **10.4.1 JWS Header Requirements**
 
