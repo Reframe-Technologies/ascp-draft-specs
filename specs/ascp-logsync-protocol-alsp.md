@@ -1333,6 +1333,8 @@ In Provisioned Mode, the server uses the `auth_challenge` message to send the bo
   - For Provisioned Mode, the object **MUST NOT** include `recovery_cert_kid`.
   - For Provisioned Mode, the object **MUST NOT** include `kdf_params`.
   - The `user_key_jwe` field within the object **MUST** be constructed using the public recovery key carried in the initiating `auth_request.recovery_cert`.
+  - The `user_identity` value within the object identifies the identity the server is provisioning for the client in that session and is treated as provisional session state at this stage.
+  - Final validation of that provisioned identity binding is deferred to the procedures defined by the ASCP Bootstrapping and Channel Discovery Specification and the ASCP Trust and Identity Architecture specification.
   - The receiving client **MUST** parse the object, decrypt `user_key_jwe` using the recovery private key corresponding to its initiating `auth_request.recovery_cert`, recover the provisioned identity private JWK, and use `identity_cert_kid` as the JWS `kid` value on subsequent ALSP messages in the session.
 - **identity\_cert**
   - Type: string (JWS compact serialization carrying a JWK encoded self-signed public identity key)
