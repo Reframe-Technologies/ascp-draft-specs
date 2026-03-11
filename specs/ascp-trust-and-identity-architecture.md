@@ -711,11 +711,9 @@ Verifiers MUST ensure that Keyframe Artipoints are evaluated according to the li
 
 # **8. Security Construct Attributes**
 
-This section defines normative attribute families that extend the meaning of Security Construct Artipoints defined in Section 7. Attributes are immutable, additive, and non-destructive: they attach additional semantic information to an Artipoint without mutating or invalidating its original meaning.
+This section defines the normative attribute families used by the Security Construct Artipoints in Section 7. Attributes are immutable, additive annotations expressed in the Layer-2 grammar and interpreted at Layer-3.
 
-All attributes defined herein are evaluated at Layer-3 and expressed using the Layer-2 grammar. This section provides normative definitions for attribute names, value encodings, and schemas. Construction, decoding, and validation procedures for Recovery Envelopes and Channel Key Envelopes are specified in Sections 11 and 12, respectively.
-
-This specification defines Layer-0 and Layer-1 mechanisms only where necessary to ensure interoperable generation and decoding of Layer-3 security material.
+This section defines attribute names, value encodings, and schemas. Recovery Envelope and Channel Key Envelope construction, decoding, and validation procedures are defined in Sections 11 and 12, respectively. Layer-0 and Layer-1 behavior is specified here only where necessary for interoperable generation and decoding of Layer-3 security material.
 
 The following attribute families are defined:
 
@@ -728,9 +726,9 @@ The following attribute families are defined:
 
 ### **8.1.1 Overview**
 
-An **endorsement attribute** binds externally verifiable evidence to a **Certificate Artipoint** or **Identity Artipoint**. Endorsements strengthen provenance by recording evidence issued by external systems such as PKI, OIDC identity providers, decentralized identifier controllers, or time-stamping authorities.
+An **endorsement attribute** attaches externally verifiable evidence to a **Certificate Artipoint** or **Identity Artipoint**. Endorsements strengthen provenance by recording evidence from external systems such as PKI, OIDC identity providers, decentralized identifier controllers, or time-stamping authorities.
 
-Endorsements are **additive annotations**. They:
+Endorsements:
 
 - MUST NOT revoke or modify certificate semantics
 - MUST NOT grant governance authority
@@ -751,13 +749,11 @@ ASCP explicitly distinguishes between:
 - **Attestation** — a factual claim (e.g., “this key existed before time T” or “this key corresponds to account X”)
 - **Endorsement** — a cryptographically verifiable binding of that attestation to a specific Artipoint at a specific time
 
-ASCP records **endorsements**, not attestations.
-
-This distinction prevents semantic overload common in PKI and DID systems and ensures that trust evaluation remains **explicit, composable, and log-anchored**. Endorsements do not assert truth; they provide verifiable evidence that verifiers may evaluate independently.
+ASCP records **endorsements**, not raw attestations. This keeps trust evaluation explicit, composable, and log-anchored. Endorsements do not assert truth; they provide verifiable evidence that verifiers evaluate independently.
 
 ### **8.1.3 Endorsement Schema**
 
-All endorsement values **MUST** conform to the following JSON structure. While inspired by the W3C Verifiable Credentials data model, ASCP endorsements use simple JSON with JOSE-based cryptographic evidence and do **not** rely on JSON-LD or VC processing rules.
+All endorsement values **MUST** conform to the following JSON structure. The schema is inspired by the W3C Verifiable Credentials data model, but ASCP uses plain JSON and JOSE-based cryptographic evidence only; JSON-LD and VC processing rules do not apply.
 
 ```json
 {
@@ -805,7 +801,7 @@ The thumbprint value **MUST** equal the RFC 7638 JWK thumbprint of the key mater
 | issuance-time | Endorser vouches key existed at or before time T    | tsa-rfc3161               |
 | id-binding    | Endorser binds key to an external identifier        | oidc-icb, did-jws         |
 
-### **8.1.5 Supported Endorsement Mechanisms**
+### **8.1.5 Defined Endorsement Mechanisms**
 
 - **jws-x5c** — PKI certificate endorsement using X.509 chains
 - **jws-kid** — ASCP-internal endorsement using another certificate
@@ -821,7 +817,7 @@ A verifier MUST:
 
 1. Verify thumbprint equals the endorsed key’s RFC 7638 thumbprint
 2. Validate mechanism-specific evidence
-3. Apply **log-time trust**, evaluating evidence using the trust state at issued\_at
+3. Evaluate the evidence under the trust state at `issued_at`
 4. Record the endorsement result as *valid*, *invalid*, or *indeterminate*
 
 Endorsements **MUST NOT** alter the semantic meaning of Identity or Certificate Artipoints.
@@ -830,9 +826,7 @@ Endorsements **MUST NOT** alter the semantic meaning of Identity or Certificate 
 
 ### **8.2.1 Overview**
 
-Purpose attributes declare **first-party cryptographic intent**. They specify which cryptographic operations a certificate’s key **MAY** be used for.
-
-Purpose attributes authorize **cryptographic use only**; they do **not** grant governance authority or access rights.
+Purpose attributes declare **first-party cryptographic intent**. They specify which cryptographic operations a certificate key **MAY** be used for, but grant no governance authority or access rights.
 
 Each purpose attribute is expressed as:
 
@@ -852,7 +846,7 @@ Each purpose attribute is expressed as:
 
 A key **MUST NOT** be used for any cryptographic operation unless the corresponding purpose attribute is present and references the correct thumbprint.
 
-Channel Codec operations (Layer-1 signing/encryption) **MUST rely exclusively** on purpose attributes of the active **Certificate Artipoint(s)** selected by Layer-3 trust evaluation, and **MUST NOT** infer cryptographic intent from identity metadata, governance attributes, labels, or other non-purpose fields.
+Channel Codec operations (Layer-1 signing and encryption) **MUST rely exclusively** on purpose attributes of the active **Certificate Artipoint(s)** selected by Layer-3 trust evaluation. They **MUST NOT** infer cryptographic intent from identity metadata, governance attributes, labels, or other non-purpose fields.
 
 Layer-1 MUST NOT interpret Keyframe or Certificate semantics directly; it MUST consume only the cryptographic consequences provisioned by Layer-3 evaluation (e.g., selected keys, recipient sets, and epoch state).
 
@@ -860,7 +854,7 @@ Layer-1 MUST NOT interpret Keyframe or Certificate semantics directly; it MUST c
 
 ### **8.3.1 Overview**
 
-Envelope attributes carry **encrypted cryptographic material** associated with **Keyframe Artipoints**. They define payload schemas carried by attributes; they do **not** define lifecycle or rotation semantics.
+Envelope attributes carry **encrypted cryptographic material** on **Keyframe Artipoints**. They define payload schemas only; lifecycle and rotation semantics are defined elsewhere.
 
 Envelope attributes are expressed as:
 
@@ -868,7 +862,7 @@ Envelope attributes are expressed as:
 envelope::<recipient> := "<JWE compact serialization>"
 ```
 
-where the value of the attribute MUST be a JOSE JWE in compact serialization form as specified in Section 12.
+The attribute value MUST be a JOSE JWE in compact serialization form as specified in Section 12.
 
 The JWE payload MUST be encrypted for the intended recipient using the recipient’s active **Certificate Artipoint** public key that is authorized for key agreement (i.e., purpose::keyAgreement is present and valid under Layer-3 trust evaluation).
 
@@ -876,7 +870,7 @@ The JWE kid header field MUST identify the specific recipient Certificate Artipo
 
 ### **8.3.2 Channel Key Envelope (CKE) Schema (Normative)**
 
-This schema defines the initial reference envelope format; future versions MAY introduce additional envelope types. The decrypted JWE payload **MUST** contain the following JSON structure:
+This schema defines the initial CKE plaintext format. Future versions MAY introduce additional envelope types. The decrypted JWE payload **MUST** contain the following JSON structure:
 
 ```json
 {
@@ -900,9 +894,7 @@ This schema defines the initial reference envelope format; future versions MAY i
 - `replaces`: References the UUID of a prior Keyframe being superseded by this envelope (optional). This field aids provenance tracing but is informational only and MUST NOT be interpreted as defining rotation order, activation, or lifecycle behavior.
 - `rotation_interval_days`: Recommended rotation interval in days (optional)
 
-Each key in the envelope (`aes_key_jwk` and `auth_key_jwk`) is a JWK containing the channel symmetric encryption key and the Channel Access Key (CAK) private key, respectively.
-
-Layer-3 provisions extracted key material to lower layers. Lower layers **MUST NOT** parse or interpret this structure directly.
+`aes_key_jwk` and `auth_key_jwk` carry the channel symmetric encryption key and the Channel Access Key (CAK) private key, respectively. Layer-3 provisions the extracted key material to lower layers. Lower layers **MUST NOT** parse or interpret this structure directly.
 
 Key material lifecycle semantics are defined in Section 10 while full JOSE JWE encoding and validation details are specified in Section 12.
 
@@ -910,7 +902,7 @@ Key material lifecycle semantics are defined in Section 10 while full JOSE JWE e
 
 ### **8.4.1 Overview**
 
-The recovery\_envelope attribute enables secure recovery of a certificate’s private key using **double encryption**, without exposing secret material to ASCP services.
+The `recovery_envelope` attribute enables secure recovery of a certificate's private key without exposing secret material to ASCP services. Depending on the declared `protection` profile, `user_key_jwe` may use password-based wrapping, recovery-key wrapping, or both.
 
 ### **8.4.2 Schema (Normative)**
 
@@ -940,22 +932,22 @@ The value of the `recovery_envelope` attribute is a JSON structure as follows:
 - `type` — Identifies this as a recovery envelope
 - `version` — Schema version for forward compatibility
 - `identity_cert_kid` — ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key MUST match the public component of the recovered JWK.
-- `recovery_cert_kid` — Optional ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key is used for recovery-key-based wrapping. This field MUST be present when `protection` includes `recovery-key` and the recovery public key is represented by an ASCP Certificate Artipoint. It MUST be omitted when the applicable recovery key is conveyed by enclosing protocol context or another out-of-band mechanism.
-- `user_identity` - The UUID of the user identity whose identity key is wrapped into the `user_key_jwe`.
-- `user_key_jwe` — The value string holds the `user-key-envelope` defined in Section 11. It MUST be a JWE compact serialization string whose terminal decrypted payload is a private JWK representing the identity keypair. That JWK MUST include the corresponding public key members in the normal JOSE form.
+- `recovery_cert_kid` — Optional ASCP certificate identifier in standard `kid` form (`ascp:cert:<uuid>`) identifying the Certificate Artipoint whose public key is used for recovery-key-based wrapping. It MUST be present when `protection` includes `recovery-key` and the recovery public key is represented by an ASCP Certificate Artipoint. It MUST be omitted when the applicable recovery key is conveyed by enclosing protocol context or another out-of-band mechanism.
+- `user_identity` — UUID of the user identity whose identity key is wrapped in `user_key_jwe`.
+- `user_key_jwe` — JWE compact serialization of the `user-key-envelope` defined in Section 11. Its terminal decrypted payload MUST be a private JWK for the recovered identity keypair, including the corresponding public key members.
 - `protection` — Non-empty array declaring the required recovery factors for `user_key_jwe`. Permitted values are `password` and `recovery-key`. Each value MUST appear at most once. The declared set MUST exactly match the wrapping construction used for `user_key_jwe`.
 - `kdf_params` — Parameters used to derive the password-based content-encryption key. This field MUST be present if and only if `protection` includes `password`. It MUST contain sufficient information for interoperable derivation, including the KDF algorithm identifier, salt, and work-factor parameters.
 - `rotation_id` — Human-readable identifier for tracking key rotations
 - `recovery_purpose` (optional) — Intended use case for this recovery envelope. Multiple options MAY be specified.
 - `created` — Timestamp when the recovery envelope was generated
 
-See Section 11 for all details around constructing the recovery envelope and in particular the construction and decoding process of the `user-key-envelope` populating the `user_key_jwe` JSON field.
+Section 11 defines construction, decoding, and validation of `recovery_envelope` and `user-key-envelope`.
 
-Some profiles MAY convey the applicable recovery public key outside the `recovery_envelope`, such as a provisioning or bootstrap protocol in which the requester supplies a transient recovery key for one-time use. In such profiles, `recovery_cert_kid` MAY be omitted and the applicable recovery key is determined by the enclosing protocol context.
+Some profiles MAY convey the applicable recovery public key outside `recovery_envelope`, such as a provisioning or bootstrap protocol in which the requester supplies a transient recovery key for one-time use. In such profiles, `recovery_cert_kid` MAY be omitted and the applicable recovery key is determined by the enclosing protocol context.
 
 ## **8.5 Key Usage Evaluation Summary (Normative)**
 
-This section defines the evaluation rules used to determine whether a given Certificate Artipoint is acceptable for a specific cryptographic use at a given **log-time**. Implementations MUST evaluate key usage deterministically from log evidence plus explicitly configured local policy inputs.
+This section defines how to determine whether a Certificate Artipoint is acceptable for a specific cryptographic use at a given **log-time**. Implementations MUST evaluate key usage deterministically from log evidence plus explicitly configured local policy inputs.
 
 Relationship semantics used here (including `supports` and `replaces`) are defined in Section 7.2.5.
 
@@ -971,16 +963,16 @@ A verifier MUST evaluate key usage as follows:
 
 1. **Verify certificate validity at log-time**
    - Resolve `cert_id` to a Certificate Artipoint present in the Coordination Log at or before `t`.
-   - Apply any lifecycle constraints relevant to certificate applicability at `t` (e.g., non-retroactivity, supersession handling, or instance policy constraints defined elsewhere in this document).
+   - Apply any lifecycle constraints relevant to applicability at `t` (e.g., non-retroactivity, supersession handling, or instance policy constraints defined elsewhere in this document).
    - If the certificate is not applicable at `t`, the verifier MUST reject it for the candidate use.
 2. **Verify identity relationship**
    - The certificate MUST `supports` `identity_id` at log-time `t`.
    - If no valid `supports` relationship is present at `t`, the verifier MUST reject the certificate for this identity.
 3. **Verify purpose match**
-   - The Certificate Artipoint MUST declare `required_purpose` as a `purpose::*` attribute.
+   - The Certificate Artipoint MUST declare `required_purpose` as a `purpose::*` attribute at `t`.
    - If `required_purpose` is not declared, the verifier MUST reject the certificate for that use.
 4. **Optionally evaluate endorsement strength**
-   - If `policy` requires endorsements for `required_purpose`, the verifier MUST evaluate endorsement presence and validity at `t` (including any external attestation verification procedures required by `policy`).
+   - If `policy` requires endorsements for `required_purpose`, the verifier MUST evaluate endorsement presence and validity at `t`, including any external attestation verification procedures required by `policy`.
    - If endorsement requirements are not met, the verifier MUST reject the certificate for that use.
 
 If all required checks succeed, the verifier MAY treat the certificate as an acceptable public key for `required_purpose` at log-time `t`.
