@@ -1788,7 +1788,9 @@ A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per channel key
   - **MUST** be integrity-protected by a signature from the channel creator or governing authority (per bootstrap specification).
 - The CAK private key:
   - **MUST** be kept confidential.
-  - **MUST NOT** be transmitted within ALSP or other ASCP protocol layers.
+  - **MUST NOT** be transmitted in cleartext within ALSP messages, ALSP protocol fields, or other directly inspectable ALSP artifacts.
+  - **MUST NOT** appear as a native ALSP protocol element or bootstrap-manifest field.
+  - **MAY** be provisioned through other ASCP layers only when carried inside recipient-encrypted higher-layer containers (for example, Keyframe-attached Channel Key Envelopes (CKEs)) such that ALSP does not expose or interpret the private key material.
   - **MUST** be accessible only to replicas (or operators) intended to be **admitted to synchronize** the channel log.
 
 ### **11.1.2 Rotation**
