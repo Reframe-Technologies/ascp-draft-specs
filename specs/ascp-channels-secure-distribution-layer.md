@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.58 — Informational (Pre-RFC Working Draft)  
+Version: 0.59 — Informational (Pre-RFC Working Draft)
 December 2025
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -327,11 +327,11 @@ Every Channel envelope **MUST** be signed using one of the following JWS signatu
 **Required:**
 
 - `ES256` (ECDSA using P-256 and SHA-256), as defined in **RFC 7518**
-- `EdDSA` (Ed25519), as defined in **RFC 8037**
+- `ES384` (ECDSA using P-384 and SHA-384), as defined in **RFC 7518**
 
 **Optional:**
 
-- `ES384` (ECDSA using P-384 and SHA-384), as defined in **RFC 7518**
+- None.
 
 Envelopes using algorithms not listed above **MUST** be rejected.
 
@@ -501,9 +501,9 @@ Layer-1 does not own, manage, or interpret append-only logs. Log storage, immuta
 
 The Layer-1 Channel Codec interacts with Layer-0 solely through the following abstract interfaces:
 
-- **Append Interface:**  
+- **Append Interface:**
   Layer-1 submits newly constructed Channel Envelopes to Layer-0 for append to the Channel Log.
-- **Delivery Interface:**  
+- **Delivery Interface:**
   Layer-0 delivers appended Channel Envelopes to Layer-1 for verification and decoding.
 
 Layer-1 **MUST** treat all envelopes received from Layer-0 as immutable inputs and **MUST NOT** modify, reorder, or suppress log entries. Layer-1 processes envelopes strictly in the order delivered by Layer-0.
@@ -512,9 +512,9 @@ Layer-1 **MUST** treat all envelopes received from Layer-0 as immutable inputs a
 
 Layer-1 serves as the cryptographic boundary between log replication and semantic representation.
 
-- **Upward Interface:**  
+- **Upward Interface:**
   After successful verification (and decryption, if applicable), Layer-1 passes the resulting cleartext **Articulation Sequence** to Layer-2 for grammatical validation and semantic interpretation.
-- **Downward Interface:**  
+- **Downward Interface:**
   Layer-1 receives serialized Articulation Sequences from Layer-2 as input to the Channel Encoder when constructing new Channel Envelopes.
 
 Layer-1 **MUST NOT** parse, interpret, or modify Articulation Sequences beyond cryptographic processing. All semantic meaning and grammatical validation are handled exclusively by higher layers.
@@ -550,9 +550,9 @@ Operational processing rules are defined in Section 11.
 
 Channel Envelopes follow a strict **two-stage encoding model**:
 
-1. **JWS Signature (required)**  
+1. **JWS Signature (required)**
    The Articulation Sequence is serialized and signed using JWS Compact Serialization, producing a three-part structure.
-2. **JWE Encryption (optional)**  
+2. **JWE Encryption (optional)**
    The resulting JWS string MAY be wrapped using JWE Compact Serialization to provide confidentiality.
 
 Both stages MUST use Compact Serialization as defined in RFC 7515 and RFC 7516. No other JOSE serialization forms are permitted for Channel Envelopes.
