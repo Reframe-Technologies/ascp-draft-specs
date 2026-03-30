@@ -427,6 +427,23 @@ To reduce ambiguity about “where a verifier should look” for specific classe
 | **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | Carries per-recipient **Channel Key Envelopes (CKEs)** as `envelope::<recipient-identity-uuid> := "<JWE>"` attributes (one per recipient). | Binds to Channels via `supports`; evaluated at Layer-3 to derive active and historical keyframe state and provision cryptographic consequences to lower layers. |
 | **RootCA Artipoint**      | Instance trust anchor                                                            | Distinguished certificate-like Security Construct that anchors certificate acceptance and onboarding provenance for the ASCP instance.     | Introduced via bootstrap history; used as the trust root for instance-level verification and optional external anchoring evidence.                      |
 
+## **6.2.2 Identity trust provenance (Normative)**
+
+An Identity Artipoint is not trusted solely by virtue of syntactic validity or presence in Coordination Log history.
+
+A verifier **MUST** treat an Identity Artipoint as trusted for ASCP trust evaluation only when its repository recognition is supported by provenance that is directly or indirectly anchored to the instance RootCA.
+
+Identity trust provenance MAY be established by:
+
+- direct RootCA-authored trust-establishing material, or
+- trust-establishing material authored under delegated bootstrap authority whose chain of authority is itself RootCA-traceable.
+
+Delegated bootstrap authority **MUST** be explicitly established through bootstrap history as defined by the **ASCP Bootstrap Process and Channel Discovery** specification. In particular, bootstrap-scoped delegation MAY be evidenced by an **Identity Reference Artipoint** (`identity-ref`) recorded in the `@bootstrap` channel, provided that the identity-ref and the Articulation Sequence carrying it are validated as RootCA-traceable bootstrap material.
+
+An Identity Artipoint that lacks such RootCA-anchored provenance MAY be retained as observed history, but verifiers **MUST NOT** treat it as a trusted participant identity for certificate issuance, authorship attribution, or other trust conclusions under this specification unless and until the required provenance is established.
+
+This requirement concerns trust provenance only. Governance specifications MAY impose additional requirements on whether identity material is operative, accepted, or publishable within a given repository.
+
 ## **6.3 Why Artipoint-Based Identities**
 
 Representing identities, certificates, and trust evidence as Artipoints provides several architectural advantages.
@@ -461,7 +478,7 @@ ASCP employs a simple certificate lifecycle grounded in immutable history. The f
 
 1. **Key generation:** A participant generates a cryptographic keypair locally or in secure hardware.
 2. **Certificate publication:** The public key is published as a Certificate Artipoint, optionally including purpose declarations, recovery material, and endorsements.
-3. **Identity binding:** A Certificate Artipoint `supports` the Identity Artipoint, establishing a verifiable binding.
+3. **Identity binding:** A Certificate Artipoint `supports` the Identity Artipoint, and the binding becomes effective once issuance provenance and subject Proof of Possession requirements are satisfied.
 4. **Rotation:** When a key is replaced, a new Certificate Artipoint is published and the identity’s binding is updated. Historical signatures remain valid because verification uses log-time trust.
 5. **Recovery (optional):** If recovery material is present, a participant may restore access to a private key without exposing it to ASCP services.
 6. **External anchoring (optional):** Endorsements from PKI, OIDC, DID, or TSA systems may be added at any time to strengthen provenance.
@@ -472,11 +489,11 @@ These steps are **illustrative**, not procedural mandates.
 
 A common—but not universal—deployment model uses **locally generated keys** under participant control.
 
-In this model, each participant generates a keypair, publishes the public key in a (typically self-signed) Certificate Artipoint, and uses the corresponding private key to produce signature evidence on authored payloads. Because identity-certificate relationships and related evidence are committed to immutable log history, historical signatures can be evaluated using **log-time** state without requiring online revocation services.
+In this model, each participant generates a keypair, publishes the public key in a Certificate Artipoint whose issuance provenance is accepted under the instance's RootCA-anchored trust rules, and uses the corresponding private key to produce signature evidence on authored payloads. Because identity-certificate relationships and related evidence are committed to immutable log history, historical signatures can be evaluated using **log-time** state without requiring online revocation services.
 
 Implementations typically store private keys using platform-appropriate secure storage. Key storage and device protection mechanisms are deployment-specific and out of scope for this specification.
 
-Deployments MAY additionally introduce stronger anchoring by having participant certificates endorsed or signed under a RootCA policy. Other deployments MAY rely on self-signing plus external endorsements. This specification supports both patterns.
+Deployments MAY additionally strengthen certificate provenance with RootCA policy, external endorsements, or both. Such evidence supplements, but does not replace, the requirement that trusted identity and certificate material remain RootCA-traceable within ASCP's log-anchored model.
 
 Additional informational context regarding deployment models and their relationship to the ASCP trust model is provided in Appendix B.
 
@@ -537,13 +554,19 @@ Identity Artipoints establish authorship provenance but do not grant authorizati
 - **label**: MAY be empty; SHOULD be human-readable
 - **payload**: MUST be present; MAY be a URI or descriptive string
 
-### 7.1.4 Required relationships
+### 7.1.4 Required relationships & Trust Status
 
 - None.
 
 Certificate binding is articulated using relationship expressions authored by Certificate Artipoints:
 
 - `certificate supports {identity}`
+
+An Identity Artipoint is structurally valid if it satisfies the canonical form and field requirements of this section.
+
+An Identity Artipoint is trusted for ASCP trust evaluation only if the verifier can establish RootCA-anchored trust provenance for that identity as defined in Section 6.2.2.
+
+Absent such provenance, implementations **MUST NOT** treat the identity as a trusted issuer, trusted participant identity, or trusted basis for certificate acceptance, except where a companion specification explicitly defines a provisional bootstrap-phase exception.
 
 ### 7.1.5 Optional Attributes
 
@@ -561,9 +584,18 @@ Identity binding and key rotation are expressed by Certificate Artipoint relatio
 
 Historical relationships remain valid for log-time verification.
 
-### 7.1.7 Proof of Possession for Third-Party Published Certificates
+### 7.1.7 Proof of Possession for certificate-to-identity bindings
 
-If a Certificate Artipoint is authored by an identity other than the Identity Artipoint it `supports`, verifiers **MUST NOT** treat that support relationship as valid unless the supported Identity demonstrates **Proof of Possession (PoP)** of the corresponding private key at **log-time**.
+Certificate issuance provenance and subject key control are distinct requirements.
+
+For a Certificate Artipoint to be accepted as bound to an Identity Artipoint, a verifier **MUST** establish both:
+
+1. **Issuance provenance** — the Certificate Artipoint itself was authored by the RootCA or by a trusted identity whose authority to publish such certificate material is RootCA-traceable under this specification and companion bootstrap rules; and
+2. **Subject Proof of Possession (PoP)** — the supported Identity demonstrates control of the private key corresponding to the Certificate Artipoint's published JWK at log-time.
+
+Accordingly, if a Certificate Artipoint is authored by an identity other than the Identity Artipoint it `supports`, verifiers **MUST NOT** treat the `supports` relationship as effective unless the supported Identity demonstrates PoP at log-time.
+
+Direct authorship of the Certificate Artipoint by the supported Identity MAY satisfy the PoP requirement only if that authorship is itself valid under the issuance-provenance requirements above. Direct authorship by the supported Identity is therefore sufficient only when that identity is already trusted to publish the certificate under RootCA-anchored provenance.
 
 A binding Identity minimally demonstrates PoP by authoring at least one **PoP Assertion** that:
 
@@ -601,9 +633,12 @@ Certificates are the canonical source of public keys used for:
 - **label**: MAY be empty
 - **payload**: MUST contain a valid JWK (RFC 7517)
 
-The `author` of a Certificate Artipoint MUST be the UUID of the RootCA or another Identity Artipoint with traceable provenance back to the RootCA.
+The `author` of a Certificate Artipoint MUST be either:
 
-If a Certificate Artipoint is authored by an identity other than the Identity Artipoint it `supports`, verifiers MUST apply the Proof of Possession (PoP) requirements in **Section 7.1.6** before treating that support relationship as valid.
+- the UUID of the RootCA, or
+- the UUID of a trusted Identity Artipoint whose authority to publish the certificate is traceable to the RootCA under this specification and companion bootstrap rules.
+
+A Certificate Artipoint does not become acceptable for use merely because it is well-formed or RootCA-traceable in authorship. Its binding to a subject identity is effective only when the requirements of **Section 7.1.7** are satisfied.
 
 ### 7.2.4 Purpose Semantics
 
@@ -613,10 +648,15 @@ Certificates MAY declare one or more `purpose::*` attributes. A key MUST NOT be 
 
 Certificate-to-identity association is defined by relationship expressions, not by identity attributes.
 
-- `certificate supports {identity}` binds a certificate to an identity.
+- `certificate supports {identity}` expresses the intended certificate-to-identity binding.
 - `new-certificate replaces {old-certificate}` expresses certificate supersession lineage.
 
-When the certificate author differs from the supported identity, verifiers MUST apply the Proof of Possession requirements in Section 7.1.6 before treating the `supports` relationship as valid.
+A verifier **MUST** treat `certificate supports {identity}` as effective only when both of the following hold at the relevant log-time:
+
+1. the Certificate Artipoint satisfies issuance-provenance requirements; and
+2. the supported identity has satisfied the PoP requirements of **Section 7.1.7**.
+
+Until both conditions hold, the `supports` relationship is pending and **MUST NOT** be used as the basis for authorship attribution, authentication acceptance, or key-agreement selection.
 
 JOSE `kid` values are transport key-selection metadata only, MUST conform to **ASCP Channels §6.4**, and MUST NOT be interpreted as identity-binding semantics.
 
@@ -963,10 +1003,10 @@ A verifier MUST evaluate key usage as follows:
 
 1. **Verify certificate validity at log-time**
    - Resolve `cert_id` to a Certificate Artipoint present in the Coordination Log at or before `t`.
-   - Apply any lifecycle constraints relevant to applicability at `t` (e.g., non-retroactivity, supersession handling, or instance policy constraints defined elsewhere in this document).
+   - Apply any lifecycle constraints relevant to applicability at `t` (e.g., non-retroactivity, supersession handling, issuance-provenance requirements, or instance policy constraints defined elsewhere in this document).
    - If the certificate is not applicable at `t`, the verifier MUST reject it for the candidate use.
 2. **Verify identity relationship**
-   - The certificate MUST `supports` `identity_id` at log-time `t`.
+   - The certificate MUST `supports` `identity_id` at log-time `t`, and that `supports` relationship MUST be effective under Section 7.1.7.
    - If no valid `supports` relationship is present at `t`, the verifier MUST reject the certificate for this identity.
 3. **Verify purpose match**
    - The Certificate Artipoint MUST declare `required_purpose` as a `purpose::*` attribute at `t`.
@@ -1948,9 +1988,9 @@ The log-anchored model also supports autonomy. Each participant, or replica, car
 
 ## **A.2 Self-Sovereign Keys, Proof of Possession, and Self-Signing**
 
-At the heart of each ASCP identity is a self-generated key pair. This reflects an intentional commitment to self-sovereignty: identities should not depend on any external authority for their creation or basic operation. By requiring that public keys be self-signed and introduced through authenticated sessions, the system ensures that the holder of the private key is demonstrably the same entity initiating participation.
+At the heart of each ASCP identity is a self-generated key pair. This reflects an intentional commitment to self-sovereignty: identities should not depend on any external authority for their creation or basic operation. ASCP therefore separates participant-controlled key generation from the repository's issuance and trust-provenance rules. Proof of Possession assertions, self-signed key statements, or comparable subject-controlled evidence can demonstrate that the holder of the private key is the same entity claiming the resulting identity-to-certificate binding.
 
-Self-signing establishes proof of possession at the moment the key is introduced. It binds the key to a specific historical point in the log and provides permanent provenance for that binding. Even when later endorsements, attestations, or RootCA signatures strengthen a certificate’s credibility, the root of that trust remains the participant’s self-generated proof.
+Such subject-controlled evidence establishes proof of possession at the moment the key is introduced. It binds the key to a specific historical point in the log and provides durable provenance for that binding. Even when later endorsements, attestations, or RootCA-backed issuance strengthen a certificate’s credibility, the root of that subject-control evidence remains the participant’s own proof.
 
 This approach also enables seamless migration across devices and environments. Because the key pair originates with the participant, the system avoids introducing assumptions about centralized key issuance, escrow by default, or authority-managed identity creation. Optional enterprise integrations may exist, but they build atop this self-sovereign core.
 
