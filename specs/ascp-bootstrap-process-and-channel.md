@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.40 — Informational (Pre-RFC Working Draft)
+Version: 0.41 — Informational (Pre-RFC Working Draft)
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -555,6 +555,8 @@ The following semantics apply to all Identity Reference Artipoints:
 - A joining replica MUST treat identity-ref entries as **temporary resolution shims** valid only during bootstrap.
 
 Once normal identity and certificate resolution becomes available, identity-ref entries MUST be treated as informational and MUST NOT be used in preference to canonical ASCP trust material.
+
+Informational note: identity-ref does not redefine the trust semantics of Identity or Certificate Artipoints, which are specified by the **ASCP Trust and Identity Architecture**. However, when validated as RootCA-traceable bootstrap material, an identity-ref MAY contribute to the provenance chain by which a verifier recognizes an identity as trusted within the organizational instance. In this sense, identity-ref can serve as bootstrap evidence of delegated authority or repository recognition, while certificate binding, Proof of Possession, and ongoing trust evaluation remain governed by the Trust and Identity specification.
 
 ### **7.3.5 Validation Requirements**
 
