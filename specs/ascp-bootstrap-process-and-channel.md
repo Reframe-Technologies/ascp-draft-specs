@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.41 — Informational (Pre-RFC Working Draft)
+Version: 0.42 — Informational (Pre-RFC Working Draft)
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -155,7 +155,7 @@ A mandatory ASCP channel that anchors the organizational trust root and contains
 
 ### **References Channel (@references)**
 
-A mandatory ASCP channel that serves as the authoritative registry for channel discovery. The references channel contains signed records that enumerate available channels and provide sufficient information for replicas to locate and replicate them.
+A mandatory ASCP channel that serves as the authoritative registry for channel discovery. The references channel contains signed records that enumerate available channels and provide sufficient information for replicas to locate and replicate them. Its channel UUID is permanently reserved as `ffffffff-ffff-7000-8000-000000000001`.
 
 ### **Bootstrap Key Package (BKP)**
 
@@ -400,6 +400,7 @@ The @bootstrap channel represents the minimal, authoritative entry point into th
 The @references channel:
 
 - MUST exist in every organizational instance,
+- MUST be identified by the fixed channel UUID `ffffffff-ffff-7000-8000-000000000001`,
 - MUST serve as the authoritative registry for channel discovery, and
 - MUST enumerate all channels that replicas may subsequently replicate, subject to authorization.
 
@@ -459,7 +460,7 @@ The @bootstrap channel serves three primary purposes:
 
 1. **Trust Anchoring:** It introduces and anchors the Bootstrap Trust Anchor (RootCA), establishing the root of trust for the organizational instance.
 2. **Initialization Enablement:** It provides the minimum information required for a replica to transition from an uninitialized state into a state where normal ASCP verification rules can be applied.
-3. **Discovery Bridging:** It enables a replica to safely locate and acquire the @references channel, after which normal channel discovery may proceed.
+3. **Discovery Bridging:** It enables a replica to safely confirm and acquire the fixed @references channel, after which normal channel discovery may proceed.
 
 The @bootstrap channel is intentionally minimal. It is not a general coordination channel and MUST NOT be used to convey ordinary application, governance, or workflow data.
 
@@ -480,7 +481,9 @@ At a minimum, the @bootstrap channel MUST include:
    - The containing Articulation Sequence (as carried in a Channel Envelope / Artipoint Record) MUST be signature-verifiable and serves as the cryptographic root for validating subsequent bootstrap artifacts.
 2. **Mandatory Channel Declarations**
    - A channel-reference articulation identifying the @references channel as the authoritative discovery registry.
-   - This reference MUST be sufficient for a replica to locate and replicate the @references channel.
+   - This reference MUST explicitly identify the fixed @references channel UUID `ffffffff-ffff-7000-8000-000000000001`.
+   - This reference MUST be sufficient for a replica to confirm and replicate the @references channel.
+   - If the articulated @references declaration identifies any other channel UUID, bootstrap validation MUST fail.
 3. **Bootstrap Manifests or Metadata (Optional but RECOMMENDED)**
    - Structured metadata that assists replicas in interpreting bootstrap state (e.g., versioning, creation timestamps).
    - Such metadata MUST be immutable and subject to the same validation rules as other bootstrap content.
@@ -653,6 +656,8 @@ Specifically, the @references channel:
 - provides sufficient metadata to allow replicas to locate and replicate channel logs, and
 - ensures that independent replicas discover the same channel universe when operating over the same validated history.
 
+The @references channel UUID is permanently reserved as `ffffffff-ffff-7000-8000-000000000001`. This value is a valid UUIDv7 and MUST identify the unique @references channel in every ASCP organizational instance. No other channel MAY use this UUID.
+
 The @references channel does not itself grant authorization to access channels. It defines *what exists*, not *who may participate*. Authorization decisions are made by other ASCP layers once discovery has occurred.
 
 ### **8.1.1 Role of @references in Layer-0 Provisioning**
@@ -679,9 +684,10 @@ The @bootstrap and @references channels serve complementary but distinct roles.
 A replica MUST NOT attempt to interpret or rely on @references content until:
 
 1. the @bootstrap channel has been acquired, and
-2. the Bootstrap Trust Anchor (RootCA) has been established and validated.
+2. the Bootstrap Trust Anchor (RootCA) has been established and validated, and
+3. the explicit bootstrap declaration for @references has been validated as referring to the fixed reserved UUID `ffffffff-ffff-7000-8000-000000000001`.
 
-Once these conditions are met, the @references channel becomes the authoritative source for channel discovery.
+After these conditions are satisfied, the @references channel is the authoritative source for channel discovery.
 
 This separation ensures that discovery operates only after trust exists, while avoiding the need for @bootstrap to carry evolving discovery state.
 
@@ -854,7 +860,7 @@ The @bootstrap channel MUST be created first.
 Its initial contents MUST include:
 
 - the Artipoint introducing the RootCA, and
-- a signed declaration identifying the @references channel as the authoritative discovery registry.
+- a signed declaration identifying the `@references` channel as the authoritative discovery registry.
 
 No other channels MAY be referenced prior to the creation of @references.
 
@@ -960,8 +966,6 @@ This model provides strong security guarantees and is RECOMMENDED for enterprise
 ### **10.3.2 Invitation Artifact**
 
 The replica is provisioned with a signed bootstrap artifact (e.g., file, QR code, or secure bundle) containing sufficient information to authenticate the organizational instance and retrieve the @bootstrap channel.
-
-Because the @bootstrap channel UUID is fixed by this specification, invitation artifacts need not carry a separate @bootstrap `channel_id`. They MUST still provide sufficient information to reach a bootstrap-serving replica and authenticate the organizational instance.
 
 Invitation artifacts MUST be verifiable against the organizational trust anchor once bootstrap validation completes.
 
