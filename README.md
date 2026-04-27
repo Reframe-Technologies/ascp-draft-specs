@@ -32,16 +32,21 @@ The design draws on operational transformation theory, CRDTs for distributed sys
 
 This repository contains early-stage specifications and is actively seeking technical review and implementation feedback.
 
-**Current Specifications (v0.1.0-draft):**
+**Current Specifications:**
 
 | Layer                  | Specification                                                                                  | Status |
 | ---------------------- | ---------------------------------------------------------------------------------------------- | ------ |
 | Overview               | [The Agents Shared Cognition Protocol](./specs/the-agents-shared-cognition-protocol.md)        | Draft  |
-| Layer 2 – Articulation | [ASCP Artipoint Grammar](./specs/ascp-artipoint-grammar.md)                                    | Draft  |
+| Terminology & Stack    | [ASCP Terminology Primer](./specs/ascp-terminology-primer.md) and [ASCP Stack](./specs/ascp-stack.md) | Draft  |
+| Layer 2 – Articulation | [ASCP Artipoint Grammar](./specs/ascp-artipoint-grammar-a-structure.md)                        | Draft  |
 | Layer 1 – Channels     | [ASCP Channels: Secure Distribution Layer](./specs/ascp-channels-secure-distribution-layer.md) | Draft  |
 | Layer 0 – Transport    | [ASCP LogSync Protocol (ALSP)](./specs/ascp-logsync-protocol-alsp.md)                          | Draft  |
+| Governance             | [ASCP Governance and Access Control](./specs/ascp-governance-and-access-control.md)            | Draft  |
+| Identity & Trust       | [ASCP Trust and Identity Architecture](./specs/ascp-trust-and-identity-architecture.md)        | Draft  |
+| Bootstrap              | [ASCP Bootstrap Process and Channel Discovery](./specs/ascp-bootstrap-process-and-channel.md)  | Draft  |
+| Profiles               | [ASCP Profile for Coordinated Work](./specs/ascp-profile-for-coordinated-work.md)              | Draft  |
 
-Additional specifications covering identity, governance, and bootstrapping are in active development. See [`specs/README.md`](./specs/README.md) for the complete index.
+See [`specs/README.md`](./specs/README.md) for the complete index and recommended reading order.
 
 **Reference implementations** in Python and Rust are planned following specification stabilization.
 
