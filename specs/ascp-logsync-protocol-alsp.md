@@ -1831,7 +1831,7 @@ The protected header **MUST** contain:
 }
 ```
 
-- `alg` **MUST** be "Ed25519".
+- `alg` **MUST** be "Ed25519" as the JOSE algorithm identifier for this CAP profile.
 - `kid` **MUST** match a CAK public key published via bootstrap channel manifest
 - `typ` **MUST** be "alsp+cak".
 
@@ -1968,7 +1968,7 @@ Error responses **SHOULD NOT** disclose whether failures were caused by key abse
 The following are explicitly **out of scope** for ALSP and are defined by the ASCP Bootstrap Process specification:
 
 - BKP payload structure
-- Channel Key Envelope semantics
+- Bootstrap-specific use of Channel Key Envelopes within the BKP
 - Discovery rules
 - Key indexing and selection
 - Key rotation and epoch overlap
@@ -2046,6 +2046,11 @@ This is compliant with RFC 7517 §4.2, which permits keys to omit the use field 
   "alg": "Ed25519"
 }
 ```
+
+- `kty`: **MUST** be `OKP`.
+- `crv`: **MUST** be `Ed25519`.
+- `x`: **MUST** contain the base64url-encoded Ed25519 public key bytes.
+- `alg`: MAY be omitted. When present, it **MUST** be `Ed25519` and **MUST** be consistent with the enclosing JOSE artifact.
 
 ## **13.4 Caching & Lifetimes**
 
@@ -2755,6 +2760,7 @@ The following specifications are **normatively required** for correct implementa
 - **RFC 7516 -** Jones, M. and J. Hildebrand, *JSON Web Encryption (JWE)*, RFC 7516, May 2015.
 - **RFC 7517 -** Jones, M., *JSON Web Key (JWK)*, RFC 7517, May 2015.
 - **RFC 7519 -** Jones, M., Bradley, J., and N. Sakimura, *JSON Web Token (JWT)*, RFC 7519, May 2015.
+- **RFC 9864 -** Jones, M.B. and O. Steele, *Fully-Specified Algorithms for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)*, RFC 9864, October 2025.
 - **RFC 8785 -** Rundgren, A. and J. Jordan, *JSON Canonicalization Scheme (JCS)*, RFC 8785, June 2020.
 - **RFC 3339 -** Klyne, G. and C. Newman, *Date and Time on the Internet: Timestamps*, RFC 3339, July 2002.
 - **RFC 4122 -** Leach, P., Mealling, M., and R. Salz, *A Universally Unique Identifier (UUID) URN Namespace*, RFC 4122, July 2005.

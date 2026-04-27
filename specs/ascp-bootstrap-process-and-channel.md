@@ -726,7 +726,8 @@ ascp:cak:<keyframe-uuid>
 
 The `cak_kid` value SHALL identify the CAK associated with the channel's active keyframe epoch.
 
-- **cak\_public\_keys -** One or more Ed25519 public keys corresponding to the referenced CAK.
+- **cak\_public\_keys -** One or more JWK objects representing Ed25519 public keys corresponding to the referenced CAK.
+  - These JWK objects MUST conform to the Ed25519 public key requirements defined in the ALSP specification.
   - At least one public key MUST be designated as **active**.
   - Additional public keys MAY be included to support transitional overlap during CAK rotation.
 
@@ -1169,7 +1170,7 @@ Where:
 - scope MUST identify the @references channel.
 - keys MUST be a non-empty ordered array of plaintext JSON formatted **Channel Key Envelopes**, each conforming exactly to the **Channel Key Envelope (CKE) Schema** defined in *ASCP Trust and Identity Architecture, Section 8.3.2*.
 - ordering MUST be "oldest-first".
-- active\_index MUST be an integer index into the keys array indicating the most recent key that senders SHOULD use when encrypting new @references entries.
+- active\_index MUST be an integer index into the keys array indicating the currently active CKE / keyframe epoch that senders SHOULD use when encrypting new @references entries.
 
 Each element of keys corresponds to one historical keyframe epoch of the @references channel.
 
@@ -1186,7 +1187,7 @@ Where \<index> selects the corresponding element in the BKP keys array.
 A replica decrypting an @references entry with kid = ascp:bkp:\<index> MUST:
 
 1. Select keys\[index] from the decrypted BKP.
-2. Extract the AES key from the selected Channel Key Envelope.
+2. Treat the selected value as the full plaintext Channel Key Envelope for that @references epoch and extract its `aes_key_jwk`.
 3. Use that key to decrypt the JWE-protected @references entry.
 
 If \<index> is out of range, the replica MUST treat the entry as undecryptable and MUST NOT infer discovery state from it.

@@ -1739,7 +1739,7 @@ For clarity, the required semantic fields are:
 - `auth_key_jwk` — a JWK representing the Channel Access Key (CAK) *private* key
 - `created` — creation timestamp
 
-Any additional fields (e.g., `valid_from`, `replaces`, `rotation_interval_days`) are informational and MUST NOT be used to determine Keyframe activation or lifecycle semantics, which are defined exclusively by articulated state (Section 10).
+Any additional fields (e.g., `valid_from`, `replaces`, `rotation_interval_days`) are informational and MUST NOT be used to determine Keyframe activation or lifecycle semantics, which are defined exclusively by articulated state (Section 10). The concrete JOSE profile by which Layer-0 uses CAK material for Channel Access Proofs is defined by ALSP, not by this section.
 
 ## **12.4 JWE Wrapping and JOSE Header Profile (Normative)**
 
@@ -1806,7 +1806,7 @@ To construct a CKE for a given Keyframe and recipient identity:
 2. **Construct the CKE plaintext**
    - Build the JSON object per Section 8.3.2.
    - aes\_key\_jwk MUST represent the symmetric key material required by the Keyframe’s payload cipher requirements.
-   - auth\_key\_jwk MUST represent the CAK private key material required by the Keyframe’s channel access algorithm.
+   - auth\_key\_jwk MUST represent the CAK private key material required by the Keyframe’s channel access algorithm. The concrete CAP JOSE profile associated with that material is defined by ALSP.
 3. **Encrypt as JWE compact**
    - Encode the plaintext JSON as UTF-8 bytes.
    - Produce a JWE Compact Serialization object using the recipient’s selected Certificate public key, with a Protected Header satisfying Section 12.4.
@@ -1845,7 +1845,7 @@ Upon encountering a Keyframe with `envelope::<recipient>` attributes, a recipien
    - Reject if required fields are absent or malformed.
 6. **Provision cryptographic consequences**
    - Extract aes\_key\_jwk and provision the symmetric key material to Layer-1 for message confidentiality and decryption for the Keyframe epoch.
-   - Extract auth\_key\_jwk and provision the CAK private key material to Layer-0 for channel access proofs (as required by the Channel access algorithm).
+   - Extract auth\_key\_jwk and provision the CAK private key material to Layer-0 for channel access proofs under the concrete CAP profile defined by ALSP (as required by the Channel access algorithm).
    - Provisioning MUST be treated as pure data output of Layer-3 evaluation (see Section 10.7).
 
 ## **12.7 Security Considerations (Informative)**

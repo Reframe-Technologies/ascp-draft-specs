@@ -718,7 +718,7 @@ Layer-1 never reads these attributes directly; Layer-3 processes them and genera
 
 - `payload_cipher`: The symmetric cipher identifier used to determine whether Layer-1 applies JWE encryption to envelopes. Valid values are defined by Section 6.3 or use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Note: In current implementations, @bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band. See **ASCP Bootstrap Process and Channel Discovery** for details.
 - `message_signing`: The signature algorithm required for Articulation Sequence / Channel Envelope signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
-- `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. Determines the CAK algorithm used at Layer-0. The algorithm used for the Channel Access Key (CAK) is determined by Layer-0 policy including a value for `"none"` for open channels.
+- `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. This is an abstract policy field selecting a JOSE-defined value for Layer-0 use, including a value for `"none"` for open channels. The concrete CAP profile and verification rules are defined by the ALSP specification.
 
 The currently active Keyframe is derived by Layer-3 from articulated Keyframe history for that Channel.
 
