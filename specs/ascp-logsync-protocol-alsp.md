@@ -1825,13 +1825,13 @@ The protected header **MUST** contain:
 
 ```json
 {
-  "alg": "EdDSA",
+  "alg": "Ed25519",
   "kid": "ascp:cak:<keyframe_uuid>",
   "typ": "alsp+cak"
 }
 ```
 
-- `alg` **MUST** be "EdDSA" (Ed25519).
+- `alg` **MUST** be "Ed25519".
 - `kid` **MUST** match a CAK public key published via bootstrap channel manifest
 - `typ` **MUST** be "alsp+cak".
 
@@ -1874,7 +1874,7 @@ Upon receiving a sync\_request for a channel with an active CAK, the server **MU
 
 1. **Parse JWS:** The server **MUST** split the CAP into protected header, payload, and signature fields. Invalid formatting **MUST** cause the server to reject the request.
 2. **Validate Protected Header:** The server **MUST** ensure:
-   - alg is "EdDSA".
+   - alg is "Ed25519".
    - typ is "alsp+cak".
    - kid corresponds to a known CAK public key for the requested channel.
 3. **Resolve Public Key:** The kid value **MUST** be resolved using the current bootstrap manifest. Failure to resolve **MUST** result in an `unauthorized` error (replication admission failed).
@@ -2043,7 +2043,7 @@ This is compliant with RFC 7517 §4.2, which permits keys to omit the use field 
   "kty": "OKP",
   "crv": "Ed25519",
   "x": "<base64url-encoded-public-key>",
-  "alg": "EdDSA"
+  "alg": "Ed25519"
 }
 ```
 
