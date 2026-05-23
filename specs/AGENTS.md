@@ -4,6 +4,8 @@
 
 This file defines drafting standards for the formal ASCP protocol specifications in `specs/`.
 
+For any file under `specs/`, this file is authoritative over the top-level [`AGENTS.md`](/Users/talljeff/repos/ascp-draft-specs/AGENTS.md) on drafting, editing, document structure, review standards, and other specification-specific guidance. The top-level file still applies for repo-wide process matters that do not conflict with this file.
+
 If you are creating, editing, extending, or reviewing a specification in this directory:
 
 1. Read [`specs/README.md`](/Users/talljeff/repos/ascp-draft-specs/specs/README.md) first for document roles and reading order.
