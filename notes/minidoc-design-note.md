@@ -25,13 +25,15 @@ This document introduces the **ASCP MiniDoc Protocol (AMDP)** as the protocol us
 
 This document also introduces **MiniDoc Records** as the MiniDoc-side analogue of immutable **Artipoint Records**. In the immutable ASCP path, Layer-1 Channel Envelopes become Artipoint Records and are replicated through ALSP. In the MiniDoc path, Layer-1 Channel Envelopes become MiniDoc Records and are exchanged between MiniDoc clients and MiniDoc servers through AMDP.
 
-This document defines three initial MiniDoc forms:
+This document defines two initial MiniDoc forms:
 
 - **MiniDoc Document** — the general mutable document class.
 - **MiniDoc Log** — a transcript-oriented append-state MiniDoc class.
-- Two initial **MiniDoc Document** document models:
-  - **Snapshot MiniDoc Document**
-  - **Collaborative MiniDoc Document**
+
+And a **MiniDoc Document** has two different document interaction models:
+
+- **Snapshot MiniDoc Document** — each accepted update is a complete snapshot of the document.
+- **Collaborative MiniDoc Document** — each accepted update carries collaborative differential change while preserving one stable document identity.
 
 The document further defines the intended relationship between MiniDoc transport, `minidoc://` URIs, Layer-1 codecs, Channel Access Keys (CAKs), Channel Access Proofs (CAPs), HTTPS authentication, version history, and future OT/CRDT-style collaborative evolution.
 
@@ -97,6 +99,7 @@ This design note covers:
 - the AMDP protocol boundary,
 - the MiniDoc object and record model,
 - the `minidoc://` identity model,
+- the canonical ASCP MiniDoc URI path profile,
 - the initial MiniDoc classes,
 - the two initial MiniDoc Document models,
 - the intended AMDP-over-HTTPS transport profile,
@@ -114,6 +117,7 @@ This document does not yet define:
 - the full HTTP header profile for authentication and admission carriage,
 - the final metadata field names for MiniDoc Records,
 - the exact Collaborative MiniDoc Document update encoding,
+- the complete AMDP-over-HTTPS endpoint inventory corresponding to each MiniDoc URI form,
 - UI behavior,
 - or application-level semantics of the MiniDoc content beyond its transport and versioning model.
 
@@ -146,10 +150,26 @@ A **MiniDoc** is a mutable, Channel-scoped content object addressed by a stable 
 A **MiniDoc URI** is the protocol-level identifier for a MiniDoc. MiniDocs are identified using a URL-shaped URI form:
 
 ```text
-minidoc://domain_name/<path>
+minidoc://<host>[:<port>]/ascp/<channel-uuid>/<doc-id>.<suffix>
 ```
 
 This URI form is part of the MiniDoc reference model. It allows MiniDocs to appear naturally as URI/URL payloads within Artipoints while remaining independent of any one transport binding.
+
+For the current ASCP MiniDoc path profile:
+
+- `<host>[:<port>]` identifies the MiniDoc server authority in ordinary URI form,
+- `/ascp/` signals the ASCP MiniDoc encapsulation profile for the pathname,
+- `<channel-uuid>` identifies the Channel scope,
+- `<doc-id>` is an opaque MiniDoc identifier unique within that Channel on that server,
+- and `<suffix>` identifies the MiniDoc class or document-model subtype.
+
+The current suffix set is:
+
+- `.txt` for **Snapshot MiniDoc Documents**
+- `.collab` for **Collaborative MiniDoc Documents**
+- `.log` for **MiniDoc Logs**
+
+The `/ascp/` path segment is used for both explicitness and future-proofing. It makes the ASCP MiniDoc path profile visible while leaving room for future non-ASCP MiniDoc path profiles under the same `minidoc:` scheme if such profiles are ever needed.
 
 ## **5.3 MiniDoc Record**
 
@@ -164,11 +184,19 @@ For the purposes of this document, a MiniDoc Record consists of:
 
 A **MiniDoc State** is an immutable reconstructable state of a MiniDoc. A MiniDoc evolves by creating additional MiniDoc States.
 
-## **5.5 `state_ref`**
+## **5.5 `state-id`**
 
-A **state reference** (`state_ref`) is a stable identifier for one immutable MiniDoc State.
+A **state-id** is a stable identifier for one immutable MiniDoc State.
 
-A `state_ref` **MUST** identify an immutable reconstructable state rather than a mutable version counter or storage-specific row identifier.
+A `state-id` **MUST** identify an immutable reconstructable state rather than a mutable version counter or storage-specific row identifier.
+
+The canonical current profile uses:
+
+- opaque server-issued 64-bit `doc-id` values,
+- opaque server-issued or server-recognized 64-bit `state-id` values,
+- and unpadded base64url text encoding for both.
+
+Under that profile, each encoded `doc-id` and `state-id` is represented as an 11-character base64url string.
 
 ## **5.6 MiniDoc Document**
 
@@ -176,7 +204,7 @@ A **MiniDoc Document** is the general mutable document class in AMDP. It has:
 
 - stable MiniDoc identity,
 - stable read, update, version, and history semantics,
-- immutable state references,
+- immutable state identifiers,
 - and support for multiple document-model subtypes that preserve the same external MiniDoc reference model.
 
 ## **5.7 Snapshot MiniDoc Document**
@@ -193,11 +221,21 @@ Collaborative MiniDoc Documents will likely be implemented using OT, CRDT, or re
 
 A **MiniDoc Log** is a MiniDoc class whose semantics are transcript-oriented and append-state. Each accepted MiniDoc Record extends the running log or transcript.
 
-## **5.10 MiniDoc server**
+## **5.10 MiniDoc transaction atomicity**
+
+Each accepted **MiniDoc Record** is atomic: it is fully applied or not applied at all.
+
+Each accepted MiniDoc Record yields exactly one new identifiable immutable MiniDoc State. The historical state sequence is therefore aligned 1:1 with accepted MiniDoc Record application boundaries across:
+
+- Snapshot MiniDoc Documents
+- Collaborative MiniDoc Documents
+- MiniDoc Logs
+
+## **5.11 MiniDoc server**
 
 A **MiniDoc server** is the AMDP-speaking server responsible for authenticating clients, enforcing Channel-scoped admission policy, coordinating MiniDoc history progression, and serving MiniDoc Records or reconstructable states.
 
-## **5.11 MiniDoc client**
+## **5.12 MiniDoc client**
 
 A **MiniDoc client** is an ASCP stack client that uses the Layer-1 codec to produce and validate Channel Envelopes and that exchanges MiniDoc Records with a MiniDoc server using AMDP.
 
@@ -209,7 +247,7 @@ MiniDocs are distinct from immutable ASCP Artipoints.
 
 - Artipoints represent immutable semantic coordination statements.
 - MiniDocs represent mutable content bodies or transcript resources.
-- Artipoints MAY reference immutable MiniDoc States using MiniDoc URIs and state references.
+- Artipoints MAY reference immutable MiniDoc States using MiniDoc URIs and, where needed, `state-id` selectors.
 
 This preserves immutable coordination history while allowing the associated content to evolve.
 
@@ -241,7 +279,7 @@ A MiniDoc has a stable MiniDoc URI across its lifetime.
 Example:
 
 ```text
-minidoc://collab.example/channels/acme-product/task-123.body
+minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/6m2rQ8TnP4A.txt
 ```
 
 Each immutable state has a separate state identity.
@@ -249,7 +287,7 @@ Each immutable state has a separate state identity.
 Example:
 
 ```text
-state_ref = "sha256:9f2c..."
+state-id = "bQ7mK9rTx2M"
 ```
 
 The MiniDoc identity remains stable while MiniDoc States evolve.
@@ -299,6 +337,27 @@ The MiniDoc server coordinates storage and history, but it does not replace Laye
 The primary MiniDoc identity form is the `minidoc://` URI. A concrete transport profile such as AMDP over HTTPS may define HTTP retrieval addresses or endpoint paths used to operate on that MiniDoc URI.
 
 Those HTTP addresses are binding-level realization details, not the primary MiniDoc identity itself.
+
+## **7.5 Optional immutable state selection**
+
+The base MiniDoc URI identifies the MiniDoc resource generically:
+
+```text
+minidoc://<host>[:<port>]/ascp/<channel-uuid>/<doc-id>.<suffix>
+```
+
+The current profile uses an optional query parameter to select a specific immutable historical state:
+
+```text
+?state-id=<state-id>
+```
+
+Accordingly:
+
+- absence of `state-id` means the current effective head of the MiniDoc resource,
+- presence of `state-id` means the exact immutable historical state named by that value.
+
+This allows Artipoints to carry a stable base MiniDoc URI while later attributes or annotations pin a specific state without rewriting the base payload URI.
 
 # **8. MiniDoc classes and document models**
 
@@ -367,7 +426,7 @@ MiniDoc servers **MAY** maintain a rolling history and **MAY** prune older store
 Pruning does not change the abstract model:
 
 - retained MiniDoc Records remain immutable,
-- retained `state_ref` values remain stable,
+- retained `state-id` values remain stable,
 - and the MiniDoc class and document-model semantics remain the same.
 
 Pruning does affect availability of pruned historical states at that server. Implementations that prune history **SHOULD** make that retention policy explicit at the operational level.
@@ -401,7 +460,7 @@ The initial transactional AMDP profile is expected to support at least the follo
 1. Create a new MiniDoc.
 2. Submit a new MiniDoc Record for an existing MiniDoc.
 3. Fetch the current state of a MiniDoc.
-4. Fetch a specific immutable MiniDoc State by `state_ref`.
+4. Fetch a specific immutable MiniDoc State by `state-id`.
 5. Fetch the ordered history of MiniDoc Records for a MiniDoc.
 
 This document does not yet freeze the exact endpoint shapes for those operations.
@@ -483,6 +542,8 @@ Properties:
 - and no Collaborative MiniDoc Document synchronization in the initial interoperable profile.
 
 In this model, MiniDoc updates are coordinated through the MiniDoc server.
+
+Each accepted MiniDoc Record creates exactly one new externally identifiable MiniDoc State boundary.
 
 ## **11.2 Snapshot MiniDoc Document progression**
 
@@ -595,7 +656,7 @@ Implementations **MAY** store MiniDoc content using:
 - snapshot objects,
 - or future OT and CRDT-oriented retained forms.
 
-Implementations **SHOULD** preserve stable immutable state references independent of the underlying storage technique.
+Implementations **SHOULD** preserve stable immutable state identifiers independent of the underlying storage technique.
 
 Operational concerns that the eventual protocol specification will need to define more fully include:
 
@@ -662,7 +723,7 @@ MiniDocs can expose privacy-sensitive metadata even when protected content is en
 Relevant privacy surfaces include:
 
 - stable MiniDoc URIs,
-- stable state references,
+- stable `state-id` values,
 - Channel identifiers,
 - access timing,
 - authorship metadata,
@@ -681,8 +742,8 @@ This document has no IANA actions.
 ## **18.1 Snapshot MiniDoc Document example**
 
 ```text
-MiniDoc URI: minidoc://collab.example/channels/acme-product/task-123.body
-Channel: acme-product
+MiniDoc URI: minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/6m2rQ8TnP4A.txt
+Channel UUID: 018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d
 Class: MiniDoc Document
 Model: Snapshot MiniDoc Document
 
@@ -693,11 +754,17 @@ R3 -> full state "Approved task text"
 
 Each accepted record replaces the current document snapshot while preserving immutable history.
 
+Pinned historical state example:
+
+```text
+minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/6m2rQ8TnP4A.txt?state-id=bQ7mK9rTx2M
+```
+
 ## **18.2 Collaborative MiniDoc Document example**
 
 ```text
-MiniDoc URI: minidoc://collab.example/channels/acme-product/spec-outline
-Channel: acme-product
+MiniDoc URI: minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/J4pLm82QeYs.collab
+Channel UUID: 018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d
 Class: MiniDoc Document
 Model: Collaborative MiniDoc Document
 
@@ -711,8 +778,8 @@ The document remains one stable MiniDoc Document even though record contents rep
 ## **18.3 MiniDoc Log example**
 
 ```text
-MiniDoc URI: minidoc://collab.example/channels/acme-product/session-77
-Channel: acme-product
+MiniDoc URI: minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/2xRfQ1mNc6U.log
+Channel UUID: 018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d
 Class: MiniDoc Log
 
 R1 -> "User asks opening question"
@@ -726,11 +793,17 @@ The current MiniDoc Log is the accumulated conversational transcript represented
 ## **18.4 Artipoint reference example**
 
 ```text
-Decision D references MiniDoc state S at
-minidoc://collab.example/channels/acme-product/task-123.body
+Goal G payload:
+minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/6m2rQ8TnP4A.txt
+
+Later annotation:
+state-id=bQ7mK9rTx2M
+
+Pinned retrieval form:
+minidoc://collab.example:443/ascp/018f7d7a-b35c-7d24-b7e2-4df10f6d8b4d/6m2rQ8TnP4A.txt?state-id=bQ7mK9rTx2M
 ```
 
-The Artipoint remains immutable even though the MiniDoc may later evolve to additional states.
+The Artipoint payload can remain the stable generic MiniDoc URI while later annotations pin one specific immutable state in effect.
 
 # **19. References**
 
