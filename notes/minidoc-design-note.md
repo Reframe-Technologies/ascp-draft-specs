@@ -30,10 +30,10 @@ This document defines two initial MiniDoc forms:
 - **MiniDoc Document** — the general mutable document class.
 - **MiniDoc Log** — a transcript-oriented append-state MiniDoc class.
 
-And a **MiniDoc Document** has two different document interaction models:
+The **MiniDoc Document** class has two different document interaction models:
 
-- **Snapshot MiniDoc Document** — each accepted update is a complete snapshot of the document.
-- **Collaborative MiniDoc Document** — each accepted update carries collaborative differential change while preserving one stable document identity.
+- **Snapshot MiniDoc Document** — each accepted update is a complete snapshot of the document in a most recent update wins kind of way.
+- **Collaborative MiniDoc Document** — each accepted update carries collaborative differential change while preserving one stable document identity. These documents resolve deterministically in a conflict-free way.
 
 The document further defines the intended relationship between MiniDoc transport, `minidoc://` URIs, Layer-1 codecs, Channel Access Keys (CAKs), Channel Access Proofs (CAPs), HTTPS authentication, version history, and future OT/CRDT-style collaborative evolution.
 
@@ -52,7 +52,9 @@ Examples include:
 - Lightweight markdown documents
 - User-agent conversational transcripts
 
-MiniDocs provide a mechanism for representing these mutable bodies while preserving ASCP’s immutable coordination semantics. A MiniDoc is therefore best understood as a mutable, Channel-scoped content object whose evolving states are referenced by immutable ASCP Artipoints.
+MiniDocs provide a mechanism for representing these mutable bodies securely and efficiently while preserving ASCP’s immutable coordination semantics. A MiniDoc is therefore best understood as a mutable, Channel-scoped content object whose evolving states are referenced by immutable ASCP Artipoints via a URI stored in their payload field.
+
+MiniDocs provide the native default mutable content resource for ASCP coordination when no separate external system of record is being referenced. ASCP constructs may instead reference externally governed artifacts when those systems are the operational source of record. A MiniDoc may therefore serve either as the long-term content resource for a construct or as an emergent interim resource later superseded by a reference to an external system of record.
 
 ## **3.1 Design goals**
 
@@ -61,33 +63,33 @@ MiniDocs are intended to satisfy the following goals:
 1. Support lightweight mutable coordination content.
 2. Preserve immutable ASCP coordination history.
 3. Reuse ASCP Channel security and admission semantics.
-4. Reuse ordinary HTTP implementation patterns and tooling where practical.
-5. Support a simple centralized transactional implementation first.
+4. Reuse ordinary HTTP implementation patterns and tooling.
+5. Provide a simple centralized transactional implementation for early deployments.
 6. Preserve stable, implementation-independent references to immutable MiniDoc states.
-7. Support future evolution toward local-first and collaborative conflict-avoiding models.
+7. Support future evolution toward local-first and collaborative conflict-free models.
 8. Avoid introducing a separate security or trust model unrelated to ASCP Channels.
 9. Preserve one stable MiniDoc reference and versioning model across multiple document update models.
 
-## **3.2 Position of MiniDocs in the ASCP model**
+## **3.2 Position of MiniDocs in the ASCP Stack model**
 
 MiniDocs are part of the ASCP ecosystem and occupy the mutable-content path for Channel-scoped coordination data.
 
 - Artipoints define immutable semantic coordination structure.
 - MiniDocs define mutable content evolution.
-- Layer-1 Channel codecs secure MiniDoc payloads in the same way they secure other Channel-scoped payloads.
-- The MiniDoc client/server protocol is **AMDP**.
+- Layer-1 Channel codecs secure MiniDoc payloads in the same way they secure other Channel-scoped payloads. ie: via a cryptographically signed and optionally encrypted Channel Envelope format.
+- The MiniDoc client/server protocol isn ASCP MiniDoc Protocol abbreviated as **AMDP**.
 - **AMDP over HTTPS** is the first transport profile for that protocol.
 
 This creates a deliberate symmetry:
 
-| **Concern** | **Immutable ASCP path** | **MiniDoc path** |
+| **Concern** | **Immutable ASCP path** | ASCP **MiniDoc path** |
 | --- | --- | --- |
 | Protected payload creation | Layer-1 Channel Envelope | Layer-1 Channel Envelope |
 | Transport unit | Artipoint Record | MiniDoc Record |
 | Transport substrate | ALSP / Layer-0 log sync | AMDP |
 | Initial binding profile | ALSP over WebSocket/TLS | AMDP over HTTPS |
 | Persistence model | Append-only Channel Log | MiniDoc server document history |
-| Content model | Immutable coordination record | Mutable document or transcript evolution |
+| Content model | Immutable coordination record | Mutable documents and transcripts |
 
 ## **3.3 Scope of this document**
 
@@ -141,7 +143,7 @@ The key boundary is:
 
 ## **5.1 MiniDoc**
 
-A **MiniDoc** is a mutable, Channel-scoped content object addressed by a stable MiniDoc URI.
+A **MiniDoc** is a mutable, Channel-scoped AMDP content resource addressed by a stable MiniDoc URI. Its content evolves through an ordered series of immutable MiniDoc States that can be referenced from ASCP coordination structures.
 
 ## **5.2 MiniDoc URI**
 
@@ -171,12 +173,20 @@ The `/ascp/` path segment is used for both explicitness and future-proofing. It 
 
 ## **5.3 MiniDoc Record**
 
-A **MiniDoc Record** is the transport and persistence unit exchanged between a MiniDoc client and a MiniDoc server. It is the MiniDoc-side analogue of an **Artipoint Record**.
+A **MiniDoc Record** is the retained state-transition unit exchanged through AMDP. It is the MiniDoc-side analogue of an **Artipoint Record**.
 
-For the purposes of this document, a MiniDoc Record consists of:
+In the current profile, an accepted retained MiniDoc Record carries:
 
-1. transport-visible metadata sufficient to identify the Channel scope, MiniDoc identity, MiniDoc class, document-model subtype where applicable, and immutable state identity, and
-2. an opaque **Layer-1 Channel Envelope** payload carried without semantic interpretation by the MiniDoc transport layer.
+1. a self-describing `record_type` corresponding to the MiniDoc class or document model declared for that MiniDoc,
+2. `prev_state_id`, identifying the prior state boundary this record follows,
+3. `state_id`, identifying the resulting immutable state boundary created by acceptance of the record, and
+4. an opaque **Layer-1 Channel Envelope** payload carried without semantic interpretation by the MiniDoc transport layer.
+
+On client submission, `state_id` is absent and is assigned by the server when the record is accepted. On later retrieval, retained MiniDoc Records include both `prev_state_id` and `state_id`.
+
+For MiniDoc creation, the submitted record uses the reserved `prev_state_id` sentinel `origin`. This token is outside the normal base64url `state-id` encoding space and cannot collide with an issued `state-id`.
+
+AMDP request and response operations may carry additional protocol metadata alongside a MiniDoc Record. That metadata can include the target MiniDoc URI or `doc-id`, `base-state-id`, `from-state-id`, `to-state-id`, retention cutoff information, and authenticated session or admission context. Those operation fields are part of AMDP processing and are not intrinsic retained-record fields.
 
 ## **5.4 MiniDoc State**
 
@@ -186,15 +196,17 @@ A **MiniDoc State** is an immutable reconstructable state of a MiniDoc. A MiniDo
 
 A **state-id** is a stable identifier for one immutable MiniDoc State.
 
-A `state-id` **MUST** identify an immutable reconstructable state and remain independent of mutable version counters or storage-specific row identifiers.
+A `state-id` **MUST** identify the immutable reconstructable state boundary created by acceptance of a MiniDoc Record. It remains independent of mutable version counters or storage-specific row identifiers.
 
 The canonical current profile uses:
 
 - opaque server-issued 64-bit `doc-id` values,
-- opaque server-issued or server-recognized 64-bit `state-id` values,
+- opaque server-issued 64-bit `state-id` values,
 - and unpadded base64url text encoding for both.
 
 Under that profile, each encoded `doc-id` and `state-id` is represented as an 11-character base64url string.
+
+The initial profile treats `state-id` as a server-assigned resulting-state identifier. Clients do not choose `state-id` values on submission.
 
 ## **5.6 MiniDoc Document**
 
@@ -314,19 +326,25 @@ This split allows the server to coordinate admissibility, sequencing, and retain
 
 # **7. MiniDoc Record model**
 
-## **7.1 Conceptual structure**
+## **7.1 Retained record structure**
 
-A MiniDoc Record conceptually binds:
+A retained MiniDoc Record in the current profile conceptually binds:
 
-- `channel_id`
-- MiniDoc URI
-- MiniDoc class
-- document-model subtype where applicable
-- immutable state identity
-- any transport-level predecessor or history metadata required by the protocol profile
+- `record_type`
+- `prev_state_id`
+- `state_id`
 - and an opaque Layer-1 Channel Envelope payload
 
-This document does not yet freeze the exact wire encoding of that metadata, but the Channel scope, MiniDoc class, document-model subtype where applicable, and immutable state identity are protocol-essential.
+The exact wire encoding of those fields remains for the protocol specification, but their retained semantic roles are part of the current AMDP design.
+
+AMDP operations supply additional request and response context outside the retained record itself. That context includes:
+
+- target MiniDoc identity,
+- `base-state-id`,
+- `from-state-id`,
+- `to-state-id`,
+- retention cutoff metadata,
+- and authenticated session or admission context.
 
 ## **7.2 Metadata-driven client behavior**
 
@@ -343,6 +361,8 @@ This is required because MiniDoc Record contents differ across these forms:
 - Collaborative MiniDoc Documents carry incremental collaborative change,
 - MiniDoc Logs carry append-oriented transcript or log extensions.
 
+In the current profile, each MiniDoc has one declared type and all retained MiniDoc Records for that MiniDoc **MUST** carry the matching `record_type`. Mixed-type record histories within one MiniDoc are out of scope for the current profile.
+
 ## **7.3 Common state-transition invariant**
 
 AMDP uses one shared state-transition invariant across all MiniDoc forms:
@@ -355,12 +375,13 @@ This invariant allows Snapshot MiniDoc Documents, Collaborative MiniDoc Document
 
 For protocol purposes, the server needs to coordinate:
 
-- the transition boundary,
-- the client-supplied predecessor or basis state,
+- the predecessor state boundary named by `prev_state_id`,
+- the resulting state boundary named by `state_id`,
+- the client-supplied operation basis state,
 - the ordered retained history,
-- and the resulting new `state-id`.
+- and the resulting new immutable state boundary.
 
-The protected payload content remains opaque at the AMDP transport layer.
+This explicit predecessor and resulting-state representation makes retained records auditable and self-describing even though the protected payload content remains opaque at the AMDP transport layer.
 
 ## **7.4 Relationship to Layer-1**
 
@@ -551,6 +572,8 @@ Fetch operations **SHOULD** return MiniDoc Records, or material sufficient to re
 
 This preserves the Channel-protected model in which MiniDoc clients validate the protected payload on receipt using the same Layer-1 codec semantics used during submission.
 
+When retained MiniDoc Records are returned, they include `record_type`, `prev_state_id`, `state_id`, and the protected payload material for that accepted record.
+
 The current read model is type-specific:
 
 - Snapshot MiniDoc Documents typically return the one retained record corresponding to the requested state.
@@ -657,7 +680,7 @@ The intended AMDP-over-HTTPS sequence is:
 4. Pinned-state read
    The client identifies the MiniDoc plus `state-id`. The server verifies session and Channel admission, resolves that retained historical state boundary, and returns the retained MiniDoc Record material for client validation.
 5. Record submission
-   The client produces a protected MiniDoc Record using Layer-1, includes `base-state-id`, and submits the record. The server verifies session, Channel admission, target MiniDoc identity, and prior-state basis before accepting the new record and issuing the resulting `state-id`.
+   The client produces a protected MiniDoc Record using Layer-1, includes `base-state-id`, and submits the record. For creation, the submitted record uses the reserved `prev_state_id` creation sentinel `origin`. For later updates, the submitted record uses the prior accepted `state-id` as `prev_state_id`. In both cases the submitted record omits `state_id`. The server verifies session, Channel admission, target MiniDoc identity, and prior-state basis before accepting the new record and issuing the resulting `state-id`.
 6. Span retrieval
    The client identifies a lower and optional upper retained state boundary. The server verifies session and Channel admission, resolves the retained span, and returns the ordered record material needed for client-side materialization.
 7. Truncation or compaction
@@ -684,6 +707,8 @@ In this model, MiniDoc updates are coordinated through the MiniDoc server.
 Each accepted MiniDoc Record creates exactly one new externally identifiable MiniDoc State boundary.
 
 Every write in the initial profile **MUST** identify the client’s expected prior state using `base-state-id`.
+
+The submitted MiniDoc Record also carries `prev_state_id` naming the predecessor state boundary for that retained transition. In ordinary updates, `base-state-id` and `prev_state_id` refer to the same prior accepted state. In creation, both use the reserved creation sentinel `origin`.
 
 This provides one common sequencing rule across Snapshot MiniDoc Documents, Collaborative MiniDoc Documents, and MiniDoc Logs.
 
@@ -992,6 +1017,15 @@ R3 -> full state "Approved task text"
 
 Each accepted record replaces the current document snapshot while preserving immutable history.
 
+Illustrative retained-record lineage:
+
+```text
+Create submit:   record_type=.txt,     prev_state_id=origin,      state_id=<absent>
+Server accepts:  record_type=.txt,     prev_state_id=origin,      state_id=bQ7mK9rTx2M
+Later submit:    record_type=.txt,     prev_state_id=bQ7mK9rTx2M, state_id=<absent>
+Server accepts:  record_type=.txt,     prev_state_id=bQ7mK9rTx2M, state_id=H3yLm2QvNc8
+```
+
 Pinned historical state example:
 
 ```text
@@ -1013,6 +1047,14 @@ R3 -> collaborative update revising earlier content without replacing the whole 
 
 The document remains one stable MiniDoc Document while accepted records carry incremental collaborative evolution.
 
+Illustrative retained-record lineage:
+
+```text
+R1 -> record_type=.collab, prev_state_id=origin,      state_id=S1
+R2 -> record_type=.collab, prev_state_id=S1,          state_id=S2
+R3 -> record_type=.collab, prev_state_id=S2,          state_id=S3
+```
+
 ## **18.3 MiniDoc Log example**
 
 ```text
@@ -1027,6 +1069,15 @@ R4 -> "Agent produces updated answer"
 ```
 
 The current MiniDoc Log is the accumulated conversational transcript represented by the ordered record sequence.
+
+Illustrative retained-record lineage:
+
+```text
+R1 -> record_type=.log, prev_state_id=origin, state_id=L1
+R2 -> record_type=.log, prev_state_id=L1,     state_id=L2
+R3 -> record_type=.log, prev_state_id=L2,     state_id=L3
+R4 -> record_type=.log, prev_state_id=L3,     state_id=L4
+```
 
 ## **18.4 Artipoint reference example**
 
