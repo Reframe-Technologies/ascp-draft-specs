@@ -519,7 +519,7 @@ AMDP defines the MiniDoc protocol semantics. AMDP over HTTPS is the first transp
 
 AMDP is a record-coordination protocol with client-side content interpretation and server-side history coordination.
 
-In the initial profile, an AMDP operation proceeds through these conceptual phases:
+In the initial profile, every AMDP operation proceeds through these phases:
 
 1. Authenticate or resume an AMDP session.
 2. Establish or reuse admitted access for the referenced Channel.
@@ -532,15 +532,21 @@ This model keeps content security and interpretation at the client boundary whil
 
 ## **9.3 AMDP over HTTPS**
 
-The initial AMDP transport profile uses HTTPS over TLS as its transport substrate.
+The initial AMDP transport profile **MUST** use HTTPS over TLS as its transport substrate. Conforming AMDP-over-HTTPS deployments **MUST** use TLS 1.3 or higher.
 
-AMDP over HTTPS should be defined so that it maps as directly as possible onto standard modern HTTP request and response patterns and can be implemented using ordinary HTTP client and server libraries.
+AMDP over HTTPS **MUST** map MiniDoc resources and operations onto standard HTTP request and response patterns closely enough that ordinary HTTP servers, clients, cookies, headers, status codes, and JSON request bodies can realize the protocol directly.
 
-Conforming AMDP-over-HTTPS deployments **SHOULD** use HTTPS over TLS 1.3 or higher as the baseline profile. In that profile, TLS provides network-path confidentiality and resistance to active transport interference, while HTTP authentication and Channel admission supply ASCP identity and access semantics.
+In this profile:
+
+- TLS provides transport confidentiality and resistance to network-path interference,
+- HTTP authentication establishes ASCP client identity,
+- a server-issued cookie carries the authenticated AMDP session,
+- a dedicated admission header carries Channel Access Proof material,
+- and HTTPS resource paths mirror the `minidoc://` identity structure.
 
 ## **9.4 Core AMDP operations**
 
-The initial transactional AMDP profile is expected to support at least the following logical operations:
+The initial transactional AMDP-over-HTTPS profile **MUST** support the following operations:
 
 1. Create a new MiniDoc and receive its canonical MiniDoc URI.
 2. Submit a new MiniDoc Record for an existing MiniDoc.
@@ -549,26 +555,49 @@ The initial transactional AMDP profile is expected to support at least the follo
 5. Fetch a retained record span for a MiniDoc using `from-state-id` and `to-state-id`.
 6. Truncate or compact retained history according to the MiniDoc class and document model.
 
-This document does not yet freeze the exact endpoint shapes for those operations.
+The HTTPS binding for those operations **MUST** use the following resource and method model:
+
+- `POST /ascp/<channel-uuid>/`
+  Creates a new MiniDoc in the identified Channel. The request body **MUST** declare the MiniDoc `record_type` and include the initial submitted MiniDoc Record with `prev_state_id=origin` and no `state_id`. On success, the server **MUST** allocate `doc-id`, assign `state_id`, return `201 Created`, and include the canonical HTTPS resource path in the `Location` header.
+- `GET /ascp/<channel-uuid>/<doc-id>.<suffix>`
+  Returns the current retained state of the identified MiniDoc.
+- `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?state-id=<state-id>`
+  Returns the exact retained immutable state selected by `state-id`.
+- `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?from-state-id=<state-id>[&to-state-id=<state-id>]`
+  Returns the retained ordered record span needed to materialize the requested state range. When `to-state-id` is omitted, the upper bound is the current head state.
+- `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>`
+  Submits a new MiniDoc Record or a retention-maintenance mutation for the identified MiniDoc. The request body **MUST** include `base-state-id` and the mutation payload appropriate to the MiniDoc class and operation.
+
+The current profile **MUST NOT** tunnel all AMDP operations through a single generic operation endpoint.
 
 ## **9.5 HTTP semantic mapping model**
 
-AMDP-over-HTTPS is intended to map onto ordinary HTTP resource interaction patterns without changing the higher-level AMDP semantics.
+AMDP-over-HTTPS **MUST** preserve the higher-level AMDP semantics while using ordinary HTTP mechanisms directly.
 
 At the semantic level:
 
-- authenticated AMDP session maps onto HTTP authentication plus a server-issued session representation,
-- admitted Channel session maps onto per-Channel server-side admission state associated with that authenticated session,
-- MiniDoc identity maps onto the `minidoc://` resource identity plus a binding-level HTTPS address,
-- current versus pinned state maps onto base resource retrieval versus state-qualified retrieval,
-- mutation preconditions map onto request-carried prior-state basis,
-- and retained-history reads map onto state-qualified span retrieval semantics.
+- authenticated AMDP session maps onto HTTP authentication plus a server-issued session cookie,
+- admitted Channel session maps onto per-Channel admission state cached against that authenticated session,
+- MiniDoc identity maps onto the `minidoc://` resource identity plus the HTTPS transport path `/ascp/<channel-uuid>/<doc-id>.<suffix>`,
+- current versus pinned state maps onto base resource retrieval versus `state-id`-qualified retrieval,
+- retained-history reads map onto `from-state-id` and `to-state-id` query-qualified retrieval,
+- and mutation preconditions map onto request-carried `base-state-id`.
 
-The RFC should freeze the exact HTTP methods, status codes, headers, and body formats. This design note defines the higher-level semantic mapping those binding choices must preserve.
+In this profile, AMDP request and response bodies **MUST** use `application/json`. Protected Layer-1 Channel Envelopes **MUST** be carried as opaque JOSE compact serialization strings inside those JSON bodies. CAP values carried in headers **MUST** likewise use compact JOSE serialization.
+
+The profile **MUST** use these HTTP status code classes:
+
+- `201 Created` for successful MiniDoc creation,
+- `200 OK` for successful retrieval and successful mutation returning protocol state,
+- `400 Bad Request` for malformed or contradictory request parameters,
+- `401 Unauthorized` for missing, invalid, or expired authenticated session state,
+- `403 Forbidden` for missing or invalid Channel admission,
+- `404 Not Found` for unknown MiniDoc or unavailable retained historical state,
+- and `409 Conflict` for stale or conflicting `base-state-id` or `prev_state_id` basis.
 
 ## **9.6 Retrieval behavior**
 
-Fetch operations **SHOULD** return MiniDoc Records, or material sufficient to reconstruct and validate MiniDoc Records, so that MiniDoc clients can apply the Layer-1 validation model directly.
+Fetch operations **MUST** return MiniDoc Records and the material sufficient to reconstruct and validate MiniDoc Records, so that MiniDoc clients can apply the Layer-1 validation model directly.
 
 This preserves the Channel-protected model in which MiniDoc clients validate the protected payload on receipt using the same Layer-1 codec semantics used during submission.
 
@@ -576,9 +605,11 @@ When retained MiniDoc Records are returned, they include `record_type`, `prev_st
 
 The current read model is type-specific:
 
-- Snapshot MiniDoc Documents typically return the one retained record corresponding to the requested state.
-- Collaborative MiniDoc Documents return the retained record span needed for the client to materialize the requested state.
-- MiniDoc Logs return the retained record span needed for the client to materialize the requested transcript or log state.
+- Snapshot MiniDoc Documents **MUST** return exactly one retained record corresponding to the requested state.
+- Collaborative MiniDoc Documents **MUST** return the retained ordered record span needed for the client to materialize the requested state.
+- MiniDoc Logs **MUST** return the retained ordered record span needed for the client to materialize the requested transcript or log state.
+
+The binding **MUST NOT** return only already-decoded application content in place of retained MiniDoc Record material.
 
 ## **9.7 Server role in the initial profile**
 
@@ -594,7 +625,7 @@ The server-authoritative role in this profile preserves the protected-payload bo
 
 ## **9.8 Server-issued document identity**
 
-In the initial AMDP-over-HTTPS profile, the server **SHOULD** allocate `doc-id` values during MiniDoc creation and return the canonical MiniDoc URI to the client.
+In the initial AMDP-over-HTTPS profile, the server **MUST** allocate `doc-id` values during MiniDoc creation and return the canonical MiniDoc URI to the client.
 
 This keeps MiniDoc identity allocation consistent with the server’s authority over retained history, state progression, and Channel-scoped namespace management.
 
@@ -611,27 +642,28 @@ This mirrors ALSP’s distinction between session authentication and replication
 
 ## **10.2 AMDP over HTTPS authentication model**
 
-In the initial AMDP-over-HTTPS profile, session authentication uses standard HTTPS and HTTP authentication mechanisms adapted to ASCP identity and certificate semantics.
+In the initial AMDP-over-HTTPS profile, session authentication **MUST** use standard HTTP authentication challenge and response semantics over HTTPS.
 
-The current design direction is:
+The binding **MUST** use a custom `ASCP` HTTP authentication scheme within those standard HTTP mechanisms:
 
-- the connection is established over HTTPS/TLS,
-- the client authenticates using an ASCP identity and certificate-backed HTTP authentication scheme,
-- the server may challenge using ordinary HTTP authentication challenge and response behavior,
-- successful HTTP authentication establishes the ASCP identity binding for the request or session context,
-- and the server returns an opaque AMDP session token or cookie representing the authenticated session.
+- an unauthenticated request to a protected AMDP resource **MUST** receive `401 Unauthorized`,
+- that response **MUST** include `WWW-Authenticate: ASCP ...`,
+- the client **MUST** answer with `Authorization: ASCP ...`,
+- the `ASCP` authentication material **MUST** carry the identity and certificate-backed proof material required for the server to validate ASCP protocol identity in the HTTPS binding,
+- and successful authentication **MUST** establish the ASCP identity for the request and authenticated session.
 
-This is conceptually analogous to ALSP direct authentication, but adapted to standard HTTP request and response semantics.
+This is analogous to ALSP direct authentication, but adapted to standard HTTP request and response semantics.
 
 ## **10.3 Session reuse**
 
 After successful authentication:
 
-- later AMDP-over-HTTPS requests **SHOULD** reuse the server-issued session token or cookie,
-- the server **MAY** expire or invalidate that session according to policy,
-- and any request received without a valid session representation **MAY** be forced back through the HTTP authentication flow.
+- the server **MUST** issue `Set-Cookie: AMDP-Session=<opaque>; Secure; HttpOnly; SameSite=Strict; Path=/ascp/`,
+- later AMDP-over-HTTPS requests **MUST** present `Cookie: AMDP-Session=<opaque>`,
+- the server **MUST** reject requests with missing, invalid, expired, or invalidated session cookies using `401 Unauthorized`,
+- and each such `401` response **MUST** include `WWW-Authenticate: ASCP ...` so that the client can re-establish the session.
 
-TLS protects the transport. HTTP authentication establishes ASCP identity. The server-issued AMDP session representation carries that authenticated session forward across later requests.
+TLS protects the transport. HTTP authentication establishes ASCP identity. The `AMDP-Session` cookie carries that authenticated session forward across later requests.
 
 ## **10.4 Channel admission using CAK and CAP**
 
@@ -640,51 +672,59 @@ MiniDoc access is Channel-governed and follows ASCP Channel authorization semant
 Where a Channel requires access admission:
 
 - the client **MUST** prove possession of the appropriate Channel Access Key (CAK) or equivalent active authorization material,
-- the proof is expressed through a Channel Access Proof (CAP)-like mechanism analogous to ALSP,
+- the proof **MUST** be carried in the dedicated HTTP request header `AMDP-CAP`,
+- the value of `AMDP-CAP` **MUST** be a JOSE compact serialization carrying the Channel Access Proof,
 - and the server **MUST** verify that proof before serving protected MiniDoc content or accepting new MiniDoc Records for that Channel.
 
 Authentication establishes who the client is. CAK and CAP-based admission establishes whether that client may access MiniDoc resources in the referenced Channel.
 
 ## **10.5 Channel admission caching**
 
-In the initial AMDP-over-HTTPS profile, Channel admission is session-cached.
+In the initial AMDP-over-HTTPS profile, Channel admission **MUST** be session-cached on a per-Channel basis.
 
-The intended behavior is:
+The binding **MUST** behave as follows:
 
-- first access to a Channel within an authenticated session may trigger a Channel admission challenge,
-- once the client satisfies Channel admission for that Channel, the server records that result in the AMDP session,
-- later requests to the same Channel within that session reuse the admitted session state,
-- unless the session expires, the server invalidates the session, CAK material rotates, or the server explicitly requires renewed admission.
+- first access to a Channel within an authenticated session **MUST** either include a valid `AMDP-CAP` header or receive an admission failure,
+- once the client satisfies Channel admission for that Channel, the server **MUST** record that admitted result in the `AMDP-Session`,
+- later requests to the same Channel within that session **MUST** be accepted without requiring a repeated `AMDP-CAP` header,
+- the server **MAY** accept redundant valid `AMDP-CAP` headers on an already admitted session,
+- and the server **MUST** require renewed admission when the authenticated session expires, the server invalidates the admission state, CAK material rotates, or local policy requires renewed proof.
 
 This mirrors ALSP’s separation between identity authentication and Channel-scoped admission while adapting it to ordinary HTTP request and response flow.
 
 ## **10.6 HTTP carriage boundary**
 
-This design note leaves the final HTTP carriage details for CAP material for later specification work. The intended profile is:
+The HTTP carriage model for the initial AMDP-over-HTTPS profile is:
 
-- identity authentication uses standard HTTP authentication challenge and response behavior,
-- admission proof is carried as request-associated protocol material,
-- admission verification occurs in the context of the authenticated request before protected MiniDoc access is granted,
-- and later requests may rely on the authenticated and admitted AMDP session state until that state is invalidated.
+- `WWW-Authenticate: ASCP ...` carries the server’s identity-authentication challenge,
+- `Authorization: ASCP ...` carries the client’s response to that challenge,
+- `Set-Cookie: AMDP-Session=...` carries the authenticated session token,
+- `Cookie: AMDP-Session=...` carries that session on later requests,
+- `AMDP-CAP: <compact-jose>` carries Channel admission proof,
+- `Location: /ascp/<channel-uuid>/<doc-id>.<suffix>` identifies a newly created MiniDoc resource,
+- `state-id`, `from-state-id`, and `to-state-id` are carried as HTTP query parameters,
+- and MiniDoc operation bodies are carried as `application/json`.
+
+This profile keeps identity authentication, authenticated session continuity, and Channel admission as distinct HTTP-level mechanisms.
 
 ## **10.7 Session, admission, and operation sequence**
 
-The intended AMDP-over-HTTPS sequence is:
+The AMDP-over-HTTPS sequence is:
 
 1. Session authentication
-   The client establishes an HTTPS connection, responds to any HTTP authentication challenge, and receives an authenticated AMDP session representation from the server.
+   The client establishes an HTTPS connection and attempts the target request. If no valid `AMDP-Session` cookie is present, the server returns `401 Unauthorized` with `WWW-Authenticate: ASCP ...`. The client repeats the request with `Authorization: ASCP ...`. On successful identity validation, the server processes the request or continues to admission handling and returns `Set-Cookie: AMDP-Session=<opaque>`.
 2. First Channel access
-   On first access to a Channel, the server verifies Channel admission using CAK and CAP-derived proof and records the admitted result in the AMDP session.
+   On first access to a Channel within that authenticated session, the client presents `AMDP-CAP` for the referenced Channel. If the proof is absent or invalid, the server returns `403 Forbidden`. If the proof is valid, the server records the admitted result against the authenticated `AMDP-Session`.
 3. Current-state read
-   The client identifies the MiniDoc and any relevant current-state retrieval parameters. The server verifies session and Channel admission, resolves the current retained state boundary, and returns the retained MiniDoc Record material for client validation.
+   The client sends `GET /ascp/<channel-uuid>/<doc-id>.<suffix>` with `Cookie: AMDP-Session=...`. The server verifies authenticated session and admitted Channel access, resolves the current retained state boundary, and returns `200 OK` with JSON carrying the retained MiniDoc Record material.
 4. Pinned-state read
-   The client identifies the MiniDoc plus `state-id`. The server verifies session and Channel admission, resolves that retained historical state boundary, and returns the retained MiniDoc Record material for client validation.
+   The client sends `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?state-id=<state-id>` with `Cookie: AMDP-Session=...`. The server verifies authenticated session and admitted Channel access, resolves the named retained state boundary, and returns `200 OK` with JSON carrying the retained MiniDoc Record material.
 5. Record submission
-   The client produces a protected MiniDoc Record using Layer-1, includes `base-state-id`, and submits the record. For creation, the submitted record uses the reserved `prev_state_id` creation sentinel `origin`. For later updates, the submitted record uses the prior accepted `state-id` as `prev_state_id`. In both cases the submitted record omits `state_id`. The server verifies session, Channel admission, target MiniDoc identity, and prior-state basis before accepting the new record and issuing the resulting `state-id`.
+   For create, the client sends `POST /ascp/<channel-uuid>/` with JSON declaring `record_type` and the initial submitted record, `prev_state_id=origin`, and no `state_id`. For later mutation, the client sends `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>` with JSON carrying `base-state-id` and the submitted record or maintenance mutation. The server verifies authenticated session, admitted Channel access, target MiniDoc identity, record type consistency, and prior-state basis before accepting the mutation and issuing the resulting `state-id`. Successful create returns `201 Created`; successful mutation returns `200 OK`.
 6. Span retrieval
-   The client identifies a lower and optional upper retained state boundary. The server verifies session and Channel admission, resolves the retained span, and returns the ordered record material needed for client-side materialization.
+   The client sends `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?from-state-id=<state-id>[&to-state-id=<state-id>]` with `Cookie: AMDP-Session=...`. The server verifies authenticated session and admitted Channel access, resolves the retained span, and returns `200 OK` with JSON carrying the ordered retained records needed for client-side materialization.
 7. Truncation or compaction
-   The client identifies the target MiniDoc, retention cutoff, and `base-state-id`, plus any replacement baseline record required by the document model. The server verifies session, Channel admission, prior-state basis, and retention preconditions before updating the retained-history boundary and issuing the resulting `state-id`.
+   The client sends `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>` with JSON carrying `base-state-id`, the retention cutoff, and any replacement baseline record required by the document model. The server verifies authenticated session, admitted Channel access, prior-state basis, and retention preconditions before updating the retained-history boundary and returning `200 OK` with the resulting `state-id`.
 
 These flows define where authentication ends, where Channel admission begins, and where MiniDoc-specific history operations occur.
 
