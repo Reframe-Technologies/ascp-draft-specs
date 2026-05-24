@@ -11,17 +11,17 @@ May 2026
 
 This document defines the current design direction for **MiniDocs** within the Agents Shared Cognition Protocol (ASCP) ecosystem. It is an **informational design note** being developed in a form intentionally closer to an ASCP protocol draft so that the MiniDoc model, transport boundaries, and security assumptions can converge toward a future protocol specification.
 
-This document is **not** yet a complete ASCP protocol specification. It does not yet freeze the complete wire format, complete HTTP header profile, or complete server interoperability rules required for a full standards-track style specification. However, it does define the current intended architectural model, protocol boundaries, initial MiniDoc classes, document-model subtypes, and the security and admission model expected to shape the eventual protocol.
+This document captures the current intended architectural model, protocol boundaries, initial MiniDoc classes, document-model subtypes, and the security and admission model expected to shape the eventual protocol. Complete wire formats, complete HTTP header profiles, and full server interoperability rules remain for a future protocol specification.
 
-This document is **not** an Internet Standards Track specification. It has not undergone IETF review and has no formal standing within the IETF process. The key words “MUST”, “MUST NOT”, “SHOULD”, “SHOULD NOT”, and “MAY”, when used in this document, are to be interpreted as described in RFC 2119 and RFC 8174. In this design note, such requirements are provisional and indicate the intended direction of the future protocol.
+This document is an informational pre-RFC working draft. It is outside the IETF standards-track process and has not undergone IETF review. The key words “MUST”, “MUST NOT”, “SHOULD”, “SHOULD NOT”, and “MAY”, when used in this document, are to be interpreted as described in RFC 2119 and RFC 8174. In this design note, such requirements are provisional and indicate the intended direction of the future protocol.
 
 # **2. Abstract**
 
 This document defines the current architectural design for **MiniDocs**, a Channel-scoped mutable content mechanism for ASCP-native coordination workflows.
 
-MiniDocs are distinct from immutable ASCP Artipoints. Artipoints provide durable semantic coordination structure, while MiniDocs provide evolving content bodies associated with those structures. MiniDoc content is carried using the same Layer-1 Channel security model used elsewhere in ASCP: a protected **Channel Envelope** providing signatures, optional encryption, and Channel-scoped access control.
+MiniDocs provide evolving content bodies associated with ASCP coordination structures. Artipoints provide durable semantic coordination structure, while MiniDocs carry mutable Channel-scoped content using the same Layer-1 Channel security model used elsewhere in ASCP: a protected **Channel Envelope** providing signatures, optional encryption, and Channel-scoped access control.
 
-This document introduces the **ASCP MiniDoc Protocol (AMDP)** as the protocol used to create, update, retrieve, and version MiniDocs. The initial AMDP transport profile is **AMDP over HTTPS**, but HTTPS is only the first binding profile for the protocol, not the defining identity form of a MiniDoc.
+This document introduces the **ASCP MiniDoc Protocol (AMDP)** as the protocol used to create, update, retrieve, and version MiniDocs. The initial AMDP transport profile is **AMDP over HTTPS**, while the MiniDoc identity form remains the transport-independent `minidoc://` URI.
 
 This document also introduces **MiniDoc Records** as the MiniDoc-side analogue of immutable **Artipoint Records**. In the immutable ASCP path, Layer-1 Channel Envelopes become Artipoint Records and are replicated through ALSP. In the MiniDoc path, Layer-1 Channel Envelopes become MiniDoc Records and are exchanged between MiniDoc clients and MiniDoc servers through AMDP.
 
@@ -70,9 +70,7 @@ MiniDocs are intended to satisfy the following goals:
 
 ## **3.2 Position of MiniDocs in the ASCP model**
 
-MiniDocs are part of the ASCP ecosystem, but they are not themselves Artipoints and they are not Layer-0 log records.
-
-Instead:
+MiniDocs are part of the ASCP ecosystem and occupy the mutable-content path for Channel-scoped coordination data.
 
 - Artipoints define immutable semantic coordination structure.
 - MiniDocs define mutable content evolution.
@@ -130,14 +128,14 @@ MiniDocs intentionally reuse existing ASCP concepts rather than replacing them.
 - The immutable log-replication model for **Artipoint Records** is owned by **ALSP**.
 - Trust anchoring, identity/certificate meaning, and bootstrap-distributed key material remain owned by the ASCP Identity & Trust and Bootstrap specifications.
 
-This document does **not** redefine those companion specifications. Instead, it defines how MiniDocs reuse those concepts in a mutable-content transport path.
+This document defines how MiniDocs reuse those companion concepts in a mutable-content transport path.
 
 The key boundary is:
 
 - Layer-1 owns signing, optional encryption, and validation of protected MiniDoc payloads.
 - AMDP owns MiniDoc-specific identity, request/response behavior, document history coordination, and Channel-scoped document access procedures.
 - AMDP over HTTPS owns the first concrete HTTP/TLS realization of AMDP.
-- MiniDoc servers do not redefine Channel meaning, governance meaning, or Layer-1 cryptographic semantics.
+- ASCP Channels and companion trust specifications continue to own Channel meaning, governance meaning, and Layer-1 cryptographic semantics.
 
 # **5. Terminology**
 
@@ -188,7 +186,7 @@ A **MiniDoc State** is an immutable reconstructable state of a MiniDoc. A MiniDo
 
 A **state-id** is a stable identifier for one immutable MiniDoc State.
 
-A `state-id` **MUST** identify an immutable reconstructable state rather than a mutable version counter or storage-specific row identifier.
+A `state-id` **MUST** identify an immutable reconstructable state and remain independent of mutable version counters or storage-specific row identifiers.
 
 The canonical current profile uses:
 
@@ -213,9 +211,9 @@ A **Snapshot MiniDoc Document** is a MiniDoc Document model in which each accept
 
 ## **5.8 Collaborative MiniDoc Document**
 
-A **Collaborative MiniDoc Document** is a MiniDoc Document model in which accepted MiniDoc Records carry incremental collaborative change rather than whole-document replacement, while preserving the same external MiniDoc identity, read, update, version, and history semantics as other MiniDoc Documents.
+A **Collaborative MiniDoc Document** is a MiniDoc Document model in which accepted MiniDoc Records carry incremental collaborative change while preserving the same external MiniDoc identity, read, update, version, and history semantics as other MiniDoc Documents.
 
-Collaborative MiniDoc Documents will likely be implemented using OT, CRDT, or related conflict-avoiding collaborative techniques, but those techniques are informative implementation strategies rather than the defining semantic meaning of the document model.
+Collaborative MiniDoc Documents will likely be implemented using OT, CRDT, or related conflict-avoiding collaborative techniques. Those techniques are informative implementation strategies for this document model.
 
 ## **5.9 MiniDoc Log**
 
@@ -241,9 +239,7 @@ A **MiniDoc client** is an ASCP stack client that uses the Layer-1 codec to prod
 
 # **6. Architectural overview**
 
-## **6.1 MiniDocs are not Artipoints**
-
-MiniDocs are distinct from immutable ASCP Artipoints.
+## **6.1 MiniDocs as mutable coordination content**
 
 - Artipoints represent immutable semantic coordination statements.
 - MiniDocs represent mutable content bodies or transcript resources.
@@ -261,7 +257,7 @@ Every MiniDoc is scoped to an ASCP Channel. The Channel provides:
 - replication scope,
 - and authorization semantics for access to MiniDoc content.
 
-For MiniDocs, Channel scoping is realized through MiniDoc Record metadata and the Layer-1 protected payload model rather than through a separate document-specific security system.
+For MiniDocs, Channel scoping is carried through MiniDoc Record metadata and the Layer-1 protected payload model. MiniDoc access therefore follows ASCP Channel security, admission, and trust semantics.
 
 ## **6.3 Layer-1 payload opacity**
 
@@ -330,13 +326,13 @@ The Layer-1 Channel codec is used on the MiniDoc path in the same way it is used
 - On submission, the MiniDoc client uses Layer-1 to secure the payload before sending it to the server.
 - On retrieval, the MiniDoc client validates and decodes the returned protected payload using Layer-1.
 
-The MiniDoc server coordinates storage and history, but it does not replace Layer-1 cryptographic validation as the authoritative content-security mechanism.
+The MiniDoc server coordinates storage and history, while Layer-1 remains authoritative for cryptographic validation and protected content semantics.
 
 ## **7.4 Binding-level retrieval addresses**
 
 The primary MiniDoc identity form is the `minidoc://` URI. A concrete transport profile such as AMDP over HTTPS may define HTTP retrieval addresses or endpoint paths used to operate on that MiniDoc URI.
 
-Those HTTP addresses are binding-level realization details, not the primary MiniDoc identity itself.
+Those HTTP addresses are binding-level realization details used to operate on the primary MiniDoc identity.
 
 ## **7.5 Optional immutable state selection**
 
@@ -363,7 +359,7 @@ This allows Artipoints to carry a stable base MiniDoc URI while later attributes
 
 ## **8.1 MiniDoc Document**
 
-MiniDoc Document is the high-level mutable document class. It is defined by stable document semantics rather than by one specific record encoding or coherency mechanism.
+MiniDoc Document is the high-level mutable document class. It is defined by stable document semantics, with multiple record and coherency models sharing that external behavior.
 
 ### **8.1.1 Snapshot MiniDoc Document**
 
@@ -383,11 +379,11 @@ A Collaborative MiniDoc Document is the future collaborative document model.
 
 For a Collaborative MiniDoc Document:
 
-- each accepted MiniDoc Record represents incremental collaborative document evolution rather than full replacement,
+- each accepted MiniDoc Record represents incremental collaborative document evolution,
 - the MiniDoc remains one stable document resource with one stable identity and version/history model,
 - and clients materialize document state from the collaborative update history or from an equivalent retained representation consistent with that history.
 
-Collaborative MiniDoc Documents are expected to use OT, CRDT, or related collaborative-conflict-avoidance techniques informatively, but AMDP should define the document model in a way that does not depend on naming one such technique as normative.
+Collaborative MiniDoc Documents are expected to use OT, CRDT, or related collaborative-conflict-avoidance techniques informatively. AMDP should define the document model through its externally visible semantics so that one specific technique does not become normative.
 
 ### **8.1.3 Shared MiniDoc Document invariants**
 
@@ -398,11 +394,11 @@ Snapshot and Collaborative MiniDoc Documents share:
 - the same concept of immutable referenced states,
 - and the same high-level read, update, version, and history semantics.
 
-The difference between them is the record content model and the coherency model, not the external document identity model.
+They differ in record content model and coherency model while sharing one external document identity model.
 
 ## **8.2 MiniDoc Log**
 
-MiniDoc Log is a distinct MiniDoc class rather than a MiniDoc Document subtype.
+MiniDoc Log is a distinct MiniDoc class with transcript-oriented append semantics.
 
 Its primary intended use is transcript-oriented append semantics, especially:
 
@@ -417,13 +413,13 @@ For a MiniDoc Log:
 - the authoritative history is the ordered record sequence,
 - and the semantic effect is a growing transcript or log-shaped resource.
 
-Unlike a Collaborative MiniDoc Document, a MiniDoc Log is fundamentally transcript-oriented rather than document-oriented.
+MiniDoc Logs are optimized for transcript and event-sequence resources, while Collaborative MiniDoc Documents preserve general document semantics under collaborative evolution.
 
 ## **8.3 History retention and pruning**
 
 MiniDoc servers **MAY** maintain a rolling history and **MAY** prune older stored MiniDoc Records according to retention policy.
 
-Pruning does not change the abstract model:
+Pruning preserves the abstract model for retained history:
 
 - retained MiniDoc Records remain immutable,
 - retained `state-id` values remain stable,
@@ -443,7 +439,7 @@ AMDP defines the MiniDoc-specific client/server protocol semantics for:
 - client authentication and Channel-scoped admission boundaries,
 - and version or state progression semantics.
 
-AMDP is not inherently tied to HTTPS, even though HTTPS is the first transport profile.
+AMDP defines the MiniDoc protocol semantics. AMDP over HTTPS is the first transport profile for those semantics.
 
 ## **9.2 AMDP over HTTPS**
 
@@ -451,7 +447,7 @@ The initial AMDP transport profile uses HTTPS over TLS as its transport substrat
 
 AMDP over HTTPS should be defined so that it maps as directly as possible onto standard modern HTTP request and response patterns and can be implemented using ordinary HTTP client and server libraries.
 
-Conforming AMDP-over-HTTPS deployments **SHOULD** use HTTPS over TLS 1.3 or higher as the baseline profile. TLS provides network-path confidentiality and resistance to active transport interference, but it does not by itself establish ASCP identity semantics or Channel admission.
+Conforming AMDP-over-HTTPS deployments **SHOULD** use HTTPS over TLS 1.3 or higher as the baseline profile. In that profile, TLS provides network-path confidentiality and resistance to active transport interference, while HTTP authentication and Channel admission supply ASCP identity and access semantics.
 
 ## **9.3 Core AMDP operations**
 
@@ -468,7 +464,7 @@ This document does not yet freeze the exact endpoint shapes for those operations
 
 ## **9.4 Retrieval behavior**
 
-Fetch operations **SHOULD** return MiniDoc Records, or material sufficient to reconstruct and validate MiniDoc Records, rather than returning only already-decoded application content.
+Fetch operations **SHOULD** return MiniDoc Records, or material sufficient to reconstruct and validate MiniDoc Records, so that MiniDoc clients can apply the Layer-1 validation model directly.
 
 This preserves the Channel-protected model in which MiniDoc clients validate the protected payload on receipt using the same Layer-1 codec semantics used during submission.
 
@@ -488,7 +484,7 @@ In the initial profile, the MiniDoc server acts as the authoritative coordinator
 - current-state determination,
 - and retained-history retrieval.
 
-The server-authoritative role in this profile does not change the protected-payload boundary: the server coordinates history, while Layer-1 remains authoritative for content protection and validation.
+The server-authoritative role in this profile preserves the protected-payload boundary: the server coordinates history, while Layer-1 remains authoritative for content protection and validation.
 
 ## **9.6 Server-issued document identity**
 
@@ -509,7 +505,7 @@ This mirrors ALSP’s distinction between session authentication and replication
 
 ## **10.2 AMDP over HTTPS authentication model**
 
-In the initial AMDP-over-HTTPS profile, session authentication is intended to use standard HTTPS and HTTP authentication mechanisms rather than ALSP-specific message framing.
+In the initial AMDP-over-HTTPS profile, session authentication uses standard HTTPS and HTTP authentication mechanisms adapted to ASCP identity and certificate semantics.
 
 The current design direction is:
 
@@ -533,7 +529,7 @@ TLS protects the transport. HTTP authentication establishes ASCP identity. The s
 
 ## **10.4 Channel admission using CAK and CAP**
 
-MiniDoc access remains Channel-governed. It does not introduce a separate document-specific authorization scheme unrelated to ASCP Channels.
+MiniDoc access is Channel-governed and follows ASCP Channel authorization semantics.
 
 Where a Channel requires access admission:
 
@@ -551,14 +547,14 @@ The intended behavior is:
 
 - first access to a Channel within an authenticated session may trigger a Channel admission challenge,
 - once the client satisfies Channel admission for that Channel, the server records that result in the AMDP session,
-- later requests to the same Channel within that session do not need to repeat the admission proof,
+- later requests to the same Channel within that session reuse the admitted session state,
 - unless the session expires, the server invalidates the session, CAK material rotates, or the server explicitly requires renewed admission.
 
 This mirrors ALSP’s separation between identity authentication and Channel-scoped admission while adapting it to ordinary HTTP request and response flow.
 
 ## **10.6 HTTP carriage boundary**
 
-This design note intentionally does not yet freeze the final HTTP carriage details for CAP material. However, the intended profile is that:
+This design note leaves the final HTTP carriage details for CAP material for later specification work. The intended profile is:
 
 - identity authentication uses standard HTTP authentication challenge and response behavior,
 - admission proof is carried as request-associated protocol material,
@@ -613,7 +609,7 @@ Server accepts new MiniDoc Record R3
 R3 advances the collaborative document history
 ```
 
-The external MiniDoc Document identity, version semantics, and immutable reference model remain stable even though the record contents are not whole-document snapshots.
+The external MiniDoc Document identity, version semantics, and immutable reference model remain stable across collaborative record progression.
 
 Current and historical reads for Collaborative MiniDoc Documents are span-oriented. The client requests the retained record span needed to materialize the target state using:
 
@@ -653,7 +649,7 @@ For a MiniDoc Log, the current state is the materialized result of the accepted 
 
 ## **11.6 Truncation and compaction semantics**
 
-Truncation and compaction are ordinary AMDP write operations with type-specific behavior. They are not merely background storage maintenance.
+Truncation and compaction are ordinary AMDP write operations with type-specific behavior. They update retained history boundaries as part of the protocol-visible MiniDoc lifecycle.
 
 For all such operations:
 
@@ -671,7 +667,7 @@ After successful truncation:
 - only later records remain available,
 - and the earliest reconstructable retained transcript state advances to the retained post-cutoff boundary.
 
-This means MiniDoc Log truncation intentionally sacrifices earlier transcript history rather than synthesizing a replacement baseline record.
+This means MiniDoc Log truncation advances the earliest retained transcript boundary without synthesizing a replacement baseline record.
 
 ### **11.6.2 Collaborative MiniDoc Document compaction**
 
@@ -706,7 +702,7 @@ The intended invariant is that:
 - Artipoint references remain stable,
 - and Channel security and admission semantics remain stable.
 
-Only the internal collaborative coherency mechanism changes.
+This preserves one stable external MiniDoc model while allowing the internal collaborative coherency mechanism to evolve.
 
 # **12. Relationship to ASCP Artipoints and external artifacts**
 
@@ -732,7 +728,7 @@ while allowing mutable coordination content.
 
 ## **12.2 Relationship to external artifacts**
 
-MiniDocs are distinct from externally governed artifacts such as:
+MiniDocs are native ASCP Channel resources. Other collaboration systems may also host mutable artifacts, such as:
 
 - Google Docs,
 - OneDrive files,
@@ -741,7 +737,7 @@ MiniDocs are distinct from externally governed artifacts such as:
 - GitHub resources,
 - and generic web URLs.
 
-External artifacts are governed externally and may be referenced through other ASCP mechanisms. MiniDocs are native ASCP Channel resources.
+Externally governed artifacts may be referenced through other ASCP mechanisms when needed. MiniDocs provide the ASCP-native resource model for Channel-scoped mutable content.
 
 # **13. Operational considerations**
 
@@ -772,7 +768,7 @@ Operational concerns that the eventual protocol specification will need to defin
 
 # **14. Error handling**
 
-This design note does not yet freeze a complete AMDP error vocabulary, but the protocol should distinguish at least the following failure classes:
+The eventual AMDP specification should define a complete error vocabulary. At minimum, it should distinguish the following failure classes:
 
 - authentication failed,
 - Channel admission proof missing or invalid,
@@ -816,9 +812,9 @@ Threats that the MiniDoc protocol must account for include:
 - denial of service against MiniDoc servers,
 - and retention-policy surprises that expose or remove historical content unexpectedly.
 
-Collaborative MiniDoc Documents may use OT, CRDT, or related collaborative-conflict-avoidance techniques as an implementation strategy, but the AMDP security boundary remains the same: Layer-1 protects payloads, and AMDP governs transport, admission, and history semantics.
+Collaborative MiniDoc Documents may use OT, CRDT, or related collaborative-conflict-avoidance techniques as an implementation strategy. The AMDP security boundary remains the same: Layer-1 protects payloads, and AMDP governs transport, admission, and history semantics.
 
-As with ALSP, TLS is necessary but not sufficient for ASCP trust. TLS alone does not establish Channel admission, Layer-1 authorship, or higher-layer governance meaning.
+As with ALSP, TLS provides transport security for the HTTPS binding. ASCP trust additionally depends on Channel admission, Layer-1 authorship, and higher-layer governance meaning.
 
 # **16. Privacy considerations**
 
@@ -877,7 +873,7 @@ R2 -> collaborative update adding section text
 R3 -> collaborative update revising earlier content without replacing the whole document
 ```
 
-The document remains one stable MiniDoc Document even though record contents represent incremental collaborative evolution rather than whole-document replacement.
+The document remains one stable MiniDoc Document while accepted records carry incremental collaborative evolution.
 
 ## **18.3 MiniDoc Log example**
 
