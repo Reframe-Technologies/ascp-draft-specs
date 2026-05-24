@@ -288,6 +288,30 @@ state-id = "bQ7mK9rTx2M"
 
 The MiniDoc identity remains stable while MiniDoc States evolve.
 
+## **6.5 Server-visible and client-visible semantics**
+
+AMDP separates server-coordinated protocol state from client-interpreted content state.
+
+The MiniDoc server coordinates and acts on:
+
+- the MiniDoc URI and Channel UUID,
+- the MiniDoc class and document-model subtype,
+- `doc-id`, `state-id`, and predecessor or basis metadata,
+- authenticated session state and admitted Channel session state,
+- ordered record acceptance,
+- retained-history boundaries,
+- and retention-policy effects on historical availability.
+
+The MiniDoc client interprets and validates:
+
+- Layer-1 protected payload content,
+- decrypted document or transcript content,
+- application-level document meaning,
+- collaborative operation meaning for OT, CRDT, or related models,
+- and any semantic validation that depends on the protected content itself.
+
+This split allows the server to coordinate admissibility, sequencing, and retained history without requiring application-level interpretation of MiniDoc Record payloads.
+
 # **7. MiniDoc Record model**
 
 ## **7.1 Conceptual structure**
@@ -319,7 +343,26 @@ This is required because MiniDoc Record contents differ across these forms:
 - Collaborative MiniDoc Documents carry incremental collaborative change,
 - MiniDoc Logs carry append-oriented transcript or log extensions.
 
-## **7.3 Relationship to Layer-1**
+## **7.3 Common state-transition invariant**
+
+AMDP uses one shared state-transition invariant across all MiniDoc forms:
+
+- one accepted MiniDoc Record,
+- one atomic state transition,
+- and one new immutable `state-id`.
+
+This invariant allows Snapshot MiniDoc Documents, Collaborative MiniDoc Documents, and MiniDoc Logs to share one common protocol model even though their record contents differ.
+
+For protocol purposes, the server needs to coordinate:
+
+- the transition boundary,
+- the client-supplied predecessor or basis state,
+- the ordered retained history,
+- and the resulting new `state-id`.
+
+The protected payload content remains opaque at the AMDP transport layer.
+
+## **7.4 Relationship to Layer-1**
 
 The Layer-1 Channel codec is used on the MiniDoc path in the same way it is used on the immutable ASCP path:
 
@@ -328,13 +371,13 @@ The Layer-1 Channel codec is used on the MiniDoc path in the same way it is used
 
 The MiniDoc server coordinates storage and history, while Layer-1 remains authoritative for cryptographic validation and protected content semantics.
 
-## **7.4 Binding-level retrieval addresses**
+## **7.5 Binding-level retrieval addresses**
 
 The primary MiniDoc identity form is the `minidoc://` URI. A concrete transport profile such as AMDP over HTTPS may define HTTP retrieval addresses or endpoint paths used to operate on that MiniDoc URI.
 
 Those HTTP addresses are binding-level realization details used to operate on the primary MiniDoc identity.
 
-## **7.5 Optional immutable state selection**
+## **7.6 Optional immutable state selection**
 
 The base MiniDoc URI identifies the MiniDoc resource generically:
 
@@ -384,6 +427,16 @@ For a Collaborative MiniDoc Document:
 - and clients materialize document state from the collaborative update history or from an equivalent retained representation consistent with that history.
 
 Collaborative MiniDoc Documents are expected to use OT, CRDT, or related collaborative-conflict-avoidance techniques informatively. AMDP should define the document model through its externally visible semantics so that one specific technique does not become normative.
+
+At the protocol layer, a Collaborative MiniDoc Document remains compatible with opaque server handling because the server coordinates only:
+
+- record acceptance,
+- ordered retention,
+- state lineage,
+- span retrieval boundaries,
+- and compaction boundaries.
+
+A collaborative MiniDoc Record may contain one or more incremental collaborative operations, but the enclosing MiniDoc Record remains the atomic accepted update unit. Client-side materialization and conflict-resolution behavior therefore remain above the server's opaque-record coordination role.
 
 ### **8.1.3 Shared MiniDoc Document invariants**
 
@@ -441,7 +494,22 @@ AMDP defines the MiniDoc-specific client/server protocol semantics for:
 
 AMDP defines the MiniDoc protocol semantics. AMDP over HTTPS is the first transport profile for those semantics.
 
-## **9.2 AMDP over HTTPS**
+## **9.2 Protocol operation model**
+
+AMDP is a record-coordination protocol with client-side content interpretation and server-side history coordination.
+
+In the initial profile, an AMDP operation proceeds through these conceptual phases:
+
+1. Authenticate or resume an AMDP session.
+2. Establish or reuse admitted access for the referenced Channel.
+3. Resolve the target MiniDoc resource or create a new one.
+4. Perform the requested read, write, span, or retention operation against the retained MiniDoc history.
+5. Return MiniDoc Records, or sufficient retained record material, for the requested state boundary.
+6. Validate and materialize the protected content client-side through the Layer-1 codec.
+
+This model keeps content security and interpretation at the client boundary while allowing the server to enforce admission, sequencing, and retained-history semantics.
+
+## **9.3 AMDP over HTTPS**
 
 The initial AMDP transport profile uses HTTPS over TLS as its transport substrate.
 
@@ -449,7 +517,7 @@ AMDP over HTTPS should be defined so that it maps as directly as possible onto s
 
 Conforming AMDP-over-HTTPS deployments **SHOULD** use HTTPS over TLS 1.3 or higher as the baseline profile. In that profile, TLS provides network-path confidentiality and resistance to active transport interference, while HTTP authentication and Channel admission supply ASCP identity and access semantics.
 
-## **9.3 Core AMDP operations**
+## **9.4 Core AMDP operations**
 
 The initial transactional AMDP profile is expected to support at least the following logical operations:
 
@@ -462,7 +530,22 @@ The initial transactional AMDP profile is expected to support at least the follo
 
 This document does not yet freeze the exact endpoint shapes for those operations.
 
-## **9.4 Retrieval behavior**
+## **9.5 HTTP semantic mapping model**
+
+AMDP-over-HTTPS is intended to map onto ordinary HTTP resource interaction patterns without changing the higher-level AMDP semantics.
+
+At the semantic level:
+
+- authenticated AMDP session maps onto HTTP authentication plus a server-issued session representation,
+- admitted Channel session maps onto per-Channel server-side admission state associated with that authenticated session,
+- MiniDoc identity maps onto the `minidoc://` resource identity plus a binding-level HTTPS address,
+- current versus pinned state maps onto base resource retrieval versus state-qualified retrieval,
+- mutation preconditions map onto request-carried prior-state basis,
+- and retained-history reads map onto state-qualified span retrieval semantics.
+
+The RFC should freeze the exact HTTP methods, status codes, headers, and body formats. This design note defines the higher-level semantic mapping those binding choices must preserve.
+
+## **9.6 Retrieval behavior**
 
 Fetch operations **SHOULD** return MiniDoc Records, or material sufficient to reconstruct and validate MiniDoc Records, so that MiniDoc clients can apply the Layer-1 validation model directly.
 
@@ -474,7 +557,7 @@ The current read model is type-specific:
 - Collaborative MiniDoc Documents return the retained record span needed for the client to materialize the requested state.
 - MiniDoc Logs return the retained record span needed for the client to materialize the requested transcript or log state.
 
-## **9.5 Server role in the initial profile**
+## **9.7 Server role in the initial profile**
 
 In the initial profile, the MiniDoc server acts as the authoritative coordinator for:
 
@@ -486,7 +569,7 @@ In the initial profile, the MiniDoc server acts as the authoritative coordinator
 
 The server-authoritative role in this profile preserves the protected-payload boundary: the server coordinates history, while Layer-1 remains authoritative for content protection and validation.
 
-## **9.6 Server-issued document identity**
+## **9.8 Server-issued document identity**
 
 In the initial AMDP-over-HTTPS profile, the server **SHOULD** allocate `doc-id` values during MiniDoc creation and return the canonical MiniDoc URI to the client.
 
@@ -561,6 +644,27 @@ This design note leaves the final HTTP carriage details for CAP material for lat
 - admission verification occurs in the context of the authenticated request before protected MiniDoc access is granted,
 - and later requests may rely on the authenticated and admitted AMDP session state until that state is invalidated.
 
+## **10.7 Session, admission, and operation sequence**
+
+The intended AMDP-over-HTTPS sequence is:
+
+1. Session authentication
+   The client establishes an HTTPS connection, responds to any HTTP authentication challenge, and receives an authenticated AMDP session representation from the server.
+2. First Channel access
+   On first access to a Channel, the server verifies Channel admission using CAK and CAP-derived proof and records the admitted result in the AMDP session.
+3. Current-state read
+   The client identifies the MiniDoc and any relevant current-state retrieval parameters. The server verifies session and Channel admission, resolves the current retained state boundary, and returns the retained MiniDoc Record material for client validation.
+4. Pinned-state read
+   The client identifies the MiniDoc plus `state-id`. The server verifies session and Channel admission, resolves that retained historical state boundary, and returns the retained MiniDoc Record material for client validation.
+5. Record submission
+   The client produces a protected MiniDoc Record using Layer-1, includes `base-state-id`, and submits the record. The server verifies session, Channel admission, target MiniDoc identity, and prior-state basis before accepting the new record and issuing the resulting `state-id`.
+6. Span retrieval
+   The client identifies a lower and optional upper retained state boundary. The server verifies session and Channel admission, resolves the retained span, and returns the ordered record material needed for client-side materialization.
+7. Truncation or compaction
+   The client identifies the target MiniDoc, retention cutoff, and `base-state-id`, plus any replacement baseline record required by the document model. The server verifies session, Channel admission, prior-state basis, and retention preconditions before updating the retained-history boundary and issuing the resulting `state-id`.
+
+These flows define where authentication ends, where Channel admission begins, and where MiniDoc-specific history operations occur.
+
 # **11. Versioning and synchronization semantics**
 
 ## **11.1 Initial transactional profile**
@@ -611,6 +715,8 @@ R3 advances the collaborative document history
 
 The external MiniDoc Document identity, version semantics, and immutable reference model remain stable across collaborative record progression.
 
+This remains compatible with opaque server handling because the server coordinates accepted record order, prior-state basis, retained spans, and compaction boundaries without interpreting the collaborative operation semantics inside the protected payload.
+
 Current and historical reads for Collaborative MiniDoc Documents are span-oriented. The client requests the retained record span needed to materialize the target state using:
 
 - `from-state-id`
@@ -647,7 +753,26 @@ For a Collaborative MiniDoc Document, the current state is the materialized resu
 
 For a MiniDoc Log, the current state is the materialized result of the accepted ordered transcript or log sequence, or an equivalent retained representation consistent with that sequence.
 
-## **11.6 Truncation and compaction semantics**
+## **11.6 Retention-aware retrieval semantics**
+
+AMDP distinguishes among:
+
+- the current state,
+- a pinned historical state selected by `state-id`,
+- a retained span bounded by `from-state-id` and optional `to-state-id`,
+- and the earliest retained state boundary still available at the server.
+
+Retention changes historical availability, not the abstract MiniDoc state model.
+
+For a Snapshot MiniDoc Document, current and pinned retrieval typically resolve to one retained record for the requested state boundary.
+
+For a Collaborative MiniDoc Document, current and pinned retrieval resolve to the retained span or equivalent retained representation needed for the client to materialize the requested state boundary.
+
+For a MiniDoc Log, current and pinned retrieval resolve to the retained ordered transcript span needed for the client to materialize the requested transcript state.
+
+When historical content has been pruned, the server can still serve current and retained historical material within the retained boundary while earlier pruned state boundaries are no longer available at that server.
+
+## **11.7 Truncation and compaction semantics**
 
 Truncation and compaction are ordinary AMDP write operations with type-specific behavior. They update retained history boundaries as part of the protocol-visible MiniDoc lifecycle.
 
@@ -657,7 +782,7 @@ For all such operations:
 - the request **MUST** include `base-state-id`,
 - and successful acceptance yields exactly one new externally identifiable `state-id`.
 
-### **11.6.1 MiniDoc Log truncation**
+### **11.7.1 MiniDoc Log truncation**
 
 For a MiniDoc Log, truncation drops the retained prefix of the record history through a caller-specified cutoff `state-id`.
 
@@ -669,7 +794,7 @@ After successful truncation:
 
 This means MiniDoc Log truncation advances the earliest retained transcript boundary without synthesizing a replacement baseline record.
 
-### **11.6.2 Collaborative MiniDoc Document compaction**
+### **11.7.2 Collaborative MiniDoc Document compaction**
 
 For a Collaborative MiniDoc Document, truncation is a compaction operation.
 
@@ -687,11 +812,11 @@ After successful compaction:
 
 This is analogous to replacing an older edit history prefix with one retained baseline state while preserving later forward evolution.
 
-### **11.6.3 Snapshot MiniDoc Document retention**
+### **11.7.3 Snapshot MiniDoc Document retention**
 
 For a Snapshot MiniDoc Document, older retained snapshot records may be dropped without special compaction semantics because each retained record is already a self-contained document state.
 
-## **11.7 Future collaborative evolution**
+## **11.8 Future collaborative evolution**
 
 Future AMDP implementations **MAY** use OT, CRDT, or related conflict-avoiding collaborative techniques for Collaborative MiniDoc Documents.
 
@@ -765,6 +890,19 @@ Operational concerns that the eventual protocol specification will need to defin
 - mapping from `minidoc://` identity to binding-level retrieval addresses,
 - concrete endpoint and payload shapes for span reads and compaction writes,
 - and migration from Snapshot to Collaborative MiniDoc Document deployment models.
+
+## **13.1 Profile boundaries for the first RFC**
+
+This design note is intended to provide enough protocol-shape detail for a first AMDP RFC to freeze:
+
+- the AMDP-over-HTTPS binding,
+- the HTTPS mapping of MiniDoc identity and operations,
+- the authenticated-session and admitted-Channel flow,
+- the exact request and response syntax for create, read, write, span, and retention operations,
+- the exact MiniDoc Record metadata encoding,
+- and the complete error vocabulary for interoperable implementations.
+
+Within that framework, Snapshot MiniDoc Documents and MiniDoc Logs are ready to be specified as normative initial interoperable behaviors. Collaborative MiniDoc Documents already fit the AMDP architectural model and can either be specified in full or staged as a later interoperable profile while preserving the same core state-transition and retained-history model.
 
 # **14. Error handling**
 
