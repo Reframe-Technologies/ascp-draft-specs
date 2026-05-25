@@ -178,13 +178,13 @@ A **MiniDoc Record** is the retained state-transition unit exchanged through AMD
 In the current profile, an accepted retained MiniDoc Record carries:
 
 1. a self-describing `record_type` corresponding to the MiniDoc class or document model declared for that MiniDoc,
-2. `prev_state_id`, identifying the prior state boundary this record follows,
+2. `base-state-id`, identifying the prior accepted state boundary this record follows,
 3. `state_id`, identifying the resulting immutable state boundary created by acceptance of the record, and
 4. an opaque **Layer-1 Channel Envelope** payload carried without semantic interpretation by the MiniDoc transport layer.
 
-On client submission, `state_id` is absent and is assigned by the server when the record is accepted. On later retrieval, retained MiniDoc Records include both `prev_state_id` and `state_id`.
+On client submission, `state_id` is absent and is assigned by the server when the record is accepted. On later retrieval, retained MiniDoc Records include both `base-state-id` and `state_id`.
 
-For MiniDoc creation, the submitted record uses the reserved `prev_state_id` sentinel `origin`. This token is outside the normal base64url `state-id` encoding space and cannot collide with an issued `state-id`.
+For MiniDoc creation, the submitted record uses the reserved `base-state-id` sentinel `origin`. This token is outside the normal base64url `state-id` encoding space and cannot collide with an issued `state-id`.
 
 AMDP request and response operations may carry additional protocol metadata alongside a MiniDoc Record. That metadata can include the target MiniDoc URI or `doc-id`, `base-state-id`, `from-state-id`, `to-state-id`, retention cutoff information, and authenticated session or admission context. Those operation fields are part of AMDP processing and are not intrinsic retained-record fields.
 
@@ -229,7 +229,7 @@ Collaborative MiniDoc Documents materialize document state client-side from reta
 
 Collaborative MiniDoc Documents keep CRDT frontiers, state vectors, and similar convergence-internal synchronization artifacts client-private. Those artifacts inform client-side materialization and publication but are not part of the server-visible AMDP state model.
 
-Collaborative MiniDoc Documents will likely be implemented using OT, CRDT, or related conflict-avoiding collaborative techniques. Those techniques are informative implementation strategies for this document model.
+Collaborative MiniDoc Documents may be implemented using OT, CRDT, or related conflict-avoiding collaborative techniques. Specific payload technologies such as Yjs updates are informative examples of possible encapsulated collaborative profiles, not normative requirements of the current design note.
 
 ## **5.9 MiniDoc Log**
 
@@ -339,7 +339,7 @@ This split allows the server to coordinate admissibility, sequencing, and retain
 A retained MiniDoc Record in the current profile conceptually binds:
 
 - `record_type`
-- `prev_state_id`
+- `base-state-id`
 - `state_id`
 - and an opaque Layer-1 Channel Envelope payload
 
@@ -371,6 +371,8 @@ This is required because MiniDoc Record contents differ across these forms:
 
 In the current profile, each MiniDoc has one declared type and all retained MiniDoc Records for that MiniDoc **MUST** carry the matching `record_type`. Mixed-type record histories within one MiniDoc are out of scope for the current profile.
 
+The current profile treats the supported suffixes, document models, and `record_type` values as a closed set. Inputs using unsupported values are rejected rather than ignored or partially processed.
+
 ## **7.3 Common state-transition invariant**
 
 AMDP uses one shared state-transition invariant across all MiniDoc forms:
@@ -385,7 +387,7 @@ For collaborative documents, one accepted MiniDoc Record may carry one or more c
 
 For protocol purposes, the server needs to coordinate:
 
-- the predecessor state boundary named by `prev_state_id`,
+- the predecessor state boundary named by `base-state-id`,
 - the resulting state boundary named by `state_id`,
 - the client-supplied operation basis state,
 - the ordered retained history,
@@ -449,7 +451,7 @@ This model is straightforward for server-authoritative transactional implementat
 
 ### **8.1.2 Collaborative MiniDoc Document**
 
-A Collaborative MiniDoc Document is the future collaborative document model.
+A Collaborative MiniDoc Document is the collaborative document model of the current MiniDoc design.
 
 For a Collaborative MiniDoc Document:
 
@@ -457,7 +459,7 @@ For a Collaborative MiniDoc Document:
 - the MiniDoc remains one stable document resource with one stable identity and version/history model,
 - and clients materialize document state from the collaborative update history or from an equivalent retained representation consistent with that history.
 
-Collaborative MiniDoc Documents are expected to use OT, CRDT, or related collaborative-conflict-avoidance techniques informatively. AMDP should define the document model through its externally visible semantics so that one specific technique does not become normative.
+The current design expects the MiniDoc protocol to define collaborative documents through externally visible transport, state, and retained-history semantics so that one specific collaborative payload technology does not become normative prematurely. Yjs-style updates are a useful informative example of one possible encapsulated collaborative payload profile.
 
 At the protocol layer, a Collaborative MiniDoc Document remains compatible with opaque server handling because the server coordinates only:
 
@@ -554,7 +556,7 @@ AMDP defines the MiniDoc-specific client/server protocol semantics for:
 - client authentication and Channel-scoped admission boundaries,
 - and version or state progression semantics.
 
-AMDP defines the MiniDoc protocol semantics. AMDP over HTTPS is the first transport profile for those semantics.
+In this design, AMDP names the architectural protocol layer and its semantics, while **AMDP over HTTPS** is the first concrete interoperable realization of those semantics. The architectural AMDP description is intentionally lighter-weight than the HTTPS realization, which is the primary normative profile direction of this design note.
 
 ## **9.2 Protocol operation model**
 
@@ -601,7 +603,7 @@ The initial transactional AMDP-over-HTTPS profile **MUST** support the following
 The HTTPS binding for those operations **MUST** use the following resource and method model:
 
 - `POST /ascp/<channel-uuid>/`
-  Creates a new MiniDoc in the identified Channel. The request body **MUST** declare the MiniDoc `record_type` and include the initial submitted MiniDoc Record with `prev_state_id=origin` and no `state_id`. On success, the server **MUST** allocate `doc-id`, assign `state_id`, return `201 Created`, and include the canonical HTTPS resource path in the `Location` header.
+  Creates a new MiniDoc in the identified Channel. The request body **MUST** declare the MiniDoc `record_type` and include the initial submitted MiniDoc Record with `base-state-id=origin` and no `state_id`. On success, the server **MUST** allocate `doc-id`, assign `state_id`, return `201 Created`, and include the canonical HTTPS resource path in the `Location` header.
 - `GET /ascp/<channel-uuid>/<doc-id>.<suffix>`
   Returns the current retained state of the identified MiniDoc.
 - `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?state-id=<state-id>`
@@ -609,7 +611,7 @@ The HTTPS binding for those operations **MUST** use the following resource and m
 - `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?from-state-id=<state-id>[&to-state-id=<state-id>]`
   Returns the retained ordered record span needed to materialize the requested state range. When `to-state-id` is omitted, the upper bound is the current head state.
 - `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>`
-  Submits a new MiniDoc Record or a retention-maintenance mutation for the identified MiniDoc. The request body **MUST** include `base-state-id` and the mutation payload appropriate to the MiniDoc class and operation.
+  Submits a new MiniDoc Record or a retention-maintenance mutation for the identified MiniDoc. The request body **MUST** include an explicit operation discriminator, `base-state-id`, and the mutation payload appropriate to the MiniDoc class and operation.
 
 The current profile **MUST NOT** tunnel all AMDP operations through a single generic operation endpoint.
 
@@ -636,7 +638,9 @@ The profile **MUST** use these HTTP status code classes:
 - `401 Unauthorized` for missing, invalid, or expired authenticated session state,
 - `403 Forbidden` for missing or invalid Channel admission,
 - `404 Not Found` for unknown MiniDoc or unavailable retained historical state,
-- and `409 Conflict` for stale or conflicting `base-state-id` or `prev_state_id` basis.
+- and `409 Conflict` for stale or conflicting `base-state-id` basis.
+
+For unavailable retained historical state, the HTTPS profile is expected to return `404 Not Found` with structured JSON error details sufficient to indicate that the request failed because the referenced historical state is no longer retained. For `409 Conflict`, the HTTPS profile is expected to return structured JSON error details that include the current head `state-id` and any relevant retained-history boundary metadata needed for client recovery.
 
 ## **9.6 Retrieval behavior**
 
@@ -644,13 +648,15 @@ Fetch operations **MUST** return MiniDoc Records and the material sufficient to 
 
 This preserves the Channel-protected model in which MiniDoc clients validate the protected payload on receipt using the same Layer-1 codec semantics used during submission.
 
-When retained MiniDoc Records are returned, they include `record_type`, `prev_state_id`, `state_id`, and the protected payload material for that accepted record.
+When retained MiniDoc Records are returned, they include `record_type`, `base-state-id`, `state_id`, and the protected payload material for that accepted record.
 
 The current read model is type-specific:
 
 - Snapshot MiniDoc Documents **MUST** return exactly one retained record corresponding to the requested state.
 - Collaborative MiniDoc Documents **MUST** return the retained ordered record span, or an equivalent retained baseline-plus-suffix replay plan, needed for the client to materialize the requested state.
-- MiniDoc Logs **MUST** return the retained ordered record span needed for the client to materialize the requested transcript or log state.
+- MiniDoc Logs **MUST** return the retained ordered record span, or another explicitly identified replay representation consistent with the retained transcript state model, needed for the client to materialize the requested transcript or log state.
+
+When the server returns a replay plan rather than only a literal ordered retained-record list, the response **MUST** identify which replay representation is being returned so that the client can process it deterministically.
 
 The binding **MUST NOT** return only already-decoded application content in place of retained MiniDoc Record material.
 
@@ -719,6 +725,10 @@ Where a Channel requires access admission:
 - the value of `AMDP-CAP` **MUST** be a JOSE compact serialization carrying the Channel Access Proof,
 - and the server **MUST** verify that proof before serving protected MiniDoc content or accepting new MiniDoc Records for that Channel.
 
+The CAP structure and verification semantics are inherited directly from ALSP. AMDP over HTTPS defines the HTTP carriage, session reuse, and request-flow realization of that proof model rather than a distinct MiniDoc-specific CAP format.
+
+When a Channel does not have an active CAK requirement, the client is not required to send `AMDP-CAP` and the server evaluates access using the same open-channel expectation that would apply to the corresponding ALSP admission context.
+
 Authentication establishes who the client is. CAK and CAP-based admission establishes whether that client may access MiniDoc resources in the referenced Channel.
 
 ## **10.5 Channel admission caching**
@@ -727,7 +737,7 @@ In the initial AMDP-over-HTTPS profile, Channel admission **MUST** be session-ca
 
 The binding **MUST** behave as follows:
 
-- first access to a Channel within an authenticated session **MUST** either include a valid `AMDP-CAP` header or receive an admission failure,
+- first access to a Channel within an authenticated session **MUST** satisfy that Channel's admission policy, including a valid `AMDP-CAP` header when CAP-based admission is required,
 - once the client satisfies Channel admission for that Channel, the server **MUST** record that admitted result in the `AMDP-Session`,
 - later requests to the same Channel within that session **MUST** be accepted without requiring a repeated `AMDP-CAP` header,
 - the server **MAY** accept redundant valid `AMDP-CAP` headers on an already admitted session,
@@ -757,17 +767,17 @@ The AMDP-over-HTTPS sequence is:
 1. Session authentication
    The client establishes an HTTPS connection and attempts the target request. If no valid `AMDP-Session` cookie is present, the server returns `401 Unauthorized` with `WWW-Authenticate: ASCP ...`. The client repeats the request with `Authorization: ASCP ...`. On successful identity validation, the server processes the request or continues to admission handling and returns `Set-Cookie: AMDP-Session=<opaque>`.
 2. First Channel access
-   On first access to a Channel within that authenticated session, the client presents `AMDP-CAP` for the referenced Channel. If the proof is absent or invalid, the server returns `403 Forbidden`. If the proof is valid, the server records the admitted result against the authenticated `AMDP-Session`.
+   On first access to a Channel within that authenticated session, the client presents `AMDP-CAP` for the referenced Channel when that Channel requires CAP-based admission. If the proof is absent or invalid when required, the server returns `403 Forbidden`. If the proof is valid, or if the Channel is open and no CAP is required, the server records the admitted result against the authenticated `AMDP-Session`.
 3. Current-state read
    The client sends `GET /ascp/<channel-uuid>/<doc-id>.<suffix>` with `Cookie: AMDP-Session=...`. The server verifies authenticated session and admitted Channel access, resolves the current retained state boundary, and returns `200 OK` with JSON carrying the retained MiniDoc Record material.
 4. Pinned-state read
    The client sends `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?state-id=<state-id>` with `Cookie: AMDP-Session=...`. The server verifies authenticated session and admitted Channel access, resolves the named retained state boundary, and returns `200 OK` with JSON carrying the retained MiniDoc Record material.
 5. Record submission
-   For create, the client sends `POST /ascp/<channel-uuid>/` with JSON declaring `record_type` and the initial submitted record, `prev_state_id=origin`, and no `state_id`. For later mutation, the client sends `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>` with JSON carrying `base-state-id` and the submitted record or maintenance mutation. The server verifies authenticated session, admitted Channel access, target MiniDoc identity, record type consistency, and prior-state basis before accepting the mutation and issuing the resulting `state-id`. Successful create returns `201 Created`; successful mutation returns `200 OK`.
+   For create, the client sends `POST /ascp/<channel-uuid>/` with JSON declaring `record_type` and the initial submitted record, `base-state-id=origin`, and no `state_id`. For later mutation, the client sends `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>` with JSON carrying an explicit operation discriminator, `base-state-id`, and the submitted record or maintenance mutation. The server verifies authenticated session, admitted Channel access, target MiniDoc identity, record type consistency, and prior-state basis before accepting the mutation and issuing the resulting `state-id`. Successful create returns `201 Created`; successful mutation returns `200 OK`.
 6. Span retrieval
    The client sends `GET /ascp/<channel-uuid>/<doc-id>.<suffix>?from-state-id=<state-id>[&to-state-id=<state-id>]` with `Cookie: AMDP-Session=...`. The server verifies authenticated session and admitted Channel access, resolves the retained span, and returns `200 OK` with JSON carrying the ordered retained records needed for client-side materialization.
 7. Truncation or compaction
-   The client sends `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>` with JSON carrying `base-state-id`, the retention cutoff, and any replacement baseline record required by the document model. The server verifies authenticated session, admitted Channel access, prior-state basis, and retention preconditions before updating the retained-history boundary and returning `200 OK` with the resulting `state-id`.
+   The client sends `PATCH /ascp/<channel-uuid>/<doc-id>.<suffix>` with JSON carrying an explicit operation discriminator, `base-state-id`, the retention cutoff, and any replacement baseline record required by the document model. The server verifies authenticated session, admitted Channel access, prior-state basis, and retention preconditions before updating the retained-history boundary and returning `200 OK` with the resulting `state-id`.
 
 These flows define where authentication ends, where Channel admission begins, and where MiniDoc-specific history operations occur.
 
@@ -783,15 +793,13 @@ Properties:
 - server-authoritative updates,
 - HTTPS API in the initial transport profile,
 - no offline editing requirement,
-- and no Collaborative MiniDoc Document synchronization in the initial interoperable profile.
+- and collaborative interoperability defined at the external transport, state, and retained-history boundary rather than by one fixed collaborative payload profile.
 
 In this model, MiniDoc updates are coordinated through the MiniDoc server.
 
 Each accepted MiniDoc Record creates exactly one new externally identifiable MiniDoc State boundary.
 
 Every write in the initial profile **MUST** identify the client’s expected prior state using `base-state-id`.
-
-The submitted MiniDoc Record also carries `prev_state_id` naming the predecessor state boundary for that retained transition. In ordinary updates, `base-state-id` and `prev_state_id` refer to the same prior accepted state. In creation, both use the reserved creation sentinel `origin`.
 
 This provides one common sequencing rule across Snapshot MiniDoc Documents, Collaborative MiniDoc Documents, and MiniDoc Logs.
 
@@ -825,6 +833,8 @@ The external MiniDoc Document identity, version semantics, and immutable referen
 
 This remains compatible with opaque server handling because the server coordinates accepted record order, prior-state basis, retained spans, and compaction boundaries without interpreting the collaborative operation semantics inside the protected payload.
 
+Informative example: one deployment might encapsulate Yjs update payloads inside the protected Layer-1 envelope while still following the same external MiniDoc history and retrieval semantics defined here.
+
 Clients derive collaborative frontier or state-vector information locally from the retained accepted history. The server-visible `state-id` tracks accepted protocol history boundaries, while client-private frontier state tracks collaborative convergence internals.
 
 Clients typically maintain both a confirmed accepted collaborative state and a working collaborative state. The confirmed state advances when new retained collaborative records are accepted and retrieved. The working state carries local tentative edits and merges accepted remote updates into the local editing view.
@@ -849,6 +859,8 @@ R3 extends the MiniDoc Log
 ```
 
 The authoritative history of a MiniDoc Log is the accepted ordered record sequence, and the current state is the materialized transcript represented by that sequence.
+
+One accepted MiniDoc Log record may represent one or more transcript or log entries. The protocol model does not require a strict one-entry-per-record mapping.
 
 Current and historical reads for MiniDoc Logs are likewise span-oriented. The client requests the retained record span needed to materialize the target transcript state using:
 
@@ -884,6 +896,8 @@ For a MiniDoc Log, current and pinned retrieval resolve to the retained ordered 
 
 When historical content has been pruned, the server can still serve current and retained historical material within the retained boundary while earlier pruned state boundaries are no longer available at that server.
 
+Requests for pruned historical state are expected to surface as `404 Not Found` in the HTTPS profile with structured JSON retention metadata explaining that the referenced state is no longer retained at that authority.
+
 For collaborative documents, retained-history management **MUST** preserve a valid replay or materialization path for every historical state that remains intended to be retrievable.
 
 ## **11.7 Truncation and compaction semantics**
@@ -908,6 +922,8 @@ After successful truncation:
 
 This means MiniDoc Log truncation advances the earliest retained transcript boundary without synthesizing a replacement baseline record.
 
+After truncation, the removed retained prefix is no longer retrievable from that authority unless it has been preserved through some separate retained path outside the truncated MiniDoc history.
+
 ### **11.7.2 Collaborative MiniDoc Document compaction**
 
 For a Collaborative MiniDoc Document, truncation is a baseline compaction operation.
@@ -926,7 +942,7 @@ After successful compaction:
 - later collaborative records remain retained and continue to apply after that replacement baseline,
 - and the compacted document remains readable without requiring the pruned collaborative prefix.
 
-The server stores and serves the baseline opaquely. An authorized Channel participant or designated compaction agent produces the baseline by materializing the collaborative state client-side and encoding it as one retained collaborative baseline record. The server is not required to verify semantic equivalence between that baseline and the replaced collaborative prefix, although authorized clients may verify equivalence locally.
+The server stores and serves the baseline opaquely. Any admitted writer may produce the baseline by materializing the collaborative state client-side and encoding it as one retained collaborative baseline record. The server is not required to verify semantic equivalence between that baseline and the replaced collaborative prefix, although authorized clients may verify equivalence locally.
 
 Pinned historical states that remain intended to be retrievable **MUST** retain a valid replay or materialization path after compaction. A deployment may therefore retain additional baselines, retained suffix ranges, or unpruned record segments as needed to preserve those pinned states.
 
@@ -999,7 +1015,7 @@ Implementations **MAY** store MiniDoc content using:
 
 Implementations **SHOULD** preserve stable immutable state identifiers independent of the underlying storage technique.
 
-Collaborative deployments should distinguish accepted retained history, client-local tentative collaborative state, and any retained baseline-plus-suffix replay plans introduced by compaction. Where collaborative compaction is used, authorized clients or designated compaction agents produce baseline records while the server continues to coordinate retained history opaquely.
+Collaborative deployments should distinguish accepted retained history, client-local tentative collaborative state, and any retained baseline-plus-suffix replay plans introduced by compaction. Where collaborative compaction is used, admitted writers produce baseline records while the server continues to coordinate retained history opaquely.
 
 Operational concerns that the eventual protocol specification will need to define more fully include:
 
@@ -1022,7 +1038,7 @@ This design note is intended to provide enough protocol-shape detail for a first
 - the exact MiniDoc Record metadata encoding,
 - and the complete error vocabulary for interoperable implementations.
 
-Within that framework, Snapshot MiniDoc Documents and MiniDoc Logs are ready to be specified as normative initial interoperable behaviors. Collaborative MiniDoc Documents already fit the AMDP architectural model and can either be specified in full or staged as a later interoperable profile while preserving the same core state-transition and retained-history model.
+Within that framework, Snapshot MiniDoc Documents, Collaborative MiniDoc Documents, and MiniDoc Logs fit one shared MiniDoc state-transition and retained-history model. The remaining work for collaborative documents is primarily the exact payload-profile and recovery specification detail, not the surrounding MiniDoc identity, admission, or history architecture.
 
 # **14. Error handling**
 
@@ -1115,10 +1131,10 @@ Each accepted record replaces the current document snapshot while preserving imm
 Illustrative retained-record lineage:
 
 ```text
-Create submit:   record_type=.txt,     prev_state_id=origin,      state_id=<absent>
-Server accepts:  record_type=.txt,     prev_state_id=origin,      state_id=bQ7mK9rTx2M
-Later submit:    record_type=.txt,     prev_state_id=bQ7mK9rTx2M, state_id=<absent>
-Server accepts:  record_type=.txt,     prev_state_id=bQ7mK9rTx2M, state_id=H3yLm2QvNc8
+Create submit:   record_type=.txt,     base-state-id=origin,      state_id=<absent>
+Server accepts:  record_type=.txt,     base-state-id=origin,      state_id=bQ7mK9rTx2M
+Later submit:    record_type=.txt,     base-state-id=bQ7mK9rTx2M, state_id=<absent>
+Server accepts:  record_type=.txt,     base-state-id=bQ7mK9rTx2M, state_id=H3yLm2QvNc8
 ```
 
 Pinned historical state example:
@@ -1145,10 +1161,12 @@ The document remains one stable MiniDoc Document while accepted records carry in
 Illustrative retained-record lineage:
 
 ```text
-R1 -> record_type=.collab, prev_state_id=origin,      state_id=S1
-R2 -> record_type=.collab, prev_state_id=S1,          state_id=S2
-R3 -> record_type=.collab, prev_state_id=S2,          state_id=S3
+R1 -> record_type=.collab, base-state-id=origin,      state_id=S1
+R2 -> record_type=.collab, base-state-id=S1,          state_id=S2
+R3 -> record_type=.collab, base-state-id=S2,          state_id=S3
 ```
+
+Informative note: the protected collaborative payload in `R2` or `R3` could encapsulate Yjs-style updates while preserving the same external MiniDoc history model.
 
 ### **18.2.1 Collaborative confirmed and working state example**
 
@@ -1162,7 +1180,7 @@ Working state:
 
 Outbound publication:
   derive collaborative MiniDoc Record U3 relative to confirmed state S2
-  submit U3 with prev_state_id=S2 and base-state-id=S2
+  submit U3 with base-state-id=S2
 
 Server acceptance:
   assign state_id=S3
@@ -1180,7 +1198,7 @@ This model keeps collaborative frontier derivation and local merge behavior on t
 Retained collaborative history before compaction:
   S1, S2, ... S40, S41, S42
 
-Authorized compaction agent:
+Admitted writer:
   materializes state S40 client-side
   emits retained baseline record B40 representing state S40
 
@@ -1208,10 +1226,10 @@ The current MiniDoc Log is the accumulated conversational transcript represented
 Illustrative retained-record lineage:
 
 ```text
-R1 -> record_type=.log, prev_state_id=origin, state_id=L1
-R2 -> record_type=.log, prev_state_id=L1,     state_id=L2
-R3 -> record_type=.log, prev_state_id=L2,     state_id=L3
-R4 -> record_type=.log, prev_state_id=L3,     state_id=L4
+R1 -> record_type=.log, base-state-id=origin, state_id=L1
+R2 -> record_type=.log, base-state-id=L1,     state_id=L2
+R3 -> record_type=.log, base-state-id=L2,     state_id=L3
+R4 -> record_type=.log, base-state-id=L3,     state_id=L4
 ```
 
 ## **18.4 Artipoint reference example**
@@ -1247,3 +1265,62 @@ The Artipoint payload can remain the stable generic MiniDoc URI while later anno
 - *ASCP Terminology Primer*.
 - RFC 3552, *Guidelines for Writing RFC Text on Security Considerations*.
 - RFC 6973, *Privacy Considerations for Internet Protocols*.
+
+# **Appendix A. Open issues (Informative)**
+
+This appendix records the issues that remain unresolved after the current design direction has been narrowed. The items in this appendix are informative and identify the questions that still need resolution before a fully interoperable RFC-style MiniDoc specification can be finalized.
+
+## **A.1 Collaborative payload profile and interoperability boundary**
+
+The current design fixes the external MiniDoc history, identity, and retrieval model for collaborative documents, but it does not yet define the final interoperability boundary for collaborative payloads.
+
+- Should a future formal specification standardize one collaborative payload profile, or continue to define interoperability only at the external transport and retained-history boundary?
+- If the external semantics remain profile-agnostic, what minimum collaborative payload invariants must still be standardized so independent implementations remain interoperable?
+- How should informative examples such as Yjs updates relate to any later formal collaborative profile work?
+
+## **A.2 Retrieval representation and replay-plan encoding**
+
+The current design allows collaborative and log retrieval to return either ordered retained records or a compaction-aware replay plan, but the exact encoding of those responses remains open.
+
+- What exact response-body shape should represent an ordered retained span versus a baseline-plus-suffix replay plan?
+- How must the server signal which replay representation it returned so the client can process it deterministically?
+- How should pinned-state retrieval be encoded when compaction has occurred and the requested state is reconstructed through a retained replay plan rather than a single retained record?
+
+## **A.3 HTTPS request and response schema definition**
+
+The HTTPS profile direction is settled, but the exact JSON and media-type contract for interoperable implementations remains unresolved.
+
+- What exact JSON body schemas should be used for create, read, update, truncate, and compact operations?
+- What exact success and error response fields should the formal HTTPS profile require?
+- What `Content-Type` and `Accept` requirements should the formal HTTPS profile impose?
+
+## **A.4 Collaborative conflict recovery and retry semantics**
+
+The current design requires conflict responses to return head-state and retention-boundary information, but the exact recovery procedure remains open.
+
+- What exact client and server behavior should be required after `409 Conflict`?
+- How much rebase and retry guidance should the formal specification standardize for collaborative clients?
+- Is additional collaborative recovery metadata needed beyond current head `state-id` and retained-history boundary information?
+
+## **A.5 Retention boundary semantics and historical availability**
+
+The note now fixes the high-level retained-history behavior, but some edge semantics at retention boundaries remain unresolved.
+
+- What exact behavior is required when a requested historical span intersects both retained and pruned history boundaries?
+- What structured retention metadata should be required in `404 Not Found` responses for pruned historical state?
+- How much retained-history precision should the formal specification require across Snapshot MiniDoc Documents, Collaborative MiniDoc Documents, and MiniDoc Logs?
+
+## **A.6 Cross-spec authorization and semantic authority boundaries**
+
+The MiniDoc layer now treats Channel admission symmetrically for reads and writes, but some higher-layer authority boundaries remain open for the eventual formal specification.
+
+- Should the formal MiniDoc specification say more about higher-layer write authorization semantics, or continue to leave them entirely to governance and application policy?
+- If MiniDoc URI-visible identity conflicts with payload-level or companion-spec metadata, which source should ultimately be authoritative?
+- What authority boundaries with companion ASCP specifications should be stated more explicitly in the eventual RFC-style specification?
+
+## **A.7 Remaining blockers for formal specification drafting**
+
+- Collaborative payload-profile standardization remains unresolved.
+- Precise HTTPS and JSON request and response schemas remain unresolved.
+- Replay-plan and compaction-aware retrieval encoding remains unresolved.
+- Collaborative conflict recovery semantics remain unresolved.
