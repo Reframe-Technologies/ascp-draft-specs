@@ -225,6 +225,10 @@ A **Snapshot MiniDoc Document** is a MiniDoc Document model in which each accept
 
 A **Collaborative MiniDoc Document** is a MiniDoc Document model in which accepted MiniDoc Records carry incremental collaborative change while preserving the same external MiniDoc identity, read, update, version, and history semantics as other MiniDoc Documents.
 
+Collaborative MiniDoc Documents materialize document state client-side from retained collaborative MiniDoc Records or from an equivalent retained baseline-plus-suffix replay plan that yields the same accepted state boundary.
+
+Collaborative MiniDoc Documents keep CRDT frontiers, state vectors, and similar convergence-internal synchronization artifacts client-private. Those artifacts inform client-side materialization and publication but are not part of the server-visible AMDP state model.
+
 Collaborative MiniDoc Documents will likely be implemented using OT, CRDT, or related conflict-avoiding collaborative techniques. Those techniques are informative implementation strategies for this document model.
 
 ## **5.9 MiniDoc Log**
@@ -320,6 +324,10 @@ The MiniDoc client interprets and validates:
 - decrypted document or transcript content,
 - application-level document meaning,
 - collaborative operation meaning for OT, CRDT, or related models,
+- confirmed collaborative frontier state,
+- working collaborative state containing tentative local edits where applicable,
+- CRDT state-vector or frontier derivation,
+- local merge and convergence behavior,
 - and any semantic validation that depends on the protected content itself.
 
 This split allows the server to coordinate admissibility, sequencing, and retained history without requiring application-level interpretation of MiniDoc Record payloads.
@@ -372,6 +380,8 @@ AMDP uses one shared state-transition invariant across all MiniDoc forms:
 - and one new immutable `state-id`.
 
 This invariant allows Snapshot MiniDoc Documents, Collaborative MiniDoc Documents, and MiniDoc Logs to share one common protocol model even though their record contents differ.
+
+For collaborative documents, one accepted MiniDoc Record may carry one or more collaborative operations. The enclosing MiniDoc Record nevertheless remains the atomic publication unit accepted or rejected by AMDP.
 
 For protocol purposes, the server needs to coordinate:
 
@@ -459,6 +469,37 @@ At the protocol layer, a Collaborative MiniDoc Document remains compatible with 
 
 A collaborative MiniDoc Record may contain one or more incremental collaborative operations, but the enclosing MiniDoc Record remains the atomic accepted update unit. Client-side materialization and conflict-resolution behavior therefore remain above the server's opaque-record coordination role.
 
+#### **8.1.2.1 Collaborative client materialization model**
+
+Collaborative MiniDoc clients maintain the materialized document state locally.
+
+The current collaborative model assumes two client-side materializations:
+
+- **Confirmed state** — the collaborative document materialized through the latest accepted retained MiniDoc state boundary known to the client.
+- **Working state** — the confirmed state plus tentative local edits that have not yet become accepted retained MiniDoc Records.
+
+Clients derive collaborative frontiers or state vectors from the confirmed state locally. Those frontier artifacts remain client-private and are used to:
+
+- prepare outbound collaborative updates,
+- merge newly accepted inbound updates,
+- and maintain a working view that remains responsive during local editing.
+
+When the client receives newly accepted retained collaborative records, it advances the confirmed state and then merges those accepted changes into the working state.
+
+#### **8.1.2.2 Collaborative publication model**
+
+Collaborative publication is expressed through ordinary MiniDoc Record submission against an accepted prior state boundary.
+
+For each outbound collaborative publication:
+
+- the client derives the submitted collaborative MiniDoc Record relative to its confirmed accepted state,
+- the client submits that record against `base-state-id`,
+- the submitted record may contain one or more collaborative operations,
+- the server validates only protocol-visible identity, admission, retained-history, and basis conditions,
+- and successful acceptance yields exactly one new `state-id`.
+
+CRDT frontiers, state vectors, and other convergence-internal synchronization values are derived client-side and are not required server-visible AMDP fields.
+
 ### **8.1.3 Shared MiniDoc Document invariants**
 
 Snapshot and Collaborative MiniDoc Documents share:
@@ -527,6 +568,8 @@ In the initial profile, every AMDP operation proceeds through these phases:
 4. Perform the requested read, write, span, or retention operation against the retained MiniDoc history.
 5. Return MiniDoc Records, or sufficient retained record material, for the requested state boundary.
 6. Validate and materialize the protected content client-side through the Layer-1 codec.
+
+For collaborative documents, frontier derivation, local merge behavior, and working-state maintenance occur client-side before submission and after retrieval.
 
 This model keeps content security and interpretation at the client boundary while allowing the server to enforce admission, sequencing, and retained-history semantics.
 
@@ -606,7 +649,7 @@ When retained MiniDoc Records are returned, they include `record_type`, `prev_st
 The current read model is type-specific:
 
 - Snapshot MiniDoc Documents **MUST** return exactly one retained record corresponding to the requested state.
-- Collaborative MiniDoc Documents **MUST** return the retained ordered record span needed for the client to materialize the requested state.
+- Collaborative MiniDoc Documents **MUST** return the retained ordered record span, or an equivalent retained baseline-plus-suffix replay plan, needed for the client to materialize the requested state.
 - MiniDoc Logs **MUST** return the retained ordered record span needed for the client to materialize the requested transcript or log state.
 
 The binding **MUST NOT** return only already-decoded application content in place of retained MiniDoc Record material.
@@ -782,6 +825,10 @@ The external MiniDoc Document identity, version semantics, and immutable referen
 
 This remains compatible with opaque server handling because the server coordinates accepted record order, prior-state basis, retained spans, and compaction boundaries without interpreting the collaborative operation semantics inside the protected payload.
 
+Clients derive collaborative frontier or state-vector information locally from the retained accepted history. The server-visible `state-id` tracks accepted protocol history boundaries, while client-private frontier state tracks collaborative convergence internals.
+
+Clients typically maintain both a confirmed accepted collaborative state and a working collaborative state. The confirmed state advances when new retained collaborative records are accepted and retrieved. The working state carries local tentative edits and merges accepted remote updates into the local editing view.
+
 Current and historical reads for Collaborative MiniDoc Documents are span-oriented. The client requests the retained record span needed to materialize the target state using:
 
 - `from-state-id`
@@ -831,11 +878,13 @@ Retention changes historical availability, not the abstract MiniDoc state model.
 
 For a Snapshot MiniDoc Document, current and pinned retrieval typically resolve to one retained record for the requested state boundary.
 
-For a Collaborative MiniDoc Document, current and pinned retrieval resolve to the retained span or equivalent retained representation needed for the client to materialize the requested state boundary.
+For a Collaborative MiniDoc Document, current and pinned retrieval resolve to the retained span, retained baseline plus suffix, or another equivalent retained replay plan needed for the client to materialize the requested state boundary.
 
 For a MiniDoc Log, current and pinned retrieval resolve to the retained ordered transcript span needed for the client to materialize the requested transcript state.
 
 When historical content has been pruned, the server can still serve current and retained historical material within the retained boundary while earlier pruned state boundaries are no longer available at that server.
+
+For collaborative documents, retained-history management **MUST** preserve a valid replay or materialization path for every historical state that remains intended to be retrievable.
 
 ## **11.7 Truncation and compaction semantics**
 
@@ -861,12 +910,14 @@ This means MiniDoc Log truncation advances the earliest retained transcript boun
 
 ### **11.7.2 Collaborative MiniDoc Document compaction**
 
-For a Collaborative MiniDoc Document, truncation is a compaction operation.
+For a Collaborative MiniDoc Document, truncation is a baseline compaction operation.
 
 The client supplies:
 
 - the cutoff `state-id`, and
 - one new baseline MiniDoc Record representing the materialized document state at that compaction boundary.
+
+The baseline record is a sealed retained collaborative record that represents the materialized collaborative state at the identified accepted boundary. Subsequent retrieval may materialize later states using that retained baseline plus later retained records.
 
 After successful compaction:
 
@@ -875,7 +926,9 @@ After successful compaction:
 - later collaborative records remain retained and continue to apply after that replacement baseline,
 - and the compacted document remains readable without requiring the pruned collaborative prefix.
 
-This is analogous to replacing an older edit history prefix with one retained baseline state while preserving later forward evolution.
+The server stores and serves the baseline opaquely. An authorized Channel participant or designated compaction agent produces the baseline by materializing the collaborative state client-side and encoding it as one retained collaborative baseline record. The server is not required to verify semantic equivalence between that baseline and the replaced collaborative prefix, although authorized clients may verify equivalence locally.
+
+Pinned historical states that remain intended to be retrievable **MUST** retain a valid replay or materialization path after compaction. A deployment may therefore retain additional baselines, retained suffix ranges, or unpruned record segments as needed to preserve those pinned states.
 
 ### **11.7.3 Snapshot MiniDoc Document retention**
 
@@ -945,6 +998,8 @@ Implementations **MAY** store MiniDoc content using:
 - or future OT and CRDT-oriented retained forms.
 
 Implementations **SHOULD** preserve stable immutable state identifiers independent of the underlying storage technique.
+
+Collaborative deployments should distinguish accepted retained history, client-local tentative collaborative state, and any retained baseline-plus-suffix replay plans introduced by compaction. Where collaborative compaction is used, authorized clients or designated compaction agents produce baseline records while the server continues to coordinate retained history opaquely.
 
 Operational concerns that the eventual protocol specification will need to define more fully include:
 
@@ -1094,6 +1149,46 @@ R1 -> record_type=.collab, prev_state_id=origin,      state_id=S1
 R2 -> record_type=.collab, prev_state_id=S1,          state_id=S2
 R3 -> record_type=.collab, prev_state_id=S2,          state_id=S3
 ```
+
+### **18.2.1 Collaborative confirmed and working state example**
+
+```text
+Confirmed state at S2:
+  accepted collaborative history through S2
+
+Working state:
+  confirmed state at S2
+  + local tentative edits T1 and T2
+
+Outbound publication:
+  derive collaborative MiniDoc Record U3 relative to confirmed state S2
+  submit U3 with prev_state_id=S2 and base-state-id=S2
+
+Server acceptance:
+  assign state_id=S3
+
+After retrieval of accepted record:
+  confirmed state advances to S3
+  working state replays local tentative edits on top of confirmed state S3
+```
+
+This model keeps collaborative frontier derivation and local merge behavior on the client while preserving one accepted retained history at the server.
+
+### **18.2.2 Collaborative baseline compaction example**
+
+```text
+Retained collaborative history before compaction:
+  S1, S2, ... S40, S41, S42
+
+Authorized compaction agent:
+  materializes state S40 client-side
+  emits retained baseline record B40 representing state S40
+
+Retained replay plan after compaction:
+  B40, S41, S42
+```
+
+Later collaborative retrieval can materialize state `S42` using the retained baseline for `S40` plus later retained suffix records. If a pinned historical state inside the compacted range must remain retrievable, the deployment preserves an additional replay path for that pinned state.
 
 ## **18.3 MiniDoc Log example**
 
