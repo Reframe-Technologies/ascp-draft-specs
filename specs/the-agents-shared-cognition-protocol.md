@@ -4,8 +4,8 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.64 — Informational (Pre-RFC Working Draft)  
-March 2026
+Version: 0.65 — Informational (Pre-RFC Working Draft)
+May 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -235,7 +235,7 @@ Each Articulation Statement expresses exactly one coordination operation. ASCP d
 - **Construction** — create a new Artipoint and relate it in a single operation
 - **Annotation** — refine or augment the interpretation of an existing Artipoint
 
-These expressions constitute the minimal vocabulary necessary to introduce, relate, and evolve context without requiring mutable shared state. The formal grammar and semantics of each statement form are defined in the companion specification **ASCP Artipoint Grammar**.
+These expressions constitute the minimal vocabulary necessary to introduce, relate, and evolve context without requiring mutable shared state. The formal grammar and structural effects of each statement form are defined in the companion specification **ASCP Artipoint Grammar**.
 
 Because every Articulation Sequence is immutable and author-attributed, the coordination log preserves the evolution of articulated perspectives—not merely their current resolution.
 
@@ -386,7 +386,7 @@ The purpose of the grammar is architectural rather than expressive. It ensures t
 
 - all coordination acts are represented as **structured, machine-parsable statements**;
 - collaborators and agents can operate on a **common, deterministic model** of articulation;
-- no application defines its own hidden semantics for meaning, relationships, or context;
+- no application hides coordination structure in private schemas or application-only state;
 - the coordination graph remains **composable**, **extensible**, and **interoperable** across tools;
 - articulation is constrained to **declarative statements**, avoiding computational or imperative complexity.
 
@@ -402,7 +402,7 @@ There are **no reserved types**, no built-in hierarchies, and no privileged sche
 
 The grammar provides only the constructs necessary for introducing Artipoints, relating them, annotating them, or constructing new composite meaning. Higher-level structures—such as Piles, Streams, Spaces, and other collaboration patterns—emerge purely from articulated relationships. This minimalism supports predictable reasoning, verifiable authorship, and clear provenance within the shared articulation log.
 
-The **formal definition** of the grammar—including its ABNF syntax, operator taxonomy, serialization rules, and validation semantics—is specified normatively in the companion document **ASCP Artipoint Grammar: A Structure for Shared Cognition**. That specification serves as the authoritative reference for implementers building parsers, encoders, or extensions to the operator set. This architectural document provides the conceptual context for understanding the grammar’s role within ASCP.
+The **formal definition** of the grammar—including its ABNF syntax, operator taxonomy, serialization rules, structural effects, and validation rules—is specified normatively in the companion document **ASCP Artipoint Grammar: A Structure for Shared Cognition**. That specification serves as the authoritative reference for implementers building parsers, encoders, or extensions to the operator set. This architectural document provides the conceptual context for understanding the grammar’s role within ASCP.
 
 # 14. Governance and Security
 
@@ -462,7 +462,7 @@ ASCP is organized into four architectural layers that maintain strict boundaries
 
 Layer 3 is where articulated context becomes interpretable and actionable. It materializes the coordination graph into user-specific views, reconstructing Spaces, Streams, Piles, Roles, Flags, and other structures from the immutable history produced by Layers 0–2.
 
-**Governance semantics are evaluated and applied at this layer by applications and agents.** While Layer 2 expresses governance rules and Layer 1 scopes visibility, Layer 3 determines how articulated policies apply within a specific runtime environment. Enforcement, delegation, permissions, and workflow-specific behaviors are therefore realized through Layer-3 application logic, not through lower protocol layers.
+**Governance semantics are evaluated and applied at this layer by applications and agents.** While Layer 2 represents governance articulations in canonical structural form and Layer 1 scopes visibility, Layer 3 determines how articulated policies apply within a specific runtime environment. Enforcement, delegation, permissions, and workflow-specific behaviors are therefore realized through Layer-3 application logic, not through lower protocol layers.
 
 Layer 3 also provisions the substrate beneath it: it determines which Channels exist, who receives key material, which Streams are distributed into which trust domains, and how replicas join or depart. Layers 1 and 0 treat these as configuration inputs and do not interpret their meaning.
 
@@ -470,18 +470,18 @@ ASCP places no constraints on presentation or workflow at Layer 3. The only arch
 
 ## **15.2 Layer 2 — Articulation Layer**
 
-Layer 2 defines the formal grammar and semantics through which coordination context is expressed. Artipoints and Articulation Statements form the immutable vocabulary used to describe relevance, relationships, roles, membership, Flags, governance policies, and all higher-level collaborative constructs.
+Layer 2 defines the formal grammar and canonical structural representation through which articulated coordination is expressed. Artipoint Expressions and Articulation Statements provide the immutable representational vocabulary used to encode relevance, relationships, roles, membership, Flags, governance policies, and all higher-level collaborative constructs.
 
 Layer 2 enforces ASCP’s core invariants:
 
-- all meaning is represented declaratively as Artipoints;
+- all articulated meaning is represented declaratively in canonical structural form;
 - structure emerges from articulated relationships, not predefined schemas;
 - the grammar is deterministic and machine-parsable;
-- any compliant implementation can interpret the coordination graph.
+- any compliant implementation can replay the coordination graph as structural history.
 
-Layer 2 defines the **semantic substrate** for the protocol suite. It provides the meaning and structure that Layers 1 and 0 transport and store, and that Layer 3 interprets and enforces.
+Layer 2 defines the **structural articulation substrate** for the protocol suite. It provides the canonical representation and structural effects that Layers 1 and 0 transport and store, and that Layer 3 interprets and enforces.
 
-**Technical specification:** The complete syntax, semantics, and parsing rules are defined in the *ASCP Artipoint Grammar* specification document.
+**Technical specification:** The complete syntax, structural effects, validation rules, and parsing rules are defined in the *ASCP Artipoint Grammar* specification document.
 
 ## **15.3 Layer 1 — Channels (Secure Distribution & Visibility Scoping)**
 
@@ -509,9 +509,9 @@ The flow of data through ASCP reflects the strict separation of responsibilities
 
 ## **16.1 Authoring and Articulation (Layer 2)**
 
-A participant or agent begins by expressing an articulation using the ASCP grammar. Layer 2 produces an **Articulation Sequence** containing one or more Articulation Statements. At this stage the sequence is a **pure articulation-layer construct**: it carries grammatical representations of meaning, references, relationships, governance expressions, roles, Flags, and other articulated structure — but it is not yet signed, encrypted, or bound to a distribution scope.
+A participant or agent begins by expressing an articulation using the ASCP grammar. Layer 2 produces an **Articulation Sequence** containing one or more Articulation Statements. At this stage the sequence is a **pure articulation-layer construct**: it carries canonical representations of articulated structure, references, relationships, governance expressions, roles, Flags, and other coordination structure — but it is not yet signed, encrypted, or bound to a distribution scope.
 
-Layer 2 defines articulation semantics only. It does not dictate visibility, distribution, or authorship verification.
+Layer 2 defines articulation syntax and structural form only. It does not dictate visibility, distribution, authorship verification, or Layer-3 interpretation.
 
 ## **16.2 Signing, Packaging, and Encryption (Layer 1)**
 
