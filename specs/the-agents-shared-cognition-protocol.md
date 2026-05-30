@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.66 — Informational (Pre-RFC Working Draft)
+Version: 0.67 — Informational (Pre-RFC Working Draft)
 May 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
