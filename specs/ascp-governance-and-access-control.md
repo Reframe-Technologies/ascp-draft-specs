@@ -2,7 +2,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.35 — Informational (Pre-RFC Working Draft)  
+Version: 0.35 — Informational (Pre-RFC Working Draft)
 March 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -234,8 +234,8 @@ All Governance attributes defined in this specification are **Coordination Const
 ## 6.1 Writer
 
 ```
-writer + <participant>  
-writer - <participant>
+writer + "<participant-uuid>"
+writer - "<participant-uuid>"
 ```
 
 Indicates who may articulate into the Structure.
@@ -243,7 +243,7 @@ Indicates who may articulate into the Structure.
 ## 6.2 Owner
 
 ```
-owner := <participant>
+owner := "<participant-uuid>"
 ```
 
 Defines the administrative steward of a Structure.
@@ -259,7 +259,7 @@ Defines explicit inheritance source.
 ## 6.4 Deny Semantics
 
 ```
-deny::<attribute> := <participant>
+deny::<attribute> := "<participant-uuid>"
 ```
 
 Denials override inherited and local positives.
@@ -267,7 +267,7 @@ Denials override inherited and local positives.
 ## 6.5 Expiration Semantics
 
 ```
-expiration::<attribute> := (<participant>, <timestamp>)
+expiration::<attribute> := "(<participant-uuid>, <timestamp>)"
 ```
 
 Expired grants MUST NOT be effective after the timestamp.
@@ -277,8 +277,8 @@ Expired grants MUST NOT be effective after the timestamp.
 ## 7.1 Member
 
 ```
-member + <identity-uuid>  
-member - <identity-uuid>
+member + "<identity-uuid>"
+member - "<identity-uuid>"
 ```
 
 The `member` attribute expresses semantic inclusion of a participant within a Construct. It defines participation and coordination visibility at the semantic layer and is evaluated according to the inheritance and override rules described in this specification.
@@ -292,14 +292,14 @@ Governance defines who is considered part of a Construct. Channels define **who 
 ## 7.2 Flag
 
 ```
-flag + <identity-uuid>  
-flag - <identity-uuid>
+flag + "<identity-uuid>"
+flag - "<identity-uuid>"
 ```
 
 Operations:
 
-- flag + \<identity-uuid> — user is actively tracking this Artipoint
-- flag - \<identity-uuid> — user is no longer tracking it
+- flag + "\<identity-uuid>" — user is actively tracking this Artipoint
+- flag - "\<identity-uuid>" — user is no longer tracking it
 
 Scope:
 
@@ -601,14 +601,14 @@ All optional attributes **MUST** adhere to the normative governance semantics de
 #### **9.2.4.1 Membership attributes**
 
 - e.g.,
-- member + \<participant-uuid>
-- member + \<group-uuid>
+- member + "\<participant-uuid>"
+- member + "\<group-uuid>"
 
 #### **9.2.4.2 Role attributes**
 
 Roles in the management of the group itself.
 
-- e.g., role::responsible + \<uuid>, role::owner + \<uuid>
+- e.g., role::responsible + "\<uuid>", role::owner + "\<uuid>"
 
 **9.2.4.3 Governance extensions**
 
@@ -695,7 +695,7 @@ This section defines how governance influences Channel state, how Keyframes expr
 
 ## **10.1 Channel Artipoints**
 
-A Channel Artipoint is a Layer-2 encoded Distribution Construct of type `channel` that declaratively records cryptographic and operational configuration to be interpreted by Layer-3 and realized by the Channel Encoder and Decoder at Layer-1 (e.g., encryption algorithms, signing requirements) and the Channel Access Key (CAK) at Layer-0.
+A Channel Artipoint is a Layer-2 encoded Distribution Construct of type `channel` that declares a governance-controlled distribution boundary. Layer-3 evaluates Channel governance and Keyframe history together to determine the cryptographic consequences provisioned to Layer-1 and Layer-0.
 
 ### **10.1.1 Canonical Form**
 
@@ -703,24 +703,19 @@ A Channel Artipoint is a Layer-2 encoded Distribution Construct of type `channel
 [uuid, timestamp,
   ["channel", "Hiring Team", "@HiringTeam"] .
   (
-    payload_cipher := "<cipher-id>",
-    message_signing := "<signing-id>",
-    channel_access_alg := "<access-id>",
     bootstrap := false
   )
 ]
 
 ```
 
-Layer-1 never reads these attributes directly; Layer-3 processes them and generates a provisioning configuration for Layer-1.
+Layer-1 never reads Channel attributes directly; Layer-3 processes them with the active Keyframe and generates provisioning configuration for lower layers.
 
 ### **10.1.2 Required Attributes**
 
-- `payload_cipher`: The symmetric cipher identifier used to determine whether Layer-1 applies JWE encryption to envelopes. Valid values are defined by Section 6.3 or use `"none"` to explicitly disable encryption and operate the Channel in cleartext. Note: In current implementations, @bootstrap Channel MUST use `"none"` as there is no defined mechanism for passing the symmetric key out-of-band. See **ASCP Bootstrap Process and Channel Discovery** for details.
-- `message_signing`: The signature algorithm required for Articulation Sequence / Channel Envelope signatures in this Channel. Determines the allowed JWS algorithms for message signing. All articulations MUST be signed using a secure algorithm.
-- `channel_access_alg`: The signature algorithm used for the Channel Access Key (CAK) credentials in the Layer-0 storage and synchronization protocol. This is an abstract policy field selecting a JOSE-defined value for Layer-0 use, including a value for `"none"` for open channels. The concrete CAP profile and verification rules are defined by the ALSP specification.
+A Channel Artipoint defines no required governance attributes beyond those mandated by the core Artipoint structure.
 
-The currently active Keyframe is derived by Layer-3 from articulated Keyframe history for that Channel.
+Cryptographic behavior for a Channel is selected by the active Keyframe's `crypto_profile`, not by low-level crypto-policy attributes on the Channel or Keyframe. The currently active Keyframe is derived by Layer-3 from articulated Keyframe history for that Channel.
 
 #### **10.1.3 Optional Governance Attributes**
 
@@ -739,7 +734,7 @@ Changes in governance state—such as adding or removing participants, modifying
 
 #### **10.1.4 Other Optional Attributes**
 
-- `bootstrap`: Boolean flag indicating if this is the organizational bootstrapping Channel. Special case for Channels without Keyframes (initial system Channel). Current implementations do not support encryption for a bootstrap Channel as there is no defined mechanism for passing the symmetric key out-of-band of any channel.
+- `bootstrap`: Boolean flag indicating if this is the organizational bootstrapping Channel. The bootstrap Channel is a special case whose initial cryptographic treatment is defined by the Bootstrap specification and lower-layer provisioning rules.
 
 ### **10.1.5 Example Channel Artipoint**
 
@@ -755,7 +750,9 @@ A **Keyframe** is a Layer-2 encoded Artipoint of type keyframe that declares the
 
 - identify a new cryptographic epoch,
 - reference the Channel they configure (via `supports {channel-uuid}`),
-- carry recipient-specific wrapped keys (as Layer-2 attributes),
+- select the epoch's `crypto_profile`,
+- carry recipient-specific state using `envelope::recipients` values,
+- MAY carry CAK public JWK material in the Keyframe payload,
 - provide immutable, auditable records of cryptographic state transitions.
 
 For new encryption operations, the active Keyframe is the newest articulated Keyframe supporting the Channel. A Keyframe MAY use `replaces` to make supersession lineage explicit and SHOULD do so for audit clarity.
@@ -770,21 +767,21 @@ Layer-1 and Layer-0 treat Keyframes as opaque objects.
 
 Layer-3 (Governance & Identity/Trust) is responsible for all semantic interpretation of governance and Keyframes. Layer-3 MUST:
 
-1. **Evaluate governance attributes**  
+1. **Evaluate governance attributes**
    Determine Channel participants, writers, owners, and role assignments.
-2. **Determine when a new cryptographic epoch is required**  
+2. **Determine when a new cryptographic epoch is required**
    Based on governance changes, rotation policy, or compromise conditions.
-3. **Interpret Keyframes**  
+3. **Interpret Keyframes**
    Resolve the active epoch, historical epochs, and the cryptographic state they represent.
-4. **Resolve participant sets**  
+4. **Resolve participant sets**
    Expand Groups, apply Virtual Groups, apply inheritance, apply denies/expirations.
-5. **Construct wrapped key envelopes**  
+5. **Construct wrapped key envelopes**
    For each eligible participant, generate or obtain the necessary cryptographic keys and wrap them using recipient public keys.
-6. **Produce and attach Keyframe payload attributes**  
-   Including JOSE kid identifiers, envelope metadata, and configuration values.
+6. **Produce and attach Keyframe recipient state**
+   Including `crypto_profile`, optional CAK public JWK payload material, and `envelope::recipients` entries containing recipient UUIDs and any required wrapped CKEs.
 7. **Provision Layers-1 and -0 with the resulting cryptographic material**, including:
    - active and historical AES Channel keys,
-   - Channel Access Key (CAK) for ALSP replication,
+   - Channel Access Key (CAK) material for ALSP replication when the active Keyframe carries a CAK,
    - identity certificates and trust anchors,
    - JOSE kid → key mappings.
 8. **Enforce key-usage invariants**, including:
@@ -847,13 +844,13 @@ For background on the RACI model, see:
 ASCP defines the following RACI-style role attributes:
 
 ```
-role::responsible := <participant(s)>  
-role::accountable := <participant(s)>  
-role::consulted := <participant(s)>  
-role::informed := <participant(s)>  
-role::approver := <participant(s)>  
-role::auditor := <participant(s)>  
-role::observer := <participant(s)>
+role::responsible := "<participant-uuid>"
+role::accountable := "<participant-uuid>"
+role::consulted := "<participant-uuid>"
+role::informed := "<participant-uuid>"
+role::approver := "<participant-uuid>"
+role::auditor := "<participant-uuid>"
+role::observer := "<participant-uuid>"
 ```
 
 - RACI roles are **governance attributes** attached to a Structure.
@@ -868,6 +865,7 @@ role::observer := <participant(s)>
 - Only one accountable participant is **RECOMMENDED**, though this specification does not enforce uniqueness.
 - All roles MAY be inherited unless overridden or explicitly denied.
 - Role attributes MUST contain only Identity or Group references (including Virtual Groups).
+- Multiple concrete Identity or Group references for the same role are represented as separate quoted participant values under the normal attribute operator model.
 
 ## **11.3 Notes (Informative)**
 
@@ -1034,7 +1032,7 @@ Bootstrap and ALSP MAY introduce provisional identity material needed for first 
 ## A.2 Inheritance Override Example
 
 ```
-inherits := default  
+inherits := default
 writer + "550e8400-e29b-41d4-a716-446655440013"
 deny::writer := "550e8400-e29b-41d4-a716-446655440014"
 ```

@@ -131,7 +131,7 @@ This section enumerates the companion specifications that comprise the ASCP prot
 | --------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Top-Level Architecture**              | **The Agents Shared Cognition Protocol** (this document)   | Defines the architectural model, conceptual framework, and cross-layer relationships for ASCP. | Architectural principles, protocol layering, conceptual primitives, non-normative overview; consolidated compliance matrix (informational). |
 | **Layer 2 — Articulation Layer**        | **ASCP Artipoint Grammar**                                 | Specifies the formal grammar for immutable, addressable coordination statements.               | Artipoint Expressions, Articulation Statements, Articulation Sequences, operator taxonomy, ABNF grammar, serialization requirements.        |
-| **Layer 1 — Secure Distribution Layer** | **ASCP Channels: Secure Distribution Layer Specification** | Defines the cryptographic envelope and distribution mechanism for Articulation Sequences.      | JWS/JWE processing, channel membership semantics, keyframes, key rotation, envelope formats, access control inputs.                         |
+| **Layer 1 — Secure Distribution Layer** | **ASCP Channels: Secure Distribution Layer Specification** | Defines the cryptographic envelope and distribution mechanism for Articulation Sequences.      | JWS/JWE processing, envelope formats, key selection from provisioned state, and application of evaluated access-control inputs.             |
 | **Layer 0 — Log and Transport Layer**   | **ASCP LogSync Protocol (ALSP)**                           | Specifies append-only log synchronization across replicas.                                     | Message formats, ordering rules, pull/push models, divergence detection, channel access proofs, error handling.                             |
 | **Identity & Trust**                    | **ASCP Identity & Trust**                                  | Establishes identity representation and authorship verification.                               | Key provisioning, trust-root anchoring, identity-certificate relationship semantics, signature verification rules, recovery mechanisms.    |
 | **Governance & Access Control**         | **ASCP Governance and Access Control**                     | Defines the declarative governance model for participation, access, and role semantics.        | Attribute definitions, inheritance rules, virtual groups, RACI-style roles, evaluation algorithm.                                           |
@@ -438,7 +438,7 @@ ASCP's trust model is built on immutable history, local verification, and scoped
 
 Verification is local-first. Each replica carries the materials necessary to evaluate trust, identity, and governance without relying on a central authority. Two replicas evaluating the same log will arrive at the same trust decisions, yielding deterministic interpretation and eliminating hidden mutable state.
 
-Trust domains are bounded by Channels. Each Channel defines its own visibility scope, keyframes, authenticated participants, and provenance boundaries. ASCP does not require global trust infrastructure or certificate transparency; trust arises within each Channel's articulated and cryptographically enforced boundary. As explained in the ASCP Trust & Identity Architecture, this model generalizes across personal, organizational, and federated deployments without *requiring* shared PKI or global coordination—though deployments may layer these in through articulated endorsements (see Section 14.5).
+Trust domains are bounded by Channels. Each Channel defines a visibility scope whose active cryptographic epoch is derived by Layer-3 from articulated Keyframe history and then enforced by lower-layer cryptographic processing. ASCP does not require global trust infrastructure or certificate transparency; trust arises within each Channel's articulated and cryptographically enforced boundary. As explained in the ASCP Trust & Identity Architecture, this model generalizes across personal, organizational, and federated deployments without *requiring* shared PKI or global coordination—though deployments may layer these in through articulated endorsements (see Section 14.5).
 
 ## **14.4 Security Properties Emergent from the Architecture**
 
@@ -485,15 +485,15 @@ Layer 2 defines the **structural articulation substrate** for the protocol suite
 
 ## **15.3 Layer 1 — Channels (Secure Distribution & Visibility Scoping)**
 
-While a Channel is defined semantically at Layer-3 as a Distribution Construct, Layer-1 realizes Channel semantics via the Channel Encoder/Decoder and envelope formats.
+While a Channel is defined semantically at Layer-3 as a Distribution Construct, Layer-1 applies the evaluated cryptographic consequences of that semantic state through the Channel Encoder/Decoder and envelope formats.
 
 Layer 1 governs how articulated context is distributed and who can see it. Channels define cryptographic visibility scopes: an Articulation Sequence sent to a Channel is accessible only to participants who hold the relevant keys.
 
-Layer 1 manages signing and encryption, Channel key material, keyframes, and the provenance boundaries of each trust domain. It ensures that all authorized participants receive a coherent view of the articulated context, while unauthorized parties cannot decrypt or store it.
+Layer 1 manages signing, encryption, and provisioned Channel key material. It ensures that recipients with the required provisioned keys can decrypt articulated context, while parties without those keys cannot read protected payloads.
 
 Layer 1 does not interpret the meaning of articulations and does not evaluate governance. It simply provides secure, authenticated distribution.
 
-**Technical specification:** Channel structure, encryption protocols, and membership management are detailed in the *ASCP Channels: Secure Distribution Layer Specification* document.
+**Technical specification:** Envelope formats and cryptographic processing are detailed in the *ASCP Channels: Secure Distribution Layer Specification* document. Channel membership and Keyframe semantics are defined at Layer-3 and supplied to Layer-1 only as evaluated provisioning inputs.
 
 ## **15.4 Layer 0 — Log and Transport Layer (ALSP)**
 

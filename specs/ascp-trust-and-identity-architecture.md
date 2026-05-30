@@ -422,9 +422,9 @@ To reduce ambiguity about “where a verifier should look” for specific classe
 
 | **Construct**             | **Role in the model**                                                            | **Primary contents / bindings**                                                                                                            | **How other constructs reference it**                                                                                                                   |
 | ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Identity Artipoint**    | Durable addressing reference for a participant (human/agent/system)              | **No key material.** Certificate bindings are expressed by incoming `supports` relations from Certificate Artipoints.                       | Referenced as the **Author** of Artipoint Records; referenced by Keyframes via `envelope::<recipient>` attribute naming (recipient identity UUID).      |
+| **Identity Artipoint**    | Durable addressing reference for a participant (human/agent/system)              | **No key material.** Certificate bindings are expressed by incoming `supports` relations from Certificate Artipoints.                       | Referenced as the **Author** of Artipoint Records; referenced by Keyframe `envelope::recipients` values using the recipient Identity Artipoint UUID.      |
 | **Certificate Artipoint** | Publishes operational cryptography and cryptographic intent                      | **JWK public key** (payload), declared `purpose::*`, optional `endorsement::*`, optional `recovery_envelope`.                              | References Identity Artipoints using `supports`; references older certificates via `replaces`; referenced by JOSE headers (e.g., `kid`) for key lookup. |
-| **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | Carries per-recipient **Channel Key Envelopes (CKEs)** as `envelope::<recipient-identity-uuid> := "<JWE>"` attributes (one per recipient). | Binds to Channels via `supports`; evaluated at Layer-3 to derive active and historical keyframe state and provision cryptographic consequences to lower layers. |
+| **Keyframe Artipoint**    | Defines a channel cryptographic epoch and distributes per-recipient key material | MAY carry CAK public JWK material in its payload and carries recipient state as `envelope::recipients` values. | Binds to Channels via `supports`; evaluated at Layer-3 to derive active and historical keyframe state and provision cryptographic consequences to lower layers. |
 | **RootCA Artipoint**      | Instance trust anchor                                                            | Distinguished certificate-like Security Construct that anchors certificate acceptance and onboarding provenance for the ASCP instance.     | Introduced via bootstrap history; used as the trust root for instance-level verification and optional external anchoring evidence.                      |
 
 ## **6.2.2 Identity trust provenance (Normative)**
@@ -718,7 +718,7 @@ Keyframes:
 
 Keyframes define *what cryptographic state exists*, not how it evolves over time.
 
-Keyframe semantics are evaluated at Layer-3; key material contained in envelope formats are provisioned opaquely into lower layers
+Keyframe semantics are evaluated at Layer-3; key material contained in envelope formats is provisioned opaquely into lower layers.
 
 ### 7.4.2 Canonical Form
 
@@ -730,16 +730,32 @@ Keyframe semantics are evaluated at Layer-3; key material contained in envelope 
 
 ### 7.4.3 Required Attributes
 
-- `version`
-- `payload_cipher`
-- `message_signing`
-- `channel_access_alg`
+- `crypto_profile`
 
-### 7.4.4 Envelope Attributes
+### 7.4.4 Payload
 
-Keyframes MUST distribute encrypted key material using `envelope::*` attributes, one per recipient.
+A Keyframe payload MAY be empty. An empty Keyframe payload means the Keyframe carries no Channel Access Key (CAK).
 
-### 7.4.5 Validation Rules
+When a Keyframe carries a CAK, the Keyframe payload MUST contain a valid public JWK for that CAK, following the same payload pattern used by Certificate Artipoints. The CAK key identifier is derived from the Keyframe UUID using the form `ascp:cak:<keyframe-uuid>` and MUST NOT be articulated as a Keyframe attribute.
+
+### 7.4.5 Recipient Attributes
+
+Keyframes express recipient-specific state using the stable Layer-2 attribute name `envelope::recipients`. Each articulated value carries one encoded recipient entry:
+
+```asciidoc
+envelope::recipients + "<recipient-identity-uuid>"
+envelope::recipients + "<recipient-identity-uuid>|<JWE compact serialization>"
+```
+
+The prefix before `|`, when a delimiter is present, MUST be the canonical UUID text of the intended recipient Identity Artipoint. The suffix after `|` MUST be a JOSE JWE in compact serialization form containing the recipient's Channel Key Envelope (CKE).
+
+The `+` operator is the canonical form for adding recipient entries. The `:=` operator is legal and resets the effective recipient-entry set to the supplied value. The `-` operator is legal under the Layer-2 operator model, but recipient removal for ordinary channel evolution SHOULD occur through Keyframe rotation rather than subtraction from an existing recipient-entry set.
+
+If the Keyframe payload contains CAK public JWK material, each effective `envelope::recipients` entry MUST include a JWE. If the Keyframe payload is empty, recipient entries MAY omit or include a JWE.
+
+Keyframe Artipoints MUST NOT articulate `payload_cipher`, `message_signing`, `channel_access_alg`, `cak_kid`, or `cak_public_jwk` as Keyframe attributes. Cryptographic behavior for the epoch is selected by `crypto_profile` and realized only through Layer-3 evaluation and lower-layer provisioning.
+
+### 7.4.6 Validation Rules
 
 Verifiers MUST ensure:
 
@@ -761,6 +777,7 @@ The following attribute families are defined:
 2. `purpose::*`
 3. `envelope::*`
 4. `recovery_envelope`
+5. `crypto_profile`
 
 ## **8.1 Endorsement Attribute Family**
 
@@ -894,15 +911,16 @@ Layer-1 MUST NOT interpret Keyframe or Certificate semantics directly; it MUST c
 
 ### **8.3.1 Overview**
 
-Envelope attributes carry **encrypted cryptographic material** on **Keyframe Artipoints**. They define payload schemas only; lifecycle and rotation semantics are defined elsewhere.
+Envelope attributes carry recipient-specific state on **Keyframe Artipoints**. They define value encoding and CKE payload schemas only; lifecycle and rotation semantics are defined elsewhere.
 
 Envelope attributes are expressed as:
 
-```json
-envelope::<recipient> := "<JWE compact serialization>"
+```asciidoc
+envelope::recipients + "<recipient-identity-uuid>"
+envelope::recipients + "<recipient-identity-uuid>|<JWE compact serialization>"
 ```
 
-The attribute value MUST be a JOSE JWE in compact serialization form as specified in Section 12.
+Each `envelope::recipients` value MUST be a UTF-8 string. The recipient prefix MUST be canonical UUID text identifying the intended recipient Identity Artipoint. When present, the JWE suffix MUST be separated from the recipient prefix by a single `|` delimiter and MUST be a JOSE JWE in compact serialization form as specified in Section 12.
 
 The JWE payload MUST be encrypted for the intended recipient using the recipient’s active **Certificate Artipoint** public key that is authorized for key agreement (i.e., purpose::keyAgreement is present and valid under Layer-3 trust evaluation).
 
@@ -910,14 +928,14 @@ The JWE kid header field MUST identify the specific recipient Certificate Artipo
 
 ### **8.3.2 Channel Key Envelope (CKE) Schema (Normative)**
 
-This schema defines the initial CKE plaintext format. Future versions MAY introduce additional envelope types. The decrypted JWE payload **MUST** contain the following JSON structure:
+This schema defines the initial CKE plaintext format. Future versions MAY introduce additional envelope types. The decrypted JWE payload **MUST** contain the following JSON structure, with `auth_key_jwk` present only when required by the associated Keyframe:
 
 ```json
 {
   "type": "channel-key-envelope",
   "version": "1.0",
   "aes_key_jwk": { ...JWK object holding Channel Symmetric Key... },
-  "auth_key_jwk": { ...JWK object holding CAK Private key... },
+  "auth_key_jwk": { ...optional JWK object holding CAK private key... },
   "created": "2025-07-26T21:13:00Z",
   "valid_from": "2025-07-26T21:13:00Z",
   "replaces": "ascp:keyframe:<uuid>",
@@ -928,13 +946,13 @@ This schema defines the initial CKE plaintext format. Future versions MAY introd
 - `type`: Identifies this CKE structure
 - `version`: Version of this envelope and key bundle
 - `aes_key_jwk`: JWK object containing the channel encryption key
-- `auth_key_jwk`: JWK object containing the CAK private key
+- `auth_key_jwk`: Optional JWK object containing the CAK private key. This field MUST be present when the Keyframe payload carries CAK public JWK material and MUST be absent when the Keyframe carries no CAK.
 - `created`: Timestamp when this envelope was created
 - `valid_from`: Start time for when this key should be used (optional). When specified, this field is informational only and MUST NOT be used to determine Keyframe activation; activation semantics are defined exclusively by articulated state as specified in Section 10.
 - `replaces`: References the UUID of a prior Keyframe being superseded by this envelope (optional). This field aids provenance tracing but is informational only and MUST NOT be interpreted as defining rotation order, activation, or lifecycle behavior.
 - `rotation_interval_days`: Recommended rotation interval in days (optional)
 
-`aes_key_jwk` and `auth_key_jwk` carry the channel symmetric encryption key and the Channel Access Key (CAK) private key, respectively. Layer-3 provisions the extracted key material to lower layers. Lower layers **MUST NOT** parse or interpret this structure directly.
+`aes_key_jwk` carries the channel symmetric encryption key. `auth_key_jwk`, when present, carries the Channel Access Key (CAK) private key corresponding to the CAK public JWK in the Keyframe payload. Layer-3 provisions the extracted key material to lower layers. Lower layers **MUST NOT** parse or interpret this structure directly.
 
 Key material lifecycle semantics are defined in Section 10 while full JOSE JWE encoding and validation details are specified in Section 12.
 
@@ -985,7 +1003,15 @@ Section 11 defines construction, decoding, and validation of `recovery_envelope`
 
 Some profiles MAY convey the applicable recovery public key outside `recovery_envelope`, such as a provisioning or bootstrap protocol in which the requester supplies a transient recovery key for one-time use. In such profiles, `recovery_cert_kid` MAY be omitted and the applicable recovery key is determined by the enclosing protocol context.
 
-## **8.5 Key Usage Evaluation Summary (Normative)**
+## **8.5 crypto\_profile Attribute (Normative)**
+
+The `crypto_profile` attribute names the cryptographic profile selected for a Keyframe epoch. Layer-3 evaluates the profile with the Keyframe payload and recipient state, then provisions the resulting cryptographic consequences to Layer-1 and Layer-0.
+
+A Keyframe Artipoint MUST include exactly one effective `crypto_profile` value. The value MUST be a non-empty string identifying an ASCP cryptographic profile understood by the Layer-3 evaluator. A Layer-3 evaluator MUST reject a Keyframe whose effective `crypto_profile` is absent, empty, duplicated, or unsupported.
+
+The `crypto_profile` value selects lower-layer behavior; it does not by itself indicate CAK presence. CAK presence is determined exclusively by whether the Keyframe payload carries CAK public JWK material.
+
+## **8.6 Key Usage Evaluation Summary (Normative)**
 
 This section defines how to determine whether a Certificate Artipoint is acceptable for a specific cryptographic use at a given **log-time**. Implementations MUST evaluate key usage deterministically from log evidence plus explicitly configured local policy inputs.
 
@@ -1017,9 +1043,9 @@ A verifier MUST evaluate key usage as follows:
 
 If all required checks succeed, the verifier MAY treat the certificate as an acceptable public key for `required_purpose` at log-time `t`.
 
-## **8.6 Example Attribute Annotations (Informative)**
+## **8.7 Example Attribute Annotations (Informative)**
 
-### **8.6.1 PKI Endorsement of Certificate Fingerprint**
+### **8.7.1 PKI Endorsement of Certificate Fingerprint**
 
 ```
 [ endorse-uuid, 2025-08-13T14:00:00Z,
@@ -1037,7 +1063,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ];
 ```
 
-### **8.6.2 OIDC Identity Binding**
+### **8.7.2 OIDC Identity Binding**
 
 ```
 [ verify-uuid, 2025-08-08T14:30:25Z,
@@ -1053,7 +1079,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ];
 ```
 
-### **8.6.3 DID-based Endorsement**
+### **8.7.3 DID-based Endorsement**
 
 ```
 [ did-endorse-uuid, 2025-08-20T10:00:00Z,
@@ -1069,7 +1095,7 @@ If all required checks succeed, the verifier MAY treat the certificate as an acc
 ];
 ```
 
-### **8.6.4 TSA Time Attestation**
+### **8.7.4 TSA Time Attestation**
 
 ```
 [ tsa-uuid, 2025-08-13T14:02:00Z,
@@ -1699,7 +1725,7 @@ A Channel Key Envelope is the mechanism by which **Keyframe Artipoints** distrib
 CKEs are **Layer-3 constructs**:
 
 - they are generated and interpreted exclusively by Layer-3 Trust & Identity evaluation,
-- they are represented using Layer-2 grammar as `envelope::*` attributes,
+- they are represented using Layer-2 grammar as `envelope::recipients` values,
 - and they are carried opaquely by Layer-1 as part of the Articulation Sequence / Channel Envelope codec path.
 
 ## **12.1 Scope and Non-Goals**
@@ -1721,12 +1747,15 @@ This section does **not** specify:
 
 ## **12.2 CKE Placement and Addressing**
 
-A CKE is carried as the value of an `envelope::<recipient>` attribute attached to a **Keyframe Artipoint**.
+A CKE is carried as the JWE suffix of an `envelope::recipients` value attached to a **Keyframe Artipoint**.
 
-- The attribute name suffix `<recipient>` MUST be the UUID of the intended recipient’s **Identity Artipoint**.
-- The attribute value MUST be a **JWE Compact Serialization** string containing a decryptable plaintext conforming to the schema in Section 8.3.2.
+- The attribute name MUST be `envelope::recipients`.
+- The value prefix before `|` MUST be the canonical UUID text of the intended recipient’s **Identity Artipoint**.
+- The value suffix after `|`, when present, MUST be a **JWE Compact Serialization** string containing a decryptable plaintext conforming to the schema in Section 8.3.2.
 
 The recipient key used for JWE encryption is selected via the JWE protected header `kid`, which MUST identify the recipient’s **Certificate Artipoint** key authorized for `purpose::keyAgreement`.
+
+When a Keyframe payload contains CAK public JWK material, each effective `envelope::recipients` entry for that Keyframe MUST include a JWE suffix. When a Keyframe payload is empty, a recipient entry MAY omit the JWE suffix.
 
 ## **12.3 Plaintext Schema (Normative)**
 
@@ -1736,8 +1765,11 @@ For clarity, the required semantic fields are:
 
 - `type` and `version` — schema identification
 - `aes_key_jwk` — a JWK representing the Channel symmetric encryption key
-- `auth_key_jwk` — a JWK representing the Channel Access Key (CAK) *private* key
 - `created` — creation timestamp
+
+The conditional semantic field is:
+
+- `auth_key_jwk` — a JWK representing the Channel Access Key (CAK) *private* key. This field is required only when the associated Keyframe carries CAK public JWK material.
 
 Any additional fields (e.g., `valid_from`, `replaces`, `rotation_interval_days`) are informational and MUST NOT be used to determine Keyframe activation or lifecycle semantics, which are defined exclusively by articulated state (Section 10). The concrete JOSE profile by which Layer-0 uses CAK material for Channel Access Proofs is defined by ALSP, not by this section.
 
@@ -1805,22 +1837,25 @@ To construct a CKE for a given Keyframe and recipient identity:
    - Determine the Certificate identifier to place in kid.
 2. **Construct the CKE plaintext**
    - Build the JSON object per Section 8.3.2.
-   - aes\_key\_jwk MUST represent the symmetric key material required by the Keyframe’s payload cipher requirements.
-   - auth\_key\_jwk MUST represent the CAK private key material required by the Keyframe’s channel access algorithm. The concrete CAP JOSE profile associated with that material is defined by ALSP.
+   - aes\_key\_jwk MUST represent the symmetric key material required by the Keyframe's evaluated `crypto_profile`.
+   - If the Keyframe payload contains CAK public JWK material, auth\_key\_jwk MUST represent the corresponding CAK private key material. The concrete CAP JOSE profile associated with that material is defined by ALSP.
+   - If the Keyframe payload is empty, auth\_key\_jwk MUST be omitted.
 3. **Encrypt as JWE compact**
    - Encode the plaintext JSON as UTF-8 bytes.
    - Produce a JWE Compact Serialization object using the recipient’s selected Certificate public key, with a Protected Header satisfying Section 12.4.
 4. **Attach to the Keyframe Artipoint**
-   - Add the attribute envelope::\<recipient-identity-uuid> := "\<JWE-compact-string>" to the Keyframe Artipoint.
+   - Add the attribute `envelope::recipients + "<recipient-identity-uuid>|<JWE-compact-string>"` to the Keyframe Artipoint.
 
 The resulting Keyframe Artipoint, once articulated as an Artipoint Record, provides log-anchored, replayable distribution of recipient-specific key material.
 
 ## **12.6 Recipient Decoding and Validation (Normative)**
 
-Upon encountering a Keyframe with `envelope::<recipient>` attributes, a recipient implementation MUST:
+Upon encountering a Keyframe with `envelope::recipients` attributes, a recipient implementation MUST:
 
 1. **Select the correct envelope**
-   - Identify the **envelope::\<recipient-identity-uuid>** attribute matching the recipient’s Identity Artipoint UUID.
+   - Evaluate the effective `envelope::recipients` value set under the Layer-2 operator model.
+   - Select entries whose recipient prefix matches the recipient's Identity Artipoint UUID.
+   - If the selected entry has no JWE suffix, no CKE is available from that entry.
 2. **Parse the JWE compact serialization**
    - Confirm it has exactly five segments.
    - Base64url-decode the Protected Header and confirm it is valid JSON.
@@ -1842,10 +1877,12 @@ Upon encountering a Keyframe with `envelope::<recipient>` attributes, a recipien
 5. **Validate plaintext schema**
    - Parse the decrypted plaintext as JSON.
    - Confirm it conforms to the schema in Section 8.3.2.
+   - If the Keyframe payload contains CAK public JWK material, confirm that auth\_key\_jwk is present and corresponds to that CAK.
+   - If the Keyframe payload is empty, confirm that auth\_key\_jwk is absent.
    - Reject if required fields are absent or malformed.
 6. **Provision cryptographic consequences**
    - Extract aes\_key\_jwk and provision the symmetric key material to Layer-1 for message confidentiality and decryption for the Keyframe epoch.
-   - Extract auth\_key\_jwk and provision the CAK private key material to Layer-0 for channel access proofs under the concrete CAP profile defined by ALSP (as required by the Channel access algorithm).
+   - When auth\_key\_jwk is present, extract it and provision the CAK private key material to Layer-0 for channel access proofs under the concrete CAP profile defined by ALSP.
    - Provisioning MUST be treated as pure data output of Layer-3 evaluation (see Section 10.7).
 
 ## **12.7 Security Considerations (Informative)**
@@ -1870,8 +1907,8 @@ Example Protected Header:
 
 Example attribute placement on a Keyframe Artipoint:
 
-```json
-envelope::550e8400-e29b-41d4-a716-446655440010 := "<jwe-compact-string>"
+```asciidoc
+envelope::recipients + "550e8400-e29b-41d4-a716-446655440010|<jwe-compact-string>"
 
 ```
 

@@ -718,17 +718,20 @@ The \<channel-uuid> value is authoritative for channel identity. The label is in
 
 A Channel Reference Artipoint MUST include the following required attributes:
 
-- **cak\_kid -** Identifies the Channel Access Key (CAK) associated with the channel. The value MUST be a stable key identifier of the form:
+- **cak\_kid -** Identifies the active Channel Access Key (CAK) associated with the channel, when one exists. When non-empty, the value MUST be a stable key identifier of the form:
 
 ```asciidoc
 ascp:cak:<keyframe-uuid>
 ```
 
-The `cak_kid` value SHALL identify the CAK associated with the channel's active keyframe epoch.
+The `cak_kid` value SHALL identify the CAK associated with the channel's active keyframe epoch. When the channel has no active CAK, `cak_kid` MUST be present with an empty string value.
 
-- **cak\_public\_keys -** One or more JWK objects representing Ed25519 public keys corresponding to the referenced CAK.
+- **cak\_public\_keys -** Zero or more JWK objects representing Ed25519 public keys corresponding to active or historical CAKs for the channel.
   - These JWK objects MUST conform to the Ed25519 public key requirements defined in the ALSP specification.
-  - At least one public key MUST be designated as **active**.
+  - When `cak_kid` is non-empty, exactly one public key corresponding to `cak_kid` MUST be designated as **active**.
+  - When `cak_kid` is empty, no CAK public key is active.
+  - The value MUST be empty when the channel has never had any CAKs.
+  - The value MAY remain non-empty when the channel has no active CAK but has historical CAKs.
   - Additional public keys MAY be included to support transitional overlap during CAK rotation.
 
 These attributes MUST be sufficient for a replica to locate the channel log and to perform **Layer-0 channel access authorization** using ALSP.
@@ -759,7 +762,8 @@ A replica validating a Channel Reference Artipoint MUST:
 1. Verify the signature on the Articulation Sequence / Channel Envelope carrying the channel-ref articulation under normal ASCP trust rules.
 2. Confirm that the author identity is traceable to the organizational trust anchor.
 3. Confirm that all required attributes are present and well-formed.
-4. Confirm that at least one CAK public key is designated as active.
+4. If `cak_kid` is non-empty, confirm that exactly one corresponding CAK public key is designated as active.
+5. If `cak_kid` is empty, confirm that no CAK public key is designated as active.
 
 Failure to validate a Channel Reference Artipoint MUST prevent discovery and replication authorization of the referenced channel.
 
@@ -1678,7 +1682,7 @@ This document deliberately excludes the following topics, which are addressed in
 
 - **Cryptographic primitives and algorithms:** Signature schemes, hashing algorithms, encryption mechanisms, and key derivation functions are defined in the ASCP Trust and Identity Architecture and related cryptographic profiles.
 - **Identity semantics and governance policy:** Rules governing identity verification, authorization, membership, delegation, and governance are defined outside this document.
-- **Channel encryption and key management internals:** Channel access keys (CAKs), key rotation mechanisms, and membership enforcement are defined in the ASCP Channels specification.
+- **Channel encryption and key management internals:** Channel access keys (CAKs), Keyframe rotation semantics, and membership enforcement are defined by the ASCP Trust and Identity, Governance, Channels, and ALSP specifications at their respective layer boundaries.
 - **Log synchronization mechanics and convergence guarantees:** Wire formats, message flows, replication algorithms, and convergence validation are defined exclusively by the ASCP LogSync Protocol (ALSP).
 - **Federation and cross-organizational trust:** Discovery, trust negotiation, or synchronization across multiple ASCP organizational instances are not defined here.
 - **Application- or domain-specific semantics:** This document does not define how applications interpret or act upon coordination artifacts once bootstrap is complete.

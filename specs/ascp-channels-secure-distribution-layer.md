@@ -691,9 +691,9 @@ Layer-1 **MUST** retain all cryptographic material necessary to process any enve
 
 ## **9.2 Provisioned Cryptographic State**
 
-For each **Keyframe-state**, Layer-1 is provisioned with a set of cryptographic material derived from evaluated Keyframes. This material constitutes the complete cryptographic state required by the Channel Codec.
+For each **Keyframe-state**, Layer-1 is provisioned with a set of cryptographic material and profile consequences derived from evaluated Keyframes. This material constitutes the complete cryptographic state required by the Channel Codec.
 
-Provisioned cryptographic state is supplied to Layer-1 via an implementation-defined provisioning interface from higher layers. Layer-1 consumes only cryptographic material and identifiers; it does not receive Grammar structures or governance metadata.
+Provisioned cryptographic state is supplied to Layer-1 via an implementation-defined provisioning interface from higher layers. Layer-1 consumes only cryptographic material, identifiers, and selected cryptographic parameters; it does not receive Grammar structures or governance metadata and does not parse `crypto_profile` attributes.
 
 For a given **Keyframe-state**, provisioned state **MUST** include:
 
@@ -787,6 +787,7 @@ Layer-1 expects the following categories of inputs to be provisioned by higher l
 - **Keyframe Cryptographic key material**, including:
   - Channel AES Keys for payload encryption and decryption, and
   - public verification keys for JWS signature validation.
+- **Evaluated profile consequences**, such as the permitted JOSE algorithms and whether payload encryption is enabled for the active Keyframe-state.
 - **Key identifiers (**`kid`**)** used to index and select cryptographic material.
 - **Epoch activation state**, indicating which **Keyframe-state** is currently active for envelope encoding.
 - **Author signing capability (sender-side)**, enabling JWS generation for `ascp:cert:<uuid>` identities. This MAY be provided as a private key, a secure keystore/HSM handle, or an abstract signing interface. The private signing key material itself is endpoint-local and not distributed via the Channel Log.

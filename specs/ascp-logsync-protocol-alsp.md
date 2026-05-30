@@ -1763,9 +1763,9 @@ Use the standard ALSP error message defined in Section 16.
 
 This section defines the **replication admission** mechanism by which a replica proves it is admitted to synchronize a specific Channel Log. Session authentication (Section 8) establishes **who** the peer is at Layer-0; replication admission establishes **which Channel Logs** that peer is permitted to synchronize. Any claims about human membership, organizational roles, or application-level meaning are out of scope for Layer-0.
 
-Replication admission is enforced through a **Channel Access Key (CAK)** and **Channel Access Proof (CAP)** verification, using the channel’s corresponding CAK public key distributed through the ASCP bootstrap process.
+Replication admission is enforced through a **Channel Access Key (CAK)** and **Channel Access Proof (CAP)** verification when the channel has an active CAK. ALSP resolves the corresponding CAK public key from validated ASCP channel discovery metadata.
 
-If a channel is configured with a CAK, the server MUST verify a CAP before providing any replication content for that channel.
+If a channel has an active CAK, the server MUST verify a CAP before providing any replication content for that channel. If a channel has no active CAK, CAP verification is not required for that channel.
 
 Non-normative note: This authorization mechanism permits Layer 0 to validate access without inspecting Layer-1 encrypted payloads, preserving end-to-end confidentiality while enforcing strict channel-level access control.
 
@@ -1784,12 +1784,12 @@ A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per channel key
   - **Private Key (sk):** Distributed only to replicas (or operators) intended to be **admitted to synchronize** the channel log, via secure, out-of-band mechanisms.
 - The CAK public key:
   - **MUST** be referenced by a stable kid value of the form: `ascp:cak:<keyframe_uuid>`
-  - **MUST** be present in the channel’s bootstrap manifest.
+  - **MUST** be present in validated ASCP channel discovery metadata while the CAK is active.
   - **MUST** be integrity-protected by a signature from the channel creator or governing authority (per bootstrap specification).
 - The CAK private key:
   - **MUST** be kept confidential.
   - **MUST NOT** be transmitted in cleartext within ALSP messages, ALSP protocol fields, or other directly inspectable ALSP artifacts.
-  - **MUST NOT** appear as a native ALSP protocol element or bootstrap-manifest field.
+  - **MUST NOT** appear as a native ALSP protocol element or channel discovery field.
   - **MAY** be provisioned through other ASCP layers only when carried inside recipient-encrypted higher-layer containers (for example, Keyframe-attached Channel Key Envelopes (CKEs)) such that ALSP does not expose or interpret the private key material.
   - **MUST** be accessible only to replicas (or operators) intended to be **admitted to synchronize** the channel log.
 
@@ -1797,9 +1797,9 @@ A **Channel Access Key (CAK)** is an Ed25519 keypair provisioned per channel key
 
 A CAK MAY be rotated. When rotated:
 
-- A new CAK public key **MUST** be published in an updated bootstrap manifest.
+- A new CAK public key **MUST** be published in updated ASCP channel discovery metadata.
 - The previous CAK MAY remain valid for a transition period, but servers **MUST** accept only CAKs explicitly listed as active.
-- Servers **MUST** reject CAPs referencing a kid not listed in the current or transitional manifest set.
+- Servers **MUST** reject CAPs referencing a kid not listed in the current or transitional discovery metadata set.
 
 Non-normative note: CAK rotation is typically triggered by membership changes, compromise, or organizational policy.
 
@@ -1832,7 +1832,7 @@ The protected header **MUST** contain:
 ```
 
 - `alg` **MUST** be "Ed25519" as the JOSE algorithm identifier for this CAP profile.
-- `kid` **MUST** match a CAK public key published via bootstrap channel manifest
+- `kid` **MUST** match an active CAK public key published via validated channel discovery metadata.
 - `typ` **MUST** be "alsp+cak".
 
 The protected header **SHOULD** be serialized using RFC 8785 Canonical JSON before BASE64URL encoding.
@@ -1877,7 +1877,7 @@ Upon receiving a sync\_request for a channel with an active CAK, the server **MU
    - alg is "Ed25519".
    - typ is "alsp+cak".
    - kid corresponds to a known CAK public key for the requested channel.
-3. **Resolve Public Key:** The kid value **MUST** be resolved using the current bootstrap manifest. Failure to resolve **MUST** result in an `unauthorized` error (replication admission failed).
+3. **Resolve Public Key:** The kid value **MUST** be resolved using the current validated channel discovery metadata. Failure to resolve **MUST** result in an `unauthorized` error (replication admission failed).
 4. **Verify Signature:** The server **MUST** verify the JWS signature using the resolved CAK public key. Signature failures **MUST** result in invalid\_auth.
 5. **Validate Payload Fields:** The server **MUST** ensure:
    - channel\_id matches sync\_request.channel\_id.
@@ -1994,7 +1994,7 @@ ascp:<type>:<uuid>
   - References the public key corresponding to the `identity_cert` exchanged during authentication.
 - `ascp:cak:<uuid>` - References a keyframe-bound Channel Access Key for Channel Log replication admission
   - Used in JWS protected headers for Channel Access Proofs (CAP)
-  - Resolved from the channel manifest contained in the @references channel.
+  - Resolved from validated ASCP channel discovery metadata.
   - References the Ed25519 public Channel Access Key (CAK) used for for the specific channel
 
 ## **13.2 Resolution Rules**
@@ -2005,7 +2005,7 @@ ascp:<type>:<uuid>
    - for the initial Provisioned Mode `auth_request`, do not perform `kid`-based resolution and instead use `recovery_cert` as defined in Section 10.4.1;
    - for Direct Mode authentication messages, use the presented `kid` to identify the certificate being authenticated for the session and, if existing state is already available for that `kid`, confirm that the presented certificate material matches it;
    - for post-authentication ALSP messages using `ascp:cert:<uuid>`, resolve the certificate from validated session/bootstrap/repository-visible state;
-   - for CAP verification using `ascp:cak:<uuid>`, resolve the CAK from the current bootstrap manifest as defined in Section 11.
+   - for CAP verification using `ascp:cak:<uuid>`, resolve the CAK from the current validated channel discovery metadata as defined in Section 11.
 4. Extract the public key from the resolved or presented JWK representation.
 5. Use that public key for signature verification.
 
@@ -2060,7 +2060,7 @@ This is compliant with RFC 7517 §4.2, which permits keys to omit the use field 
 
 **Session-Based Key Resolution**:
 
-- Layer 0 implementations SHOULD resolve JWK keys from session authentication material and applicable bootstrap/channel manifests at the time of use.
+- Layer 0 implementations SHOULD resolve JWK keys from session authentication material and applicable validated channel discovery metadata at the time of use.
 - All cached keys SHOULD be purged at the start of each new ALSP session.
 - Keys MUST be resolved and validated from previously logged articulation and/or the authentication and bootstrap material encountered during each session.
 
