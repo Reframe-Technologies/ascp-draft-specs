@@ -2,14 +2,14 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.78 — Informational (Pre-RFC Working Draft)
-March 2026
+Version: 0.80 — Informational (Pre-RFC Working Draft)
+May 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
 # **1. Status of This Document**
 
-This document is part of the ASCP specification suite and defines the Layer-2 grammar used to express immutable, addressable **Artipoint Expressions** within ASCP. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the grammar, articulation patterns, and structural coordination semantics it defines.
+This document is part of the ASCP specification suite and defines the Layer-2 grammar used to express immutable, addressable **Artipoint Expressions** within ASCP. It is published at this time to gather community feedback on the structure, clarity, and interoperability of the grammar, articulation patterns, and relationship declarations it defines.
 
 This is **not** an Internet Standards Track specification. It has not undergone IETF review, has no formal standing within the IETF process, and is provided solely for early review and experimentation. Implementations based on this document should be considered **experimental**.
 
@@ -19,7 +19,7 @@ Feedback from implementers, protocol designers, distributed systems researchers,
 
 # **2. Abstract**
 
-This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). The grammar specifies the structure of **Artipoint Expressions**, expressed as immutable, timestamped, and author-attributed **Articulation Sequences** that introduce and relate **Artipoints** within the ASCP coordination graph. This specification defines articulation patterns, operator semantics, payload formats, and the ABNF required for deterministic parsing and interoperability.
+This draft defines the Artipoint Grammar, the Layer-2 coordination syntax of the Agents Shared Cognition Protocol (ASCP). The grammar specifies the structure of **Artipoint Expressions**, expressed as immutable, timestamped, and author-attributed **Articulation Sequences** that represent authored Artipoints and relationship declarations for Layer-3 interpretation. This specification defines articulation patterns, operator forms, payload formats, and the ABNF required for deterministic parsing and interoperability.
 
 # **3. Introduction & Background**
 
@@ -42,9 +42,9 @@ The result is a system that captures not just the final state of collaborative w
 
 ASCP represents coordination exclusively through **immutable, append-only articulation**.
 
-Context is never modified, deleted, or overwritten. All evolution of meaning, structure, or relevance is expressed solely by the creation of additional Artipoints that extend the coordination graph. While interpretations of context may change over time, the historical record of articulation remains complete, addressable, and auditable.
+Context is never modified, deleted, or overwritten. All evolution of meaning, structure, or relevance is expressed solely by the creation of additional Artipoint Expressions and relationship declarations. While interpretations of context may change over time, the historical record of articulation remains complete, addressable, and auditable.
 
-This invariant applies uniformly across all articulation patterns and operator semantics defined in this specification.
+This invariant applies uniformly across all articulation patterns and operator forms defined in this specification.
 
 ## 3.2 Terminology Reference
 
@@ -54,16 +54,16 @@ Terminology in this document follows the definitions established in the **ASCP T
 
 The Artipoint Grammar defines a minimalist syntax for representing **acts of articulation** that introduce cognitive atoms—called Artipoints—as immutable, addressable statements. One or more **Articulation Statements** form an **Articulation Sequence**, where each Articulation Statement is a semicolon-terminated line that captures a complete, atomic declaration of intent or structure.
 
-#### The Coordination DAG
+#### Layering boundary and derived coordination DAG
 
-The **coordination DAG** is a directed acyclic graph with two types of elements:
+The **coordination DAG** is a Layer-3 derived semantic structure assembled by interpreting Layer-2 Articulation Statements. It has two types of elements:
 
-- **Nodes:** semantic Artipoints introduced by Articulation Statements
+- **Nodes:** semantic Artipoints represented by Articulation Statements
 - **Edges:** verb-operator articulations that connect those nodes
 
-The coordination DAG is global, append-only, and fully historical: once an Artipoint or edge is introduced, it remains addressable for the lifetime of the system. No articulation ever removes or mutates existing nodes or edges; all change occurs through monotonic extension of the graph.
+The Layer-2 grammar does not itself materialize or evaluate the coordination DAG. It defines the canonical syntactic forms from which Layer-3 derives the DAG. In that derived structure, Artipoints and relationship declarations are append-only and historical: once represented in articulated history, they remain addressable for the lifetime of the system. No articulation removes or mutates existing Artipoint representations or relationship declarations; all change is represented by additional Articulation Statements.
 
-The grammar is intentionally flat: **there is no nesting** within expressions. All composition happens via references to previously defined Artipoints using their UUID, creating a Directed Acyclic Graph (DAG) of shared cognition. This approach enables:
+The grammar is intentionally flat: **there is no nesting** within expressions. All composition is represented via references to previously defined Artipoints using their UUID, giving Layer-3 the information needed to derive a Directed Acyclic Graph (DAG) of shared cognition. This approach enables:
 
 - Machine-readable and human-relatable cognitive statements
 - Individual referenceability and auditability
@@ -73,24 +73,24 @@ The grammar is intentionally flat: **there is no nesting** within expressions. A
 
 ASCP’s core innovation is recognizing that collaboration requires a **persistent, shared cognitive substrate**—the articulated structure of how work is organized, connected, and reasoned about—distinct from the content itself. ASCP records the articulated structure of coordination: decisions about relevance, relationship, dependency, and organization, independent of the underlying content. This scaffolding persists and remains auditable even as underlying documents and data evolve.
 
-All Articulation Statements are applied to the coordination DAG in a strictly ordered, append-only manner; the evaluation model governing this application is defined in Section 9.
+Articulation Statements are interpreted by Layer-3 in Layer-0 log order; the ordering constraints for this interpretation are defined in Section 9.
 
-#### Structural Effects vs Semantic Effects
+#### Representation vs interpretation effects
 
 For the purposes of this specification, it is essential to distinguish between:
 
-- **Structural effects**, which describe how an articulation extends the coordination DAG (i.e., the introduction of new semantic Artipoints via Articulation Statements and/or new labeled edges); and
-- **Semantic effects**, which describe how articulated relationships are *interpreted* when materializing views of the graph within a given context.
+- **Layer-2 relationship declarations**, which describe the syntactic form by which an Articulation Statement represents an Artipoint or a labeled relationship; and
+- **Layer-3 interpretation effects**, which describe how articulated relationships are interpreted when deriving graph structures and materialized views within a given context.
 
-The Artipoint Grammar defines **structural effects only**, as recorded in the coordination DAG. Semantic effects — including activation, masking, prioritization, supersession, or displacement — are deterministic evaluation rules applied during interpretation and **MUST NOT** modify the underlying DAG.
+The Artipoint Grammar defines representation and relationship-declaration forms only. Interpretation effects, including activation, masking, prioritization, supersession, or displacement, are deterministic Layer-3 rules applied over those representations and **MUST NOT** modify the articulated history from which derived structures are assembled.
 
-This distinction is relied upon throughout the operator semantics defined in Section 8.
+This distinction is relied upon throughout the operator interpretation constraints defined in Section 8.
 
 ## 4.1 The Reference Principle
 
 Key design insight: **Artipoints capture cognitive structure, not dynamic content itself**.
 
-When an Artipoint needs to incorporate evolving content—documents, databases, real-time streams—that mutable state lives externally and is referenced through URIs in the payload. This is the **"bookmark pattern"**: rather than embedding a 50-page research paper directly, you create a cognitive statement about it with a URI to the external document. The paper may be updated, moved, or versioned, but the cognitive decision—the structural relationship between paper and project—remains immutable and auditable within the DAG.
+When an Artipoint needs to incorporate evolving content—documents, databases, real-time streams—that mutable state lives externally and is referenced through URIs in the payload. This is the **"bookmark pattern"**: rather than embedding a 50-page research paper directly, the articulation represents a statement about it with a URI to the external document. The paper may be updated, moved, or versioned, but the authored relationship between paper and project remains immutable and auditable in articulated history.
 
 Within an Articulation Sequence, each Artipoint Expression follows this non-normative pattern:
 
@@ -102,27 +102,27 @@ Where the `articulation-pattern` enables four fundamental types of articulation 
 
 ## 4.2 **Expression of Coordination Relationships**
 
-Verb-operators are the **only** grammar mechanism that introduce coordination relationships into the DAG.
+Verb-operators are the **only** grammar mechanism that declare coordination relationships for Layer-3 DAG derivation.
 
-Attributes and payloads MAY reference other Artipoints by UUID, but such references do **not** create structural edges and do **not** participate in DAG topology. Only connection and construction expressions using verb-operators produce coordination relationships.
+Attributes and payloads MAY reference other Artipoints by UUID, but such references do **not** declare structural edges and do **not** participate directly in derived DAG topology. Only connection and construction expressions using verb-operators declare coordination relationships.
 
 ## **4.3 Externalized Context Principle (Informative)**
 
 The Artipoint Grammar enforces a strict separation between **articulated structure** and **embedded content**.
 
-All contextual meaning—such as grouping, scope, precedence, supersession, evolution, or relevance—MUST be expressed through **relationships between Artipoints in the coordination graph**, never by embedding structure or semantics inside payloads.
+All contextual meaning—such as grouping, scope, precedence, supersession, evolution, or relevance—MUST be expressed through **relationship declarations between Artipoints** that Layer-3 can interpret, never by embedding structure or semantics inside payloads.
 
-Payloads are intentionally opaque to the grammar. They serve as **semantic anchors** to external or domain-specific content, while all composition, interpretation, and coordination semantics arise exclusively from:
+Payloads are intentionally opaque to the grammar. They serve as anchors to external or domain-specific content, while all composition, interpretation, and coordination meaning arises exclusively from:
 
-- the immutable sequence of Artipoints,
+- the immutable sequence of Articulation Statements,
 - the directed relationships introduced by operators, and
-- the positions of those Artipoints within the resulting DAG.
+- the positions of those Artipoints within Layer-3 derived structures.
 
 This design ensures that contextual meaning remains durable, auditable, and interoperable even as referenced content evolves independently. The grammar therefore captures the **persistent cognitive scaffolding** of collaboration, rather than transient or mutable state.
 
 ## **4.4 Immutability in Practice**
 
-Because Artipoints capture the persistent cognitive substrate rather than dynamic content, each statement becomes a permanent, auditable decision point in the DAG. This design enables rich collaborative histories: an AI agent's relevance judgment, a human's organizational decision, or a team's dependency mapping all accumulate as an immutable record—even as the documents, data, and deliverables they reference continue to evolve externally.
+Because Artipoints capture the persistent cognitive substrate rather than dynamic content, each statement becomes a permanent, auditable decision point in articulated history. This design enables rich collaborative histories: an AI agent's relevance judgment, a human's organizational decision, or a team's dependency mapping all accumulate as an immutable record—even as the documents, data, and deliverables they reference continue to evolve externally.
 
 **Fully formed Articulation Sequence Example**: The following example demonstrates a complete Articulation Sequence (as defined in Section 5.3) showing how an AI agent articulates a reference to a research paper rather than embedding the paper's text itself.
 
@@ -140,13 +140,13 @@ This creates a permanent record: "this agent determined this paper was highly re
 
 ## 4.5 Coordination Contexts (Informative)
 
-Artipoint type labels—such as Spaces, Streams, Piles, or other aggregate types—are semantic hints only. They carry no structural meaning. Structure is established exclusively through explicit verb-operator articulations in the coordination DAG.
+Artipoint type labels—such as Spaces, Streams, Piles, or other aggregate types—are semantic hints only. They carry no structural meaning at Layer-2. Layer-3 derives structure exclusively from explicit verb-operator articulations.
 
 In this specification, all structural grouping is represented explicitly through hierarchical parent–child relationships established by operators. No implicit or global scope semantics exist.
 
 ## 4.6 Structural Benefits
 
-This design enables teams to work within a common cognitive structure while maintaining appropriate privacy and scope. Team members contribute to the same underlying DAG—the shared "tree" of how work is organized—while potentially having private branches and nodes that others cannot see. Everyone benefits from the structural coherence without sacrificing information security or cognitive autonomy.
+This design enables teams to work within a common cognitive structure while maintaining appropriate privacy and scope. Team members contribute to articulated history from which Layer-3 derives the shared structure of how work is organized, while potentially having private branches and nodes that others cannot see. Everyone benefits from the structural coherence without sacrificing information security or cognitive autonomy.
 
 The result is true **shared cognition**: not just exchanging messages or files, but building and evolving a persistent, jointly-accessible model of how the work itself is structured and interconnected.
 
@@ -176,7 +176,7 @@ articulation-statement = artipoint-expression ";" [ end-of-line ]
 
 ```
 
-The Articulation Statement forms a "Cognitive Atom"—an atomic **act of articulation** that captures a specific coordination assertion made by an author at a specific time, whose semantic result is the introduction or modification of one or more Artipoints.
+The Articulation Statement forms a "Cognitive Atom"—an atomic **act of articulation** that captures a specific coordination assertion made by an author at a specific time, represented as the introduction, relationship, annotation, or construction of one or more Artipoint Expressions.
 
 ## 5.3 Articulation Sequences
 
@@ -191,35 +191,39 @@ articulation-sequence = "{" sequence-header ","
 where the `sequence-header` is defined as:
 
 ```clike
-sequence-header = seq-number "," author [ "," timestamp ]
+sequence-header = seq-id "," author [ "," timestamp ]
 ```
 
 The sequence header is an ordered tuple containing:
 
-- **seq-number** — An unsigned 64-bit sequence number (see Section 5.3.1)
+- **seq-id** — An unsigned 64-bit sequence identifier (see Section 5.3.1)
 - **author** — A UUID reference to an Identity Artipoint (see Section 5.3.2)
 - **timestamp** — An optional RFC 3339 UTC timestamp (see Section 5.3.3)
 
 All Articulation Statements within a sequence **MUST** share the same author. The sequence is passed from Layer-2 to Layer-1 Channels for distribution, where the author's credentials secure the sequence.
 
-### **5.3.1 Sequence Number Semantics**
+### **5.3.1 Sequence Identifier Semantics**
 
-The `seq-number` field has the following normative requirements:
+The `seq-id` field is an author-scoped sequence identifier. It supports correlation, local tracking, acknowledgement, and operational diagnostics for Articulation Sequences. It is not an ordering counter.
 
-- **Scope:** The `seq-number` is scoped to the author. Each author maintains an independent sequence.
-- **Monotonicity:** For a given author, `seq-number` values **MUST** be strictly monotonically increasing across successive sequences.
-- **Gaps:** Gaps in the sequence are permitted. Non-consecutive values do not constitute a validation error.
-- **Ordering Semantics:** The `seq-number` **MUST NOT** be used to alter evaluation or replay order. Evaluation order is determined solely by Layer-0 log order as specified in Section 9.
+The `seq-id` field has the following normative requirements:
+
+- **Scope:** The `seq-id` is scoped to the author. The tuple `(author, seq-id)` identifies a sequence for correlation purposes.
+- **Generation:** New `seq-id` values generated by an ASCP implementation **MUST** be drawn uniformly from a cryptographically strong random source over the unsigned 64-bit identifier space.
+- **Canonical Presence:** A canonical Articulation Sequence **MUST** contain a `seq-id` before it is rendered, signed, hashed, or passed to Layer-1 Channels.
+- **Draft Assignment:** A Layer-2 renderer **MAY** accept a pre-canonical draft sequence without a `seq-id`. If it does, the renderer **MUST** assign a valid `seq-id` before emitting canonical bytes and **MUST NOT** modify the assigned value after canonical rendering begins.
+- **Ordering Semantics:** The `seq-id` **MUST NOT** be used to alter interpretation or replay order. Interpretation order is determined solely by Layer-0 log order as specified in Section 9.
+- **Identity Semantics:** The tuple `(author, seq-id)` **MUST NOT** be treated as the durable graph identity of an Articulation Statement or as a Layer-2 replay deduplication key.
 - **Data Type and Range:** The value **MUST** be an unsigned 64-bit integer in the range `0` to `18446744073709551615` (inclusive).
-- **Validation:** Values outside the specified range **MUST** cause Layer-2 grammar validation to fail.
+- **Validation:** Values outside the specified range **MUST** cause Layer-2 grammar validation to fail. Validators **MUST NOT** require `seq-id` values for a given author to be consecutive or monotonic.
 
 ### **5.3.2 Sequence Author**
 
-The author field **MUST** contain a UUID reference to a valid Identity Artipoint. An Identity Artipoint is a Security Construct Artipoint that declares the existence of a participant—whether human, agent, or system component—with persistent, verifiable identity. This design ensures that authorship becomes an integral part of the immutable DAG of cognition: sequences and their contained statements are always authored, and authors are themselves first-class Artipoints within the coordination graph.
+The author field **MUST** contain a UUID reference to a valid Identity Artipoint. An Identity Artipoint is a Security Construct Artipoint that declares the existence of a participant—whether human, agent, or system component—with persistent, verifiable identity. This design ensures that authorship becomes an integral part of articulated history: sequences and their contained statements are always authored, and authors are themselves first-class Artipoints under Layer-3 interpretation.
 
 Validation of signatures, key relationships, and authorship correctness is defined in the ASCP Channels and ASCP Identity specifications. External identifiers such as email addresses, DIDs, or URLs **SHOULD** be stored as attributes within the Identity Artipoint and **MUST NOT** appear directly in the author field.
 
-The Artipoint Grammar expresses **what is being articulated**, not **who is permitted to articulate**, **who must receive it**, or **how it is enforced**. The grammar captures authorial intent and structural meaning only. Questions of permission, authority, participation, and accountability are articulated separately as governance metadata and evaluated by higher protocol layers. Questions of delivery, visibility, and cryptographic access are handled exclusively by ASCP Channels. This separation allows the grammar to remain minimal, deterministic, and universally interpretable, while supporting rich coordination semantics through composition rather than control logic.
+The Artipoint Grammar expresses **what is being articulated**, not **who is permitted to articulate**, **who must receive it**, or **how it is enforced**. The grammar captures canonical representation of authorial intent only. Questions of permission, authority, participation, accountability, and meaning are articulated separately as governance metadata and interpreted by Layer-3. Questions of delivery, visibility, and cryptographic access are handled exclusively by ASCP Channels. This separation allows the grammar to remain minimal, deterministic, and universally parseable, while supporting rich coordination interpretation through composition rather than control logic.
 
 ### **5.3.3 Sequence Timestamp**
 
@@ -227,7 +231,7 @@ The optional sequence timestamp represents the time of articulation sequence ass
 
 ## **5.4 Statement Recipients (Informational)**
 
-The Artipoint Grammar defines the structure and semantics of Artipoints and Articulation Sequences, but it **does not encode explicit recipients** or perform any distribution or access-control function.
+The Artipoint Grammar defines the representation of Artipoint Expressions and Articulation Sequences, but it **does not encode explicit recipients** or perform any distribution or access-control function.
 
 However, **governance itself is articulated through Artipoints**. Membership attributes, group definitions, and inheritance rules (normatively defined in the *ASCP Governance & Access Control* specification) determine **who is contextually part of a Space, Stream, or other collaborative structure**. These governance statements express the *semantic audience*—that is, who *ought* to participate in the coordination context.
 
@@ -238,16 +242,16 @@ In short:
 - **Governance Artipoints** and **Attributes** express *who is included* in a collaborative scope;
 - **Channels** where Articulation Sequences are distributed enforce *who actually receives* articulated statements.
 
-This maintains strict layering: governance lives at Layer-3, articulation semantics lives at Layer-2, while distribution and access-control are implemented via Layer-1.
+This maintains strict layering: governance and semantic interpretation live at Layer-3, articulation representation lives at Layer-2, while distribution and access-control are implemented via Layer-1.
 
 # **6. Articulation Patterns**
 
-The true power of Artipoints emerges through **composition**—how individual cognitive atoms combine to form complex, interconnected structures within the DAG. Each of the four articulation patterns defined below serves a distinct role in building and evolving this shared cognitive graph:
+The true power of Artipoints emerges through **composition**—how individual cognitive atoms combine under Layer-3 interpretation to form complex, interconnected structures. Each of the four articulation patterns defined below serves a distinct representational role:
 
-- **Instantiation** creates new nodes—the foundational cognitive atoms that represent tasks, documents, insights, or any meaningful unit of thought
-- **Connection** establishes directed edges between existing nodes, encoding relationships like dependencies, associations, or semantic links
-- **Construction** combines instantiation and connection in a single statement, simultaneously creating a new node and linking it to existing context
-- **Annotation** enriches existing nodes with metadata, state updates, or additional semantic information without changing the graph's topology
+- **Instantiation** represents new Artipoints—the foundational cognitive atoms that represent tasks, documents, insights, or any meaningful unit of thought
+- **Connection** declares directed relationships between existing Artipoints, representing dependencies, associations, or interpretive links
+- **Construction** combines instantiation and connection in a single statement, simultaneously representing a new Artipoint and linking it to existing context
+- **Annotation** enriches existing Artipoint representations with metadata, state updates, or additional information without declaring graph topology
 
 Together, these patterns enable incremental, collaborative construction of knowledge structures. An AI agent might instantiate a research task, connect it to relevant prior work, while a human collaborator annotates it with priority metadata. Each action adds to the permanent, auditable record of how the cognitive structure evolved—creating not just the final graph, but a complete history of the reasoning process that built it.
 
@@ -285,14 +289,14 @@ connection = uuidReference verb-operator uuidSet
 
 ```
 
-Establishes a semantic relationship between an existing source Artipoint (LHS) and one or more existing target Artipoints (RHS) using a verb-operator.
+Declares a relationship between an existing source Artipoint (LHS) and one or more existing target Artipoints (RHS) using a verb-operator.
 
 A connection:
 
-- **MUST** be evaluated atomically as a single articulation event with no intermediate states.
-- **MUST NOT** create new Artipoint&#x73;**.** Only construction or instantiation expressions create new Artipoints.
-- **MUST** apply all structural effects as determined by the operator semantics, including any hierarchical parent–child relationships defined for that operator.
-- Any visibility effects, including Sibling Displacement Behavior (SDB), are evaluated during the visibility phase defined in Section 8 and MUST NOT modify the coordination DAG.
+- **MUST** be represented atomically as a single articulation event with no intermediate states.
+- **MUST NOT** create a new Artipoint. Only construction or instantiation expressions create new Artipoints.
+- **MUST** declare relationships according to the operator interpretation constraints, including any hierarchical parent–child relationships associated with that operator.
+- Any visibility effects, including Sibling Displacement Behavior (SDB), are interpreted during the visibility phase defined in Section 8 and MUST NOT modify articulated history.
 
 See Section 8 for detailed definitions of hierarchical and Sibling Displacement Behavior effects.
 
@@ -307,10 +311,10 @@ A construction expression creates a new Artipoint and establishes a relationship
 
 A construction:
 
-- **MUST** be evaluated atomically as a single articulation event with no intermediate states. The new Artipoint instantiation and operator application occur in one inseparable operation.
+- **MUST** be represented atomically as a single articulation event with no intermediate states. The new Artipoint instantiation and operator declaration occur in one inseparable operation.
 - **MUST NOT** be treated as two separate operations (instantiation followed by connection).
-- **MUST** establish all structural effects through operator semantics, including the new Artipoint's initial hierarchical placement where applicable.
-- Any visibility effects, including Sibling Displacement Behavior (SDB), are evaluated during the visibility phase defined in Section 8 and MUST NOT depend on any special “birth context.”
+- **MUST** declare all relationships through operator interpretation constraints, including the new Artipoint's initial hierarchical placement where applicable.
+- Any visibility effects, including Sibling Displacement Behavior (SDB), are interpreted during the visibility phase defined in Section 8 and MUST NOT depend on any special “birth context.”
 
 See Section 8 for the definitions of hierarchical and Sibling Displacement Behavior effects.
 
@@ -366,27 +370,27 @@ Expressions **MUST NOT** appear inside payloads. Payloads are opaque content-bea
 
 The standard payload types (`json`, `string`, `uri`, `data`, `uuid`) are fixed and defined by this specification. Custom payload types MAY be used for experimental or domain-specific purposes and, if proven valuable, MAY be incorporated into future versions of this specification. Implementations encountering unrecognized payload types SHOULD treat the typed block as opaque content and preserve it without interpretation.
 
-# 8. Articulation Operator Taxonomy and Semantics
+# 8. Articulation Operator Taxonomy and Interpretation Constraints
 
-This section defines the semantic effects of operators, the deterministic construction of the structural forest of trees projection implied by those semantics, and the visibility rules governing projection. The canonical coordination log serves as the sole source of truth, and projection and visibility rules MUST NOT mutate canonical structure.
+This section defines the operator forms used by Layer-2 Articulation Statements and the deterministic Layer-3 interpretation constraints associated with those forms. The canonical coordination log serves as the sole source of truth for interpretation, and derived projection and visibility rules MUST NOT mutate articulated history.
 
 ## 8.1 General Principles
 
-Verb-operators define **coordination relationships** between Artipoints through append-only, immutable, and deterministic semantics. Their principles are:
+Verb-operators declare **coordination relationships** between Artipoints through append-only, immutable, and deterministic forms. Their principles are:
 
 - **Declarative Only:** Operators state relationships; they do not execute behavior, enforce policy, or encode workflow logic.
-- **Append-Only Structure:** Operators **MUST NOT** modify, delete, or overwrite any existing Artipoint or relationship. Each operator invocation extends the coordination DAG solely by the addition of new edges (and, in the case of constructions, a new node plus edges).
-- **Structural vs Semantic Effects:** Operators define **structural effects** on the coordination DAG (as defined in Section 4). Any masking, supersession, prioritization, or displacement behavior is a **semantic evaluation effect** applied during interpretation and **MUST NOT** alter the underlying DAG.
-- **Determinism:** Given an identical articulation history replayed in the same Layer-0 log order, all conforming implementations MUST derive identical hierarchical edge sets, forest projections, visibility results, and semantic evaluation outcomes.
-- **Forward Compatibility:** Operators MAY be extended with future verbs. Unrecognized operators **MUST** be admitted to the log and treated as **no-op** with respect to structural and semantic effects, while remaining fully addressable.
+- **Append-Only Representation:** Operators **MUST NOT** modify, delete, or overwrite any existing Artipoint representation or relationship declaration. Each operator invocation adds a new declaration to articulated history.
+- **Representation vs Interpretation:** Operators define Layer-2 relationship declarations. Any masking, supersession, prioritization, or displacement behavior is a Layer-3 interpretation effect and **MUST NOT** alter articulated history.
+- **Determinism:** Given an identical articulation history replayed in the same Layer-0 log order, all conforming implementations MUST derive identical hierarchical edge sets, forest projections, visibility results, and Layer-3 interpretation outcomes.
+- **Forward Compatibility:** Operators MAY be extended with future verbs. Unrecognized operators **MUST** be admitted to the log and treated as **no-op** with respect to derived relationship and interpretation effects, while remaining fully addressable.
 
-## 8.2 Evaluation Order
+## 8.2 Interpretation Order
 
-The evaluation order of applying the operator semantics proceeds through three deterministic, sequential phases, each building upon the output of the previous:
+Layer-3 interpretation of operator declarations proceeds through three deterministic, sequential phases, each building upon the output of the previous:
 
-1. **DAG Construction:** Replay all Articulation Statements in canonical log order to construct the immutable coordination DAG. This phase instantiates all nodes and derives all structural edges (topological, hierarchical, and semantic) according to the grammar. Output: a complete, append-only DAG that serves as the authoritative record and cannot be modified by subsequent articulations or phases.
-2. **Hierarchical Forest Projection:** Evaluate hierarchical operators in log order to project a "forest of trees" structure from the DAG. This phase organizes canonical nodes into parent–child relationships and determines occurrence placement within the forest. Output: a hierarchical forest where each canonical node may have multiple occurrences across different tree positions. This projection depends entirely on Phase 1's DAG and establishes the structural hierarchy for Phase 3.
-3. **Visibility and Masking Application:** Apply visibility and masking rules from Sibling Displacement Behavior (SDB) operators in log order. This phase determines which occurrences remain visible, which are masked, and which are superseded based on operator semantics. Output: final visibility state for each occurrence. This phase depends on Phase 2's forest structure and does not modify the DAG or forest topology—only visibility.
+1. **DAG Derivation:** Interpret all Articulation Statements in canonical log order to derive the immutable coordination DAG. This phase derives nodes and structural edges from Layer-2 representations and relationship declarations. Output: a complete, append-only derived DAG that cannot be modified by subsequent articulations or phases.
+2. **Hierarchical Forest Projection:** Interpret hierarchical operators in log order to project a "forest of trees" structure from the DAG. This phase organizes canonical nodes into parent–child relationships and determines occurrence placement within the forest. Output: a hierarchical forest where each canonical node may have multiple occurrences across different tree positions. This projection depends entirely on Phase 1's DAG and establishes the structural hierarchy for Phase 3.
+3. **Visibility and Masking Application:** Apply visibility and masking rules from Sibling Displacement Behavior (SDB) operators in log order. This phase determines which occurrences remain visible, which are masked, and which are superseded based on operator interpretation constraints. Output: final visibility state for each occurrence. This phase depends on Phase 2's forest structure and does not modify the DAG or forest topology—only visibility.
 
 No phase backtracks or modifies earlier results.
 
@@ -415,20 +419,20 @@ a directed parent→child edge MUST be derived according to the following table 
 
 ### 8.3.2 Non-Hierarchical Operators
 
-The following operators affect semantics or visibility only and MUST NOT create or modify parent–child relationships:
+The following operators affect Layer-3 interpretation or visibility only and MUST NOT create or modify parent–child relationships:
 
-| Verb       | Type                 | Hierarchy Effect | SDB? |
-| ---------- | -------------------- | ---------------- | ---- |
-| references | semantic link        | None             | No   |
-| replaces   | semantic override    | None             | Yes  |
-| promotes   | elevation            | None             | No   |
-| removes    | structural exclusion | None             | Yes  |
+| Verb       | Type                  | Hierarchy Effect | SDB? |
+| ---------- | --------------------- | ---------------- | ---- |
+| references | interpretive link     | None             | No   |
+| replaces   | interpretive override | None             | Yes  |
+| promotes   | elevation             | None             | No   |
+| removes    | structural exclusion  | None             | Yes  |
 
-See §8.5 for the semantics of Sibling Displacement Behavior (SDB).
+See §8.5 for the interpretation constraints of Sibling Displacement Behavior (SDB).
 
 ## 8.4 Forest Projection Model
 
-The Forest Projection Model describes how the immutable canonical log (Phase 1, §8.2) is transformed into a hierarchical forest structure (Phase 2, §8.2). This model distinguishes between **canonical nodes**—the immutable log entities that never change—and **occurrences**—the placements of those nodes within the projected forest. The forest construction process is deterministic and mandatory: it depends solely on hierarchical operator semantics applied in canonical log order, and it is completely unaffected by visibility rules (Phase 3, §8.2), which are applied non-destructively afterward. The result is a proper forest of trees where canonical nodes may be shared across multiple hierarchical contexts, enabling reference stability and semantic identity without introducing cycles or violating tree structure.
+The Forest Projection Model describes how the immutable canonical log (Phase 1, §8.2) is interpreted into a hierarchical forest structure (Phase 2, §8.2). This model distinguishes between **canonical nodes**—the immutable interpreted entities that never change—and **occurrences**—the placements of those nodes within the projected forest. The forest construction process is deterministic and mandatory: it depends solely on hierarchical operator interpretation constraints applied in canonical log order, and it is completely unaffected by visibility rules (Phase 3, §8.2), which are applied non-destructively afterward. The result is a proper forest of trees where canonical nodes may be shared across multiple hierarchical contexts, enabling reference stability and semantic identity without introducing cycles or violating tree structure.
 
 ### 8.4.1 Canonical Nodes and Occurrences
 
@@ -443,10 +447,10 @@ However, the same canonical node may appear as multiple distinct occurrences in 
 The structural projection MUST be constructed deterministically by iterating through each hierarchical operator in canonical log order (as defined in §9) and executing the following steps for each operator:
 
 1. Extract the LHS and RHS Artipoints from the operator statement.
-2. Apply the operator's hierarchical semantics (as defined in §8.3.1) to derive parent→child occurrence relationships.
+2. Apply the operator's hierarchical interpretation constraint (as defined in §8.3.1) to derive parent→child occurrence relationships.
 3. Materialize each derived relationship by creating or updating the corresponding parent and child occurrences in the forest.
 
-This construction phase is deterministic because it depends **solely** on hierarchical operator semantics applied in canonical log order. The algorithm is **explicitly unaffected** by Sibling Displacement Behavior (SDB) rules, which are applied only during the subsequent visibility evaluation phase (§8.5).
+This construction phase is deterministic because it depends **solely** on hierarchical operator interpretation constraints applied in canonical log order. The algorithm is **explicitly unaffected** by Sibling Displacement Behavior (SDB) rules, which are applied only during the subsequent visibility evaluation phase (§8.5).
 
 The outcome of this phase is a **forest of tree occurrences**. Because the same canonical node may be referenced by multiple hierarchical operators, a single canonical node can appear as multiple distinct occurrences in different trees, each with its own parent and position. All parent–child relationships are fully materialized and deterministic.
 
@@ -456,7 +460,7 @@ An unorganized node is a canonical node with zero parent edges and zero child ed
 
 In the canonical projection, each unorganized node MUST appear as a separate single-node tree within the forest. This ensures deterministic, interoperable forest structure across all conforming implementations.
 
-Implementations MAY optionally introduce a virtual root occurrence in the view projection to group unorganized nodes for client processing convenience. This virtual root exists in the view layer only and MUST NOT modify the canonical DAG.
+Implementations MAY optionally introduce a virtual root occurrence in the view projection to group unorganized nodes for client processing convenience. This virtual root exists in the view layer only and MUST NOT modify the derived DAG.
 
 ## 8.5 Sibling Displacement Behavior (SDB)
 
@@ -519,17 +523,17 @@ Displacement evaluation applies only among direct sibling occurrences under the 
 
 If a child occurrence C is hidden, the subtree rooted at C remains navigable in the view. Visibility flags for nodes within that subtree are still computed independently by SDB rules and MUST NOT be forcibly overridden by parent visibility.
 
-Visibility evaluation MUST NOT modify canonical nodes, canonical edges, or forest topology.
+Visibility evaluation MUST NOT modify derived nodes, derived edges, or forest topology.
 
 ## 8.6 Detailed Description of each Operator
 
-The operators described below appear within **Articulation Statements** as defined in Section 5. Each operator follows the same invariant pattern: articulation extends the coordination DAG with new relationships, while any supersession or exclusion semantics are applied only during interpretation and only among sibling occurrences within the projected forest as defined in Section 8.5.
+The operators described below appear within **Articulation Statements** as defined in Section 5. Each operator follows the same invariant pattern: articulation declares relationships for Layer-3 interpretation, while any supersession or exclusion behavior is applied only during interpretation and only among sibling occurrences within the projected forest as defined in Section 8.5.
 
 For clarity, the examples in the subsections below show individual articulation statements. In practice, per the grammar defined in Section 5.1, all such statements appear within an enclosing `articulation-sequence` that includes a `sequence-header` as defined in Section 5.3.
 
 ### 8.6.1 references
 
-Declares that the LHS Artipoint semantically refers to each RHS Artipoint without implying dependency, structural inclusion, or ordering semantics.
+Declares that the LHS Artipoint refers to each RHS Artipoint without implying dependency, structural inclusion, or ordering semantics.
 
 Example:
 
@@ -546,7 +550,7 @@ Example:
 
 ### 8.6.2 replaces
 
-The RHS remains immutable in the coordination DAG but MUST be hidden under any parent occurrence where both LHS and RHS occur as sibling children.
+The RHS remains part of the derived coordination DAG but MUST be hidden under any parent occurrence where both LHS and RHS occur as sibling children.
 
 Example:
 
@@ -614,7 +618,7 @@ Example:
 
 ### 8.6.6 promotes
 
-Declares that the LHS Artipoint is an elevated form of RHS, establishing a semantic relationship without affecting hierarchy, visibility, or displacement.
+Declares that the LHS Artipoint is an elevated form of RHS, establishing an interpretive relationship without affecting hierarchy, visibility, or displacement.
 
 Example:
 
@@ -623,7 +627,7 @@ Example:
   [stream, "Live Workstream", uuidOldPile] promotes {uuidOldPile} ];
 ```
 
-*A stream promotes an earlier pile, establishing a semantic elevation relationship without altering hierarchy or visibility.*
+*A stream promotes an earlier pile, establishing an interpretive elevation relationship without altering hierarchy or visibility.*
 
 ### 8.6.7 annotates
 
@@ -679,7 +683,7 @@ uuidPile adds {uuidNewDoc};
 
 Declares that the LHS Artipoint hides the child occurrence of RHS under LHS.
 
-The RHS remains immutable in the coordination DAG. Only the specific child occurrence under LHS is hidden; other occurrences of RHS under different parents are unaffected.
+The RHS remains part of the derived coordination DAG. Only the specific child occurrence under LHS is hidden; other occurrences of RHS under different parents are unaffected.
 
 ```
 uuidPile removes {uuidOldDoc};
@@ -687,48 +691,48 @@ uuidPile removes {uuidOldDoc};
 
 *Removes a document from a collection.*
 
-# **9. Articulation Evaluation Model (Normative)**
+# **9. Articulation Interpretation Model (Normative)**
 
-This section defines the **evaluation model** governing how Articulation Statements are applied to the coordination DAG over time. It specifies the authoritative ordering, replay guarantees, and lifecycle rules under which the structural and semantic definitions in this specification MUST be interpreted.
+This section defines the **interpretation model** governing how Layer-3 derives structures from Layer-2 Articulation Statements over time. It specifies the authoritative ordering, replay guarantees, and lifecycle rules under which the relationship declarations in this specification MUST be interpreted.
 
-This section does **not** define operator semantics, scope rules, or Scoped Displacement Behavior (SDB). Those behaviors are defined exclusively in Section 8 and MUST be applied in accordance with the evaluation model defined here.
+This section does **not** define operator forms, scope rules, or Scoped Displacement Behavior (SDB). Those behaviors are defined exclusively in Section 8 and MUST be applied in accordance with the interpretation model defined here.
 
 ## **9.1 Log-Order Invariant**
 
-All Articulation Statements MUST be evaluated **strictly in the order they are received from Layer-0 log replay**.
+All Articulation Statements MUST be interpreted **strictly in the order they are received from Layer-0 log replay**.
 
-- Layer-0 log order is the **sole authoritative ordering source** for Layer-2 evaluation.
+- Layer-0 log order is the **sole authoritative ordering source** for Layer-3 interpretation of Layer-2 Articulation Statements.
 - Implementations MUST NOT reorder, buffer, batch, delay, speculate on, or retroactively reinterpret Articulation Statements.
-- Within a single Articulation Sequence, Articulation Statements MUST be applied **in sequence order**.
+- Within a single Articulation Sequence, Articulation Statements MUST be interpreted **in sequence order**.
 
-Metadata — including timestamps, UUID values (including UUIDv7), payload contents, or operator types — MUST NOT be used to alter evaluation order.
+Metadata — including timestamps, UUID values (including UUIDv7), payload contents, or operator types — MUST NOT be used to alter interpretation order.
 
-## **9.2 Append-Only Replay Semantics**
+## **9.2 Append-Only Replay Rules**
 
-Evaluation of Articulation Statements is **monotonic and append-only**.
+Interpretation of Articulation Statements is **monotonic and append-only**.
 
-- Each Articulation Statement is applied exactly once, at the time it is encountered during replay.
-- No previously applied structural or semantic result may be undone, reordered, or re-evaluated due to later statements.
+- Each Articulation Statement is interpreted exactly once, at the time it is encountered during replay.
+- No previously derived representation or interpretation result may be undone, reordered, or reinterpreted due to later statements.
 - All evolution of meaning, relevance, or activation is expressed solely by the addition of new Articulation Statements.
 
-This model ensures that evaluation is **prefix-deterministic**: given the same ordered prefix of a channel log, all conforming implementations MUST derive identical structural and semantic results for that prefix.
+This model ensures that interpretation is **prefix-deterministic**: given the same ordered prefix of a channel log, all conforming implementations MUST derive identical representation and interpretation results for that prefix.
 
-## **9.3 Structural Replay vs Semantic Interpretation**
+## **9.3 Representation Replay vs Layer-3 Interpretation**
 
-Evaluation proceeds in two strictly ordered phases for each Articulation Statement:
+Interpretation proceeds in two strictly ordered phases for each Articulation Statement:
 
-1. **Structural application**, in which the coordination DAG is extended according to the grammar and operator structure outlined in Section 4.
-2. **Semantic interpretation** — including Sibling Displacement Behavior (SDB) visibility evaluation — applied as a projection layer over the forest of occurrences defined in Section 8.
+1. **Representation replay**, in which the Articulation Statement is parsed and its relationship declarations are admitted according to the grammar and operator structure outlined in Section 4.
+2. **Layer-3 interpretation** — including Sibling Displacement Behavior (SDB) visibility evaluation — applied as a projection layer over the forest of occurrences defined in Section 8.
 
-Semantic interpretation MUST NOT modify the underlying coordination DAG. Structural effects are permanent; semantic effects are interpretive projections only.
+Layer-3 interpretation MUST NOT modify articulated history or the derived coordination DAG. Relationship declarations are permanent; interpretation effects are projections only.
 
 ## **9.4 Unresolved References and Deferred Interpretation**
 
 Articulation Statements MAY reference UUIDs that have not yet been observed during replay.
 
 - Such references MUST be admitted and recorded without buffering or rejection.
-- Any semantic interpretation that depends on an unresolved Artipoint MUST be deferred until that Artipoint becomes resolvable through later replay.
-- Deferred interpretation MUST NOT retroactively reorder or invalidate prior evaluation results.
+- Any Layer-3 interpretation that depends on an unresolved Artipoint MUST be deferred until that Artipoint becomes resolvable through later replay.
+- Deferred interpretation MUST NOT retroactively reorder or invalidate prior interpretation results.
 
 This rule enables deterministic local-first operation under out-of-order delivery and partial replication.
 
@@ -736,22 +740,22 @@ This rule enables deterministic local-first operation under out-of-order deliver
 
 Duplicate or repeated Articulation Statements MAY appear in the log.
 
-- Repetition MUST NOT alter the effective structure or interpretation beyond the first applicable articulation.
+- Repetition MUST NOT alter the derived structure or interpretation beyond the first applicable articulation.
 - Historical duplication MUST be preserved as part of the immutable record, even when semantically redundant.
 
 Idempotency is defined relative to **prior replayed history**, not by global deduplication or speculative analysis.
 
-## **9.6 Deterministic Evaluation Requirement**
+## **9.6 Deterministic Interpretation Requirement**
 
-> **Given an identical Layer-0 log replayed in the same order, all conforming ASCP implementations MUST construct identical coordination DAGs and MUST derive identical semantic interpretation results.**
+> **Given an identical Layer-0 log replayed in the same order, all conforming ASCP implementations MUST derive identical coordination DAGs and identical Layer-3 interpretation results.**
 
-No implementation-defined discretion is permitted at Layer-2 with respect to ordering, replay, or evaluation.
+No implementation-defined discretion is permitted with respect to ordering, replay, or interpretation of Layer-2 Articulation Statements.
 
 This requirement is foundational to interoperability, shared cognition, and auditable collaboration within ASCP.
 
 # **10. Artipoint Annotation Attributes**
 
-Attributes provide optional metadata for Artipoints and are commonly used in annotations and bookmarks. Attributes do not introduce coordination relationships and do not modify the coordination DAG.
+Attributes provide optional metadata for Artipoints and are commonly used in annotations and bookmarks. Attributes do not declare coordination relationships and do not modify derived coordination structures.
 
 ## 10.1 Attribute Syntax
 
@@ -771,7 +775,7 @@ When using the `class::key` pattern, implementations MUST NOT insert whitespace 
 
 ## 10.3 Attribute Operators
 
-Operators modify the value using the following available semantic patterns:
+Attribute operators modify attribute values using the following patterns:
 
 | **Operator** | **Meaning**                                                                                                                                                                                   |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -815,7 +819,7 @@ Attribute keys are fully extensible and represent open-ended domain vocabulary. 
 
 Artipoints and Artipoint references use UUIDs as their canonical identifiers.
 
-Because these identifiers participate directly in DAG construction, causal evaluation, immutability semantics, and reference resolution, the UUID format is a compulsory part of the Artipoint Grammar.
+Because these identifiers participate directly in Layer-3 DAG derivation, causal interpretation, immutability semantics, and reference resolution, the UUID format is a compulsory part of the Artipoint Grammar.
 
 ### **11.1 UUID Version Requirement**
 
@@ -825,7 +829,7 @@ UUIDs is ASCP are defined based on RFC-4122, but they **MUST** be generated as *
 550e8400-e29b-41d4-a716-446655440000
 ```
 
-UUIDv7 is required at the grammar layer because Artipoint UUIDs are not opaque tokens. Instead, they are structural identifiers with temporal-sortable properties that ASCP uses to support deterministic DAG construction and evaluation.
+UUIDv7 is required at the grammar layer because Artipoint UUIDs are not opaque tokens. Instead, they are structural identifiers with temporal-sortable properties that ASCP uses to support deterministic DAG derivation and interpretation.
 
 Implementations **MUST** reject Artipoints whose UUID field is not a valid UUIDv7.
 
@@ -848,7 +852,7 @@ Implementations **MUST** reject Artipoints whose UUID field is not a valid UUIDv
 - Variant bits **MUST** conform to RFC-4122 (10x).
 - Parsers **MUST** accept hyphenated and non-hyphenated hex, Base64URL encoding may be accepted as well, but implementations MUST normalize internally to raw 16-byte representation.
 
-### **11.4 UUID Role in DAG Construction**
+### **11.4 UUID Role in DAG Derivation**
 
 UUIDv7 identifiers are **structural elements** of the Artipoint Grammar, not opaque tokens. UUIDs provide:
 
@@ -856,7 +860,7 @@ UUIDv7 identifiers are **structural elements** of the Artipoint Grammar, not opa
 - **reference stability** across all articulation statements
 - **collision resistance** suitable for distributed authorship
 
-Because the semantics of instantiation, reference, masking, and supersession require stable identifiers, UUIDv7 is a **normative structural requirement** of the grammar. The DAG **MUST** be evaluated using the UUID as the authoritative identity of each Artipoint.
+Because Layer-3 interpretation of instantiation, reference, masking, and supersession requires stable identifiers, UUIDv7 is a **normative structural requirement** of the grammar. Derived DAGs **MUST** use the UUID as the authoritative identity of each Artipoint.
 
 # **12. Timestamps**
 
@@ -867,7 +871,7 @@ time      = 2DIGIT ":" 2DIGIT ":" 2DIGIT
 fraction  = "." 1*DIGIT
 ```
 
-Timestamps in ASCP Artipoints represent the **articulation time**—the moment when the author (human or AI agent) made the cognitive decision to create, modify, or relate cognitive structure within the shared DAG. This is fundamentally different from content creation time, system processing time, or wall-clock synchronization, although the changes to the DAG *should* propagate into the ASCP channel log with minimal latency and typically within one second or less.
+Timestamps in ASCP Artipoints represent the **articulation time**—the moment when the author (human or AI agent) made the coordination assertion represented by the statement. This is fundamentally different from content creation time, system processing time, or wall-clock synchronization, although new articulated history should propagate into the ASCP channel log with minimal latency and typically within one second or less.
 
 - MUST be **RFC 3339 compliant** UTC-only timestamps (Z suffix mandatory)
 - Fractional seconds SHOULD be limited to millisecond precision (3 digits maximum)
@@ -878,7 +882,7 @@ Timestamps in ASCP Artipoints represent the **articulation time**—the moment w
 - No timezone offsets permitted in this grammar (reserved for future extensions)
 - Case-insensitive: both "T"/"Z" and "t"/"z" are valid per RFC 3339
 
-Timestamps represent authorial articulation time and provenance metadata. They MUST NOT be used to reorder, delay, or reschedule Articulation Statements during Layer-2 evaluation. Evaluation order is defined exclusively by Layer-0 log replay as specified in Section 9.
+Timestamps represent authorial articulation time and provenance metadata. They MUST NOT be used to reorder, delay, or reschedule Articulation Statements during Layer-3 interpretation. Interpretation order is defined exclusively by Layer-0 log replay as specified in Section 9.
 
 # **13. Provenance and Authorship**
 
@@ -928,7 +932,7 @@ safe-char  = %x20-21 / %x23-5B / %x5D-7E
 
 There is no nesting of expressions within expressions. Instead, **collections** (e.g. streams, piles, lists) are formed using the construction pattern with a bookmark that refers to an external document or resource.
 
-The **Artipoint's own UUID** serves as the persistent ID of that structure. Metadata lives in the referenced document; relations live in the DAG.
+The **Artipoint's own UUID** serves as the persistent ID of that structure. Metadata lives in the referenced document; relations are declared by Articulation Statements and interpreted into derived structures.
 
 # **16. Examples (Future Section)**
 
@@ -970,9 +974,9 @@ In the future we could/should add sections covering:
 ; - Referencing, typing and composition
 
 ; Design Principles:
-; - All articulated meaning is represented as Artipoints
+; - All articulated meaning is represented by Artipoint Expressions
 ; - Artipoints are introduced and related via Articulation Statements
-; - Immutable, addressable units forming a DAG
+; - Immutable, addressable units used by Layer-3 to derive a DAG
 ; - Self-similar and recursive
 ; - No reserved keywords for types (artipoint-type, payload-type, etc.)
 ; - Expressive verb operators
@@ -991,7 +995,7 @@ articulation-statement  = OWS artipoint-expression OWS ";"
                           OWS [ end-of-line ]
 
 ; ----- Articulation Sequence Header ------
-sequence-header = seq-number separator author
+sequence-header = seq-id separator author
                   [ separator timestamp ]
 
 ; ----- Artipoint Expression -----
@@ -1040,7 +1044,7 @@ attr-operator  = OWS ( "+" / "-" / "=" / ":=" ) OWS
 
 ; ----- Identity & refs -----
 uuidReference  = OWS uuid OWS
-seq-number     = uint
+seq-id         = uint
 author         = uuidReference
 
 ; ----- Timestamps -----
@@ -1459,9 +1463,9 @@ Where:
 - Case-insensitive 'T' and 'Z' characters accepted per RFC 3339
 - Leap seconds handled per RFC 3339 specification (time-second may be "60")
 
-### B.1.8 Sequence Number Values (Type = 0x03)
+### B.1.8 Sequence Identifier Values (Type = 0x03)
 
-Encodes unsigned sequence number values directly into ULEB128 values.
+Encodes unsigned sequence identifier values directly into ULEB128 values.
 
 #### **Textual Forms**
 
@@ -1480,12 +1484,12 @@ Where:
 
 - `0x1F` = Binary Value Island (BVI) introducer
 - `0x03` = Binary values type identifier
-- `<ULEB128-value>` = The value of the sequence number itself
+- `<ULEB128-value>` = The value of the sequence identifier itself
 
 #### **Encoding Process**
 
 1. Parse unsigned base-10 integer representation
-2. Encode the number value into ULEB128 to represent the value itself
+2. Encode the identifier value into ULEB128 to represent the value itself
 
 #### **Examples**
 
@@ -1646,8 +1650,8 @@ This section defines **accept‑and‑record** behavior for an immutable log. On
 ## D.1 Core Principles
 
 - **Immutability:** Clients MUST store every received, well‑formed Layer‑1 envelope exactly as emitted. No rewriting, normalization, or redaction.
-- **Report‑and‑proceed:** Validation errors are **reported** via diagnostics; evaluation/materialization proceeds with deterministic **no‑op defaults** where applicable.
-- **Determinism:** Given the same sequence, all conforming implementations MUST produce identical DAG effects (including when effects are intentionally **no‑op**).
+- **Report‑and‑proceed:** Validation errors are **reported** via diagnostics; interpretation/materialization proceeds with deterministic **no‑op defaults** where applicable.
+- **Determinism:** Given the same sequence, all conforming implementations MUST produce identical derived interpretation effects (including when effects are intentionally **no‑op**).
 
 ## D.2 Validation Phases
 
@@ -1655,16 +1659,16 @@ This section defines **accept‑and‑record** behavior for an immutable log. On
    - **FAIL** ⇒ The envelope MUST NOT be passed to Layer-2 and should be marked invalid in the local log.
    - **PASS** ⇒ Proceed to grammar validation.
 2. **Grammar Validation (Layer‑2):** Syntactic correctness per ABNF (tokenization, UUID/timestamp lexemes, statement structure).
-   - **FAIL** ⇒ Report as invalid syntax reporting any parseable uuid, author, timestamp. DAG effect = **no‑op**.
-   - **PASS** ⇒ Proceed to semantic validation.
-3. **Semantic Validation (Layer‑3):** Operator, reference, and attribute semantics.
-   - **FAIL (non‑critical)** ⇒ Admit and index fully; apply DAG effect per decision table (often **no‑op**); attach diagnostic code(s).
+   - **FAIL** ⇒ Report as invalid syntax reporting any parseable uuid, author, timestamp. Derived interpretation effect = **no‑op**.
+   - **PASS** ⇒ Proceed to Layer-3 interpretation validation.
+3. **Interpretation Validation (Layer‑3):** Operator, reference, and attribute interpretation.
+   - **FAIL (non‑critical)** ⇒ Admit and index fully; apply derived interpretation effect per decision table (often **no‑op**); attach diagnostic code(s).
 
 ## D.3 Deterministic Handling Table
 
 Use the following decision table to produce identical outcomes across implementations.
 
-| Case    | Condition                                                              | DAG Effect                                                                                                    | Diagnostic             |
+| Case    | Condition                                                              | Derived Interpretation Effect                                                                                 | Diagnostic             |
 | ------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | **E1**  | Unknown **operator** in connection/construction                        | **no‑op** for edges implied by the operator; instantiation (if any) remains valid                             | op\_unknown            |
 | **E2**  | Unknown **typedBlock** prefix (e.g., foo:{...})                        | Keep payload opaque; treat instantiation valid                                                                | payload\_type\_unknown |
@@ -1674,7 +1678,7 @@ Use the following decision table to produce identical outcomes across implementa
 | **E6**  | **Timestamp missing/invalid**                                          | Report diagnostic; process normally.                                                                          | ts\_invalid            |
 | **E7**  | replaces target **invalid or unresolved**                              | No displacement applied; source remains ordinary node                                                         | mask\_target\_invalid  |
 | **E8**  | adds/removes on **non‑collection** LHS                                 | Treat as **no‑op**                                                                                            | op\_context\_invalid   |
-| **E9**  | **Oversize payload** (exceeds implementation/profile cap)              | Store envelope; treat payload as opaque; apply operator sans payload semantics                                | payload\_oversize      |
+| **E9**  | **Oversize payload** (exceeds implementation/profile cap)              | Store envelope; treat payload as opaque; apply operator without payload-specific interpretation                | payload\_oversize      |
 | **E10** | Unknown **DSD/BVI** codes                                              | Preserve bytes; attempt textual fallback if present; otherwise treat affected token as unknown ⇒ follow E1/E2 | encoding\_unknown      |
 
 > **no‑op** means: do not add edges, masks, inclusions, or exclusions implied by the failing part. The remainder of the statement (e.g., an instantiation) remains effective if valid.
@@ -1685,7 +1689,7 @@ Use the following decision table to produce identical outcomes across implementa
 - `promotes` does not produce masking or displacement effects.
 - `removes` hides only the specific child occurrence of RHS under the addressed LHS parent occurrence.
 
-Masking is determined solely by hierarchical sibling relationships within the projected forest and canonical log order. No masking effect alters canonical nodes or edges.
+Masking is determined solely by hierarchical sibling relationships within the projected forest and canonical log order. No masking effect alters derived nodes or edges.
 
 ## D.5 Diagnostics (SHOULD)
 
@@ -1693,9 +1697,9 @@ Implementations SHOULD expose a diagnostics feed with fields like { uuid, envelo
 
 ## D.6 Forward Compatibility
 
-- Unknown verbs/types/codes MUST NOT block ingestion. They are preserved for future interpreters and evaluated as **no‑op** today per E1/E2/E10.
+- Unknown verbs/types/codes MUST NOT block ingestion. They are preserved for future interpreters and interpreted as **no‑op** today per E1/E2/E10.
 - Profiles MAY further constrain acceptance (e.g., disallow certain typed blocks) but MUST still follow these deterministic outcomes.
 
 ## D.7 Conformance
 
-Implementations MUST demonstrate, via test vectors, that given identical articulation sequences they yield identical DAG effects and identical diagnostics for all cases E1–E10.
+Implementations MUST demonstrate, via test vectors, that given identical articulation sequences they yield identical derived interpretation effects and identical diagnostics for all cases E1–E10.

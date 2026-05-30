@@ -4,7 +4,7 @@
 
 **Public Comment Draft -** *Request for community review and collaboration*
 
-Version: 0.65 — Informational (Pre-RFC Working Draft)
+Version: 0.66 — Informational (Pre-RFC Working Draft)
 May 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
@@ -241,7 +241,7 @@ Because every Articulation Sequence is immutable and author-attributed, the coor
 
 ## **10.5 Artipoints Support Addressability**
 
-Addressability enables ASCP to support differentiated visibility, participation, and attention without conflating them. Each Artipoint and Articulation Sequence has a stable identifier, allowing the protocol to distinguish between:
+Addressability enables ASCP to support differentiated visibility, participation, and attention without conflating them. Artipoints have stable graph identifiers, while Articulation Sequences carry grammar-defined author-scoped sequence identifiers for correlation. This distinction keeps sequence correlation, graph addressability, visibility, participation, and attention separate:
 
 | **Mechanism** | **Governs**                | **Purpose**                                                       |
 | ------------- | -------------------------- | ----------------------------------------------------------------- |
