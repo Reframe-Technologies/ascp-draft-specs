@@ -1,8 +1,9 @@
 # Issue 01: Layer-2 `seq-id`
 
 Author: Jeffrey Szczepanski
-Date: 2026-05-06
-Issue Status: Open
+Date: 2026-05-30
+Issue Status: Resolved
+Resolution: Incorporated into `docs/ascp/ascp-artipoint-grammar-a-structure.md`, Section 5.3.1.
 
 ## Background
 

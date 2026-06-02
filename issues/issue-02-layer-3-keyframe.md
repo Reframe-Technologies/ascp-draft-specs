@@ -1,8 +1,9 @@
 # Issue 02: Keyframe encoding and payload shape.
 
 Author: Jeffrey Szczepanski
-Date: 2026-05-29
-Issue Status: Open
+Date: 2026-05-30
+Issue Status: Resolved
+Resolution: Updated ASCP specs on May 30, 2026.
 
 ## Background
 
