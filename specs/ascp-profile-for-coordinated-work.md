@@ -1,8 +1,8 @@
 # ASCP Profile for Coordinated Work
 
-**Public Comment Draft —** *Request for community review and collaboration*  
-Version: 0.10 — Informational (Pre-RFC Working Draft)  
-March 2026
+**Public Comment Draft —** *Request for community review and collaboration*
+Version: 0.11 — Informational (Pre-RFC Working Draft)
+July 2026
 
 **Editors:** Jeffrey Szczepanski, Reframe Technologies, Inc.; contributors
 
@@ -20,7 +20,7 @@ Modern organizations rely on “systems of record” to maintain canonical state
 
 This document defines a Layer-3 ASCP profile for capturing that into substrate of durable **articulation work**: immutable, addressable, semantically typed Artipoints arranged into an interpretable coordination graph. The profile introduces:
 
-- **Rationale Constructs** to capture issues, options, arguments, evidence, and decisions.
+- **Rationale Constructs** to capture issues, options, assumptions, arguments, evidence, and decisions.
 - **Work Coordination Constructs** to capture objectives, goals, tasks, lists, agendas, and discussion points.
 - A **Commitment** bridging Construct that converts decisions into articulated plans tied to goals and tasks.
 
@@ -102,7 +102,7 @@ A Commitment is neither a Rationale Construct nor a Work Coordination Construct.
 
 ## 4.4 Decision Trace
 
-A **Decision Trace** is a derived semantic structure materialized from a subgraph rooted at a Decision, including relevant evidence, arguments, commitments, tasks, and lifecycle state within a given scope.
+A **Decision Trace** is a derived semantic structure materialized from a subgraph rooted at a Decision, including relevant assumptions, evidence, arguments, commitments, tasks, and lifecycle state within a given scope.
 
 Specific interpretive projections over a Decision Trace MAY be defined as named views (e.g., rationale-focused or work-focused views), but all such views derive from the same underlying trace.
 
@@ -121,7 +121,7 @@ This profile defines a coordinated-work system as two semantic families and a cr
 A simplified conceptual structure is:
 
 ```
-Issue → Options → (Arguments + Evidence) → Decision → Commitment → Tasks → Task State
+Issue → Options → (Assumptions + Arguments + Evidence) → Decision → Commitment → Tasks → Task State
                                       ↘              ↘
                                        ↘              Goal(s) → Objective(s)
                                         ↘
@@ -154,7 +154,7 @@ Contextual placement does not alter the semantic role of a Rationale Construct. 
 
 An issue represents a question, problem statement, or matter requiring consideration or resolution.
 
-An issue establishes the scope of deliberation and serves as the root context for options, arguments, evidence, and decisions. It defines *what is being decided*, not how or whether it will be executed.
+An issue establishes the scope of deliberation and serves as the root context for options, assumptions, arguments, evidence, and decisions. It defines *what is being decided*, not how or whether it will be executed.
 
 ### **6.3.2 option**
 
@@ -162,25 +162,31 @@ An option represents a proposed course of action or alternative resolution for a
 
 Options enumerate the space of possible responses to an issue. They do not imply selection, commitment, or authorization, and may coexist without conflict until a decision is made.
 
-### **6.3.3 argument**
+### **6.3.3 assumption**
+
+An assumption represents an articulated premise accepted for the purpose of reasoning, planning, or coordination, with contingent or unverified truth status.
+
+Assumptions capture dependencies in reasoning that participants or agents rely on when evaluating options, forming arguments, making decisions, or framing commitments. They are distinct from evidence: evidence grounds deliberation through observed or referenced material, while assumptions expose premises whose validity may later be confirmed, challenged, or revised.
+
+### **6.3.4 argument**
 
 An argument represents a reasoned position in favor of or against a specific option.
 
 Arguments capture evaluative judgment, interpretation, or reasoning contributed by participants or agents. They express *why an option should or should not be selected*, but do not themselves determine outcomes.
 
-### **6.3.4 evidence**
+### **6.3.5 evidence**
 
-An evidence construct represents factual information, reference material, or external signals used to support or contextualize arguments, options, or decisions.
+An evidence construct represents factual information, reference material, or external signals used to support or contextualize assumptions, arguments, options, or decisions.
 
 Evidence provides grounding for deliberation but does not encode interpretation or judgment. Its semantic role is to inform reasoning, not to resolve it.
 
-### **6.3.5 decision**
+### **6.3.6 decision**
 
 A decision represents the articulated selection of an option in response to an issue.
 
-A decision records *what was chosen and why*, based on the available options, arguments, and evidence at the time. A decision does not itself execute work or allocate responsibility; it establishes the authoritative rationale from which coordinated intent may later be articulated.
+A decision records *what was chosen and why*, based on the available options, assumptions, arguments, and evidence at the time. A decision does not itself execute work or allocate responsibility; it establishes the authoritative rationale from which coordinated intent may later be articulated.
 
-### **6.3.6 action**
+### **6.3.7 action**
 
 An action represents an articulated intent, directive, or follow-on statement motivated by a decision.
 
@@ -191,7 +197,7 @@ An action may capture recommended next steps, requests, or declared intentions, 
 Rationale Constructs MAY carry payloads that:
 
 - summarize the construct for humans/agents (e.g., short rationale summary), and/or
-- denote external resources (e.g., `evidence` payload as `uri:`).
+- denote external resources (e.g., `evidence` or `assumption` payload as `uri:`).
 
 Payloads are semantic anchors; structure and coordination meaning MUST NOT be encoded in payload.
 
@@ -204,13 +210,16 @@ Within a shared scope:
 - An `option` **MUST** be associated with an `issue`, either by:
   - being assembled/grouped under that issue, and/or
   - `references {issue}`.
+- An `assumption` **SHOULD** `supports` an `argument`, `option`, or `decision` whose reasoning depends on that premise.
 - An `argument` **SHOULD** `references` exactly one `option`.
-- `evidence` **SHOULD** `supports` an `argument`, `option`, or `decision`.
+- `evidence` **SHOULD** `supports` an `assumption`, `argument`, `option`, or `decision`.
 - An `action` **SHOULD** `references` the `decision` that motivated it.
 
 ## 6.6 Evolution and Supersession
 
 A subsequent `decision` MAY `replaces` a prior decision for the same issue. When used, `replaces` MUST be interpreted according to ASCP scoped displacement behavior (SDB): masking applies only within scopes shared by both Artipoints.
+
+A subsequent `assumption` MAY `replaces` a prior assumption to represent revision, validation, invalidation, or refinement of an articulated premise. When used, `replaces` MUST be interpreted according to ASCP scoped displacement behavior (SDB).
 
 # 7. Work Coordination Constructs
 
@@ -247,6 +256,8 @@ A task represents a unit of articulated work to be undertaken or tracked.
 
 Tasks function as **Work Item Proxies**, typically denoting external mutable artifacts (e.g., tickets, issues, documents) via payload locators. A task does not encode execution logic, lifecycle enforcement, or ownership semantics; it represents work *as coordinated and referenced*, not as executed.
 
+When task execution depends on an articulated premise, a `task` MAY `references` the relevant `assumption` so downstream materializers can identify assumption-sensitive work.
+
 ### **7.3.4 list**
 
 A list represents an explicit grouping of tasks or work items for organizational, planning, or tracking purposes.
@@ -263,7 +274,7 @@ Agendas organize discussion points, referenced artifacts, or intended topics. Th
 
 A discussion\_point represents a specific topic, question, or focus area within an agenda.
 
-Discussion points may reference rationale constructs, commitments, tasks, or evidence to provide context. They exist solely to frame conversation and coordination, not to assert decisions or execute work.
+Discussion points may reference rationale constructs, commitments, tasks, assumptions, or evidence to provide context. They exist solely to frame conversation and coordination, not to assert decisions or execute work.
 
 ## 7.4 Work Item Proxy Binding (Normative)
 
@@ -330,6 +341,7 @@ Within a shared scope, a commitment Artipoint MUST satisfy the following invaria
 - A commitment **SHOULD** references exactly one originating decision.
 - A commitment **SHOULD** supports one or more goal Artipoints it advances.
 - A commitment **MUST** assembles (ordered) or groups (unordered) the set of task Artipoints that implement the committed work.
+- A commitment **MAY** references assumption Artipoints that materially constrain or justify the coordination plan.
 - A commitment **MAY** assembles related action Artipoints, but such actions **MUST NOT** be treated as the executable work substrate.
 
 These invariants ensure that coordinated work remains explicitly traceable to its justificatory decision without collapsing execution semantics into the protocol.
@@ -374,7 +386,7 @@ Given a `decision` D, a materializer constructs the canonical Decision Trace Vie
 
 - the referenced `issue`,
 - the selected `option` (if present),
-- supporting `argument` and `evidence` Artipoints reachable via `supports` and `references`,
+- supporting `assumption`, `argument`, and `evidence` Artipoints reachable via `supports` and `references`,
 - any `commitment` that `references {D}`,
 - tasks assembled/grouped by such commitments,
 - latest (unmasked) `task_state` for each task in that scope.
@@ -408,7 +420,7 @@ Decisions MAY `references` other decisions as precedent. A materializer MAY expo
 
 ## 9.5 Meeting Package View
 
-An `agenda` assembles/group discussion points. A discussion point SHOULD `references` the artifacts it intends to cover (decisions, commitments, tasks, evidence). A materializer SHOULD produce a “meeting package” that bundles the referenced traces and execution context.
+An `agenda` assembles/group discussion points. A discussion point SHOULD `references` the artifacts it intends to cover (decisions, commitments, tasks, assumptions, evidence). A materializer SHOULD produce a “meeting package” that bundles the referenced traces and execution context.
 
 # 10. Conformance
 
@@ -417,14 +429,14 @@ An `agenda` assembles/group discussion points. A discussion point SHOULD `refere
 An implementation claiming RC Producer conformance:
 
 - MUST emit syntactically valid Artipoint Expressions for RC types, and
-- MUST satisfy RC link invariants in Section 6.3 for any decision trace it produces.
+- MUST satisfy RC link invariants in Section 6.5 for any decision trace it produces.
 
 ## 10.2 WCC Producer
 
 An implementation claiming WCC Producer conformance:
 
 - MUST emit syntactically valid Artipoint Expressions for WCC types, and
-- MUST support proxy tasks (Section 7.2) and task lifecycle representation (Section 7.4).
+- MUST support proxy tasks (Section 7.4) and task lifecycle representation (Section 7.6).
 
 ## 10.3 Commitment Producer
 
@@ -656,7 +668,7 @@ Coordinated work traces contain sensitive operational context. Implementations M
 - verify Artipoint authorship per ASCP identity and signature requirements,
 - respect governance semantics when interpreting authority and responsibility (including who is permitted to author within a scope),
 - consider that payload URIs may reveal sensitive system endpoints or identifiers, and
-- treat external evidence links as potentially sensitive data requiring appropriate access control at lower layers.
+- treat external evidence links and assumption payload URIs as potentially sensitive data requiring appropriate access control at lower layers.
 
 This profile does not define cryptographic enforcement mechanisms; it assumes ASCP Channels and related security constructs provide distribution boundaries and confidentiality when required.
 
@@ -680,11 +692,15 @@ This document makes no requests of IANA.
   [EVID1, 2025-12-25T10:03:00Z,
     [evidence, "SEV1 incident list", uri:"https://pagerduty.example/incidents?sev=1&since=30d"]
   ];
+  [ASM1, 2025-12-25T10:03:30Z,
+    [assumption, "Incident impact threatens renewal", string:"Customer will churn without exception path"]
+  ];
   [ARG1, 2025-12-25T10:04:00Z,
     [argument, "Service impact justifies exception", string:"pro"]
     references {OPT1}
   ];
   [SUP1, 2025-12-25T10:04:05Z, EVID1 supports {ARG1}];
+  [SUP2, 2025-12-25T10:04:10Z, ASM1 supports {ARG1}];
   [DEC1, 2025-12-25T10:06:00Z,
     [decision, "Approve 20% under policy v3.2 exception", uri:"https://policy.example/v3.2"]
     references {ISSUE1}
@@ -703,8 +719,10 @@ This document makes no requests of IANA.
     [commitment, "Execute renewal exception path", string:"Finance approval + CRM update"]
     references {DEC1}
   ];
+  [COM1R, 2025-12-25T10:09:02Z, COM1 references {ASM1}];
   [COM1S, 2025-12-25T10:09:05Z, COM1 supports {GOAL1}];
   [COM1A, 2025-12-25T10:09:10Z, COM1 assembles {TASK1, TASK2}];
+  [TASK1R, 2025-12-25T10:09:15Z, TASK1 references {ASM1}];
   [TS1, 2025-12-25T10:10:00Z,
     [task_state, "Open", string:"open"]
     references {TASK1}
