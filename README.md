@@ -1,6 +1,6 @@
 # Agents Shared Cognition Protocol (ASCP)
 
-**A protocol for persistent, structured context in human-AI collaboration**
+ASCP provides an open foundation for ongoing work that independent humans, agents, and applications can participate in, with durable coordination history and shared interpretation.
 
 ## Problem Statement
 
