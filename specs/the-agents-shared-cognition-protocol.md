@@ -21,7 +21,7 @@ This document is intended for system architects, protocol designers, implementer
 
 # **2. Abstract**
 
-Modern digital work lacks a protocol for **context** itself. Humans coordinate through documents and messaging systems with no persistent structure, while AI agents operate through stateless prompts that discard meaning between sessions. The result is fragmented understanding, brittle coordination, and the continual loss of shared intent.
+Persistent documents and agent memory do not by themselves provide a common model for coordination across independent participants and applications. When decisions, responsibilities, and their history remain tied to individual systems, continuity depends on repeatedly reconstructing context as participants and tools change.
 
 The **Agents Shared Cognition Protocol (ASCP)** defines a protocol suite that provides a durable, structured, and addressable substrate for shared cognition. ASCP introduces **Artipoints** as immutable, author-attributed units of meaning that are introduced and related through **Articulation Statements**. These statements are packaged into **Articulation Sequences**, which are cryptographically secured and distributed via Channels, then synchronized through an append-only log.
 
@@ -50,13 +50,13 @@ It provides the **architectural overview** for the ASCP specification suite. All
 
 # 4. Motivations for ASCP
 
-Modern digital systems have no shared substrate for **context**. Humans coordinate through documents and chats with no persistent structure, while AI agents operate through stateless prompts. Applications maintain isolated internal models, and there is no protocol for representing or evolving the contextual relationships that give work continuity.
+Humans and agents can retain documents, conversation history, and persistent memory while the contextual relationships that give work continuity remain tied to individual applications. ASCP addresses the need for a common model through which independent participants and tools can represent, share, and evolve those relationships.
 
 This gap produces three systemic limitations:
 
 - **Ephemeral Working Context** — The rationale behind decisions, relationships between artifacts, and evolving interpretations are scattered across tools and degrade over time.
 - **Fragmentation Across Applications** — Each system models tasks, data, and relationships differently; users become the manual integration layer between incompatible contexts.
-- **Stateless AI Interaction** — Agents cannot rely on durable shared memory and must be re-supplied with context on every invocation, even when they authored prior contributions.
+- **Continuity Across Participants** — Joining ongoing work requires reconstructing context when its coordination history remains tied to another participant or application.
 
 ASCP addresses these limitations by establishing a protocol for **articulated context**: structured, immutable, author-attributed coordination semantics (Artipoints), introduced and related through articulated statements distributed via secure Channels and synchronized through an append-only log. Rather than treating coordination as an application feature, ASCP provides a shared, interoperable substrate that any tool or agent can extend.
 
@@ -167,11 +167,11 @@ The following scenarios illustrate the operational difference between systems wi
 
 ## Without ASCP
 
-A user bookmarks meeting notes at `https://notion.so/project-kickoff-notes`. When the user later queries an AI agent regarding a decision documented in those notes, the agent has no persistent access to the prior context. The user must re-supply the relevant information, even if the agent participated in the original interaction that produced the notes.
+A user bookmarks meeting notes at `https://notion.so/project-kickoff-notes`. An AI agent retains the notes and related context in its own memory. When a different agent joins the project, the user must reconstruct or transfer the relevant coordination context because it remains tied to the first agent's application.
 
 ## With ASCP
 
-The same meeting notes are articulated as an Artipoint within a shared Stream. The AI agent maintains access to the articulation log and can reference the documented decisions without requiring the user to re-supply context. The agent operates on a persistent shared memory substrate rather than stateless prompts.
+The same meeting notes are referenced by an Artipoint within a shared Stream, alongside articulated decisions and their relationships. A different agent with the relevant access and compatible semantic profiles can use that history to continue the work. The coordination context persists independently of the first agent's memory or application.
 
 # **10. Understanding Artipoints**
 
@@ -387,10 +387,10 @@ The purpose of the grammar is architectural rather than expressive. It ensures t
 - all coordination acts are represented as **structured, machine-parsable statements**;
 - collaborators and agents can operate on a **common, deterministic model** of articulation;
 - no application hides coordination structure in private schemas or application-only state;
-- the coordination graph remains **composable**, **extensible**, and **interoperable** across tools;
+- articulated structure has a common representation across tools, supporting **composition**, **extension**, and **interoperability**;
 - articulation is constrained to **declarative statements**, avoiding computational or imperative complexity.
 
-A central architectural invariant of ASCP is that **contextual meaning is externalized into the coordination graph itself**. Meaning is not embedded in payloads, inferred from application state, or encoded in hidden schemas. Instead, it arises exclusively from the immutable Artipoints and the relationships articulated between them over time.
+A central architectural invariant of ASCP is that **coordination structure is externalized into articulated history**. That structure is not embedded in payloads, inferred from application state, or encoded in hidden schemas. Its meaning is derived by interpreting immutable Artipoints and their articulated relationships under Layer-3 semantic rules. Interoperable interpretation requires compatible semantic profiles, such as those defined by the Governance and Access Control specification and the Profile for Coordinated Work; the grammar supplies their common representation.
 
 This invariant allows context to remain durable, auditable, and interoperable across applications and agents, even as the content referenced by payloads or the views materializing the graph evolve independently.
 
@@ -400,7 +400,7 @@ A fundamental implication of this design—visible across Sections 10, 11, and 1
 
 There are **no reserved types**, no built-in hierarchies, and no privileged schema. All structure emerges from **how Artipoints are articulated and related**, not from predefined object classes. This architectural uniformity allows a simple grammar to support rich, evolving collaboration semantics while remaining straightforward to validate, synchronize, and reason about.
 
-The grammar provides only the constructs necessary for introducing Artipoints, relating them, annotating them, or constructing new composite meaning. Higher-level structures—such as Piles, Streams, Spaces, and other collaboration patterns—emerge purely from articulated relationships. This minimalism supports predictable reasoning, verifiable authorship, and clear provenance within the shared articulation log.
+The grammar provides only the constructs necessary for introducing Artipoints, relating them, annotating them, or constructing new composite meaning. Higher-level structures—such as Piles, Streams, Spaces, and other collaboration patterns—emerge from articulated relationships interpreted under the applicable Layer-3 semantic profiles. This minimalism supports predictable reasoning, verifiable authorship, and clear provenance within the shared articulation log.
 
 The **formal definition** of the grammar—including its ABNF syntax, operator taxonomy, serialization rules, structural effects, and validation rules—is specified normatively in the companion document **ASCP Artipoint Grammar: A Structure for Shared Cognition**. That specification serves as the authoritative reference for implementers building parsers, encoders, or extensions to the operator set. This architectural document provides the conceptual context for understanding the grammar’s role within ASCP.
 
@@ -545,7 +545,7 @@ Applications and agents present the updated coordination context through their c
 
 # 17. Why ASCP Matters
 
-Modern computational systems lack a protocol for shared context. Applications maintain isolated internal models, messaging systems provide ephemeral coordination, and AI systems operate through stateless prompts. ASCP addresses this gap by standardizing *the articulation of context itself* as a first-class, durable, and interoperable substrate.
+Persistent application state and agent memory alone do not preserve interoperable coordination across independent participants and tools. ASCP addresses this gap by standardizing *the articulation of context itself* as a first-class, durable, and interoperable substrate.
 
 ASCP’s core innovation is not the invention of new collaboration primitives per se, but the **formalization and distribution** of existing coordination behaviors as immutable, machine-interpretable structures. By representing context as authored, addressable, and evolvable Artipoints—distributed through secure Channels and maintained in a durable log—ASCP enables a level of continuity, auditability, and shared understanding that is not possible with today’s ad-hoc mechanisms.
 
@@ -562,7 +562,7 @@ By establishing a protocol for articulated context, ASCP provides the foundation
 
 # 18. Conclusion
 
-ASCP provides an architectural foundation for shared cognition across humans and intelligent agents. By establishing Artipoints as semantic units of meaning, Articulation Statements as authored acts of coordination, and Channels as cryptographically scoped distribution primitives—all grounded in a structured grammar and durable log synchronization—ASCP replaces the fragmented, ephemeral, and stateless defaults of modern digital systems with a secure, composable, and persistent substrate for context.
+ASCP provides an architectural foundation for shared cognition across humans and intelligent agents. By establishing Artipoints as semantic units of meaning, Articulation Statements as authored acts of coordination, and Channels as cryptographically scoped distribution primitives—all grounded in a structured grammar and durable log synchronization—ASCP provides a secure, composable, and persistent substrate for coordination that spans participants and applications.
 
 The protocol suite does not prescribe how applications should appear or behave. Instead, it defines how context is expressed, distributed, verified, and evolved. This separation allows diverse tools, agents, and organizations to interoperate while maintaining privacy, authorship integrity, and durable shared understanding.
 

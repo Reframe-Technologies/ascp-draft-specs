@@ -940,7 +940,7 @@ Coming soon: a set of validated Artipoint examples including bookmarks, annotati
 
 # **17. Summary**
 
-This grammar defines a minimal but powerful **cognitive substrate**—a way to persistently structure thought, reasoning, and coordination into a universally interpretable form. It is:
+This grammar defines a common syntactic representation for durable articulation of reasoning and coordination. Shared interpretation depends on compatible Layer-3 semantic profiles. The grammar is:
 
 - Declarative, immutable, and traceable
 - Friendly to both humans and agents
