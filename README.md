@@ -4,15 +4,15 @@
 
 ## Problem Statement
 
-Current AI agent systems lack persistent, structured memory across interactions. Each conversation starts fresh, tools operate in isolation, and collaborative context disappears when sessions end. Existing agent protocols (MCP, A2A) focus on tool invocation and message passing but provide no substrate for durable, addressable shared context that both humans and agents can reference over time.
+AI agents can maintain persistent memory and project state, but the coordination of ongoing work often remains tied to individual agents or applications. Decisions, commitments, responsibilities, and their history need to remain meaningful as participants and implementations change. ASCP proposes a common articulation model through which independent humans, agents, and applications can participate in that ongoing work.
 
 This creates fundamental limitations:
 
-- Agents cannot build on prior work or maintain continuity across sessions
-- Humans must repeatedly re-establish context and intent
-- Multi-agent coordination lacks shared ground truth
-- Audit trails and accountability are ephemeral
-- Knowledge cannot be versioned, referenced, or composed
+- Continuity across agents and applications requires repeated context reconstruction
+- Responsibilities and agreements are difficult to distinguish from descriptions or inferences
+- Independent participants lack a common record of authored coordination acts
+- Provenance and authority are difficult to verify across implementations
+- Coordination relationships remain tied to application-specific models
 
 ASCP addresses this by treating coordination context as a first-class, immutable data layer—analogous to how Git treats code history, but designed for collaborative intent, decisions, and shared understanding.
 
@@ -25,6 +25,7 @@ ASCP introduces **Artipoints**: immutable, cryptographically signed statements o
 - Local-first synchronization with conflict-free merging
 - Human and agent co-authorship with attribution
 - Structured references between context elements
+- Common articulation grammar and compatible semantic profiles for interpretation across independent implementations
 
 The design draws on operational transformation theory, CRDTs for distributed systems, and CSCW research on shared workspaces, while borrowing architectural patterns from Git, IPFS, and Matrix.
 
@@ -67,14 +68,14 @@ The protocol is transport-agnostic and designed for both centralized and peer-to
 
 | Protocol/System                  | Focus                                  | Key Difference from ASCP                                                             |
 | -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
-| **MCP** (Model Context Protocol) | Tool invocation, resource access       | No persistent context layer; session-scoped                                          |
+| **MCP** (Model Context Protocol) | Tool invocation, resource access       | Can expose ASCP through tools and resources; ASCP supplies the shared articulation model and coordination semantics |
 | **ActivityPub**                  | Social networking, federated timelines | Content-focused, not coordination-focused; lacks structured intent primitives        |
 | **Matrix**                       | Real-time messaging, E2EE chat         | Message-oriented; no immutable coordination semantics or structured references       |
 | **XMPP**                         | Instant messaging, presence            | Synchronous messaging; no durable context model                                      |
 | **CRDTs** (e.g., Automerge)      | Conflict-free data replication         | General-purpose data structures; ASCP adds coordination semantics and access control |
 | **Git**                          | Version control for code               | ASCP adapts Git's immutability model for collaborative context instead of files      |
 
-ASCP is complementary to agent communication protocols (MCP, A2A) and could serve as their shared memory substrate. It differs from social protocols (ActivityPub) by focusing on structured coordination rather than content distribution, and from CRDTs by providing domain-specific semantics for human-AI collaboration.
+ASCP complements MCP and A2A by providing a common articulation model for ongoing coordination. An MCP gateway could let existing agents access ASCP context and contribute coordination acts, while ASCP defines their representation and semantics independently of the gateway. It differs from social protocols (ActivityPub) by focusing on structured coordination rather than content distribution, and from CRDTs by providing domain-specific semantics for human-AI collaboration.
 
 ## Theoretical Foundations
 
