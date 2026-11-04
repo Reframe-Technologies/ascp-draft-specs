@@ -1,33 +1,28 @@
 # Agents Shared Cognition Protocol (ASCP)
 
-ASCP provides an open foundation for ongoing work that independent humans, agents, and applications can participate in, with durable coordination history and shared interpretation.
+ASCP is a draft protocol for coordination across humans, AI agents, and applications. It defines a common model for recording decisions, commitments, responsibilities, and their history across independent implementations.
 
 ## Problem Statement
 
-AI agents can maintain persistent memory and project state, but the coordination of ongoing work often remains tied to individual agents or applications. Decisions, commitments, responsibilities, and their history need to remain meaningful as participants and implementations change. ASCP proposes a common articulation model through which independent humans, agents, and applications can participate in that ongoing work.
+AI agents can maintain persistent memory and project state, but coordination often remains tied to individual agents or applications. When work moves between them, participants must reconstruct context and determine which decisions, commitments, and responsibilities still apply.
 
-This creates fundamental limitations:
+This fragmentation creates several problems:
 
-- Continuity across agents and applications requires repeated context reconstruction
-- Responsibilities and agreements are difficult to distinguish from descriptions or inferences
-- Independent participants lack a common record of authored coordination acts
-- Provenance and authority are difficult to verify across implementations
-- Coordination relationships remain tied to application-specific models
-
-ASCP addresses this by treating coordination context as a first-class, immutable data layer—analogous to how Git treats code history, but designed for collaborative intent, decisions, and shared understanding.
+- Continuing work across agents and applications requires repeated context reconstruction
+- Actual commitments and agreements are difficult to distinguish from suggestions, summaries, or inferences
+- Participants lack a shared history of who decided or accepted what
+- Authorship and authority are difficult to verify across implementations
+- Relationships between tasks, decisions, and responsibilities remain tied to application-specific models
 
 ## Approach
 
-ASCP introduces **Artipoints**: immutable, cryptographically signed statements of collaborative intent that form an append-only log. These are organized into **Channels** (secure distribution contexts), **Streams** (workstream-based contexts), and **Spaces** (project workspaces). The protocol provides:
+ASCP represents coordination as **Artipoints**: immutable units of articulated meaning that participants can reference and relate over time. Authored contributions are preserved as signed records in append-only logs. The design combines:
 
-- Immutable, content-addressed coordination primitives
+- Durable coordination history with explicit authorship
 - Cryptographic identity and access control
-- Local-first synchronization with conflict-free merging
-- Human and agent co-authorship with attribution
-- Structured references between context elements
-- Common articulation grammar and compatible semantic profiles for interpretation across independent implementations
-
-The design draws on operational transformation theory, CRDTs for distributed systems, and CSCW research on shared workspaces, while borrowing architectural patterns from Git, IPFS, and Matrix.
+- Local-first replication with deterministic log convergence
+- Structured relationships between coordination elements
+- A common grammar and compatible semantic profiles for interpretation across implementations
 
 ## Repository Contents
 
@@ -55,27 +50,27 @@ See [`specs/README.md`](./specs/README.md) for the complete index and recommende
 
 ASCP uses a four-layer model:
 
-1. **Transport (ALSP)**: Local-first log synchronization ensuring eventual consistency across participants
-2. **Distribution (Channels)**: Named, cryptographically scoped contexts with access control and optional encryption
-3. **Articulation (Artipoints)**: Immutable coordination statements with formal grammar, signatures, and content addressing
-4. **Coordination (Streams/Spaces)**: Higher-level structures for organizing collaborative work
+- **Layer 0 — Log and synchronization (ALSP):** Replicates and orders records in Channel logs
+- **Layer 1 — Secure distribution (Channels):** Signs and optionally encrypts contributions using provisioned keys
+- **Layer 2 — Articulation:** Defines the grammar for expressing Artipoints and their relationships
+- **Layer 3 — Interpretation and governance:** Derives coordination views and evaluates meaning, authority, and trust
 
-Each Artipoint is a signed, timestamped statement (e.g., "task created," "decision recorded," "context linked") that references prior Artipoints, forming a directed acyclic graph of coordination history. Channels define who can read/write, Streams provide conversation-like ordering, and Spaces group related work.
+Channels scope the distribution of coordination history. Streams organize coherent threads of work, while Spaces provide broader organizational and accountability contexts.
 
 The protocol is transport-agnostic and designed for both centralized and peer-to-peer deployment.
 
 ## Relationship to Existing Work
 
-| Protocol/System                  | Focus                                  | Key Difference from ASCP                                                             |
+| Protocol/System                  | Focus                                  | Relationship to ASCP                                                                 |
 | -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
-| **MCP** (Model Context Protocol) | Tool invocation, resource access       | Can expose ASCP through tools and resources; ASCP supplies the shared articulation model and coordination semantics |
-| **ActivityPub**                  | Social networking, federated timelines | Content-focused, not coordination-focused; lacks structured intent primitives        |
-| **Matrix**                       | Real-time messaging, E2EE chat         | Message-oriented; no immutable coordination semantics or structured references       |
-| **XMPP**                         | Instant messaging, presence            | Synchronous messaging; no durable context model                                      |
-| **CRDTs** (e.g., Automerge)      | Conflict-free data replication         | General-purpose data structures; ASCP adds coordination semantics and access control |
-| **Git**                          | Version control for code               | ASCP adapts Git's immutability model for collaborative context instead of files      |
+| **MCP** (Model Context Protocol) | Tool invocation, resource access       | Can expose ASCP context and coordination operations through tools and resources |
+| **ActivityPub**                  | Social networking, federated timelines | Addresses social activity exchange; ASCP focuses on shared coordination history and interpretation |
+| **Matrix**                       | Real-time messaging, E2EE chat         | Addresses messaging and room state; ASCP focuses on authored coordination acts and their interpretation |
+| **XMPP**                         | Instant messaging, presence            | Addresses messaging and presence; ASCP focuses on durable coordination across participants and applications |
+| **CRDTs** (e.g., Automerge)      | Conflict-free data replication         | Address replicated data convergence; ASCP also defines coordination representation and semantics |
+| **Git**                          | Version control for code               | Provides a useful analogy for preserved history; ASCP records coordination acts and relationships |
 
-ASCP complements MCP and A2A by providing a common articulation model for ongoing coordination. An MCP gateway could let existing agents access ASCP context and contribute coordination acts, while ASCP defines their representation and semantics independently of the gateway. It differs from social protocols (ActivityPub) by focusing on structured coordination rather than content distribution, and from CRDTs by providing domain-specific semantics for human-AI collaboration.
+ASCP is intended to complement existing communication and agent protocols. An MCP gateway, for example, could let agents read coordination history and contribute new coordination acts through their existing tools.
 
 ## Theoretical Foundations
 
@@ -85,8 +80,6 @@ ASCP builds on research in:
 - **Distributed Systems**: Operational transformation, CRDTs, eventual consistency models
 - **Discourse and Argumentation Theory**: Structured dialogue, speech acts, collaborative reasoning
 - **Cryptographic Identity**: Self-sovereign identity, capability-based security
-
-Key influences include Lamport's logical clocks, the IPFS content-addressing model, and Matrix's federated room model.
 
 ## Background Reading
 
@@ -110,7 +103,7 @@ We are actively seeking input from:
 
 Please open GitHub issues for technical questions, specification feedback, or implementation concerns. We particularly welcome discussion on:
 
-- Conflict resolution strategies for concurrent edits
+- Interpretation of concurrent or conflicting coordination acts
 - Cryptographic identity and trust models
 - Interoperability with existing agent protocols
 - Performance characteristics and scalability limits
