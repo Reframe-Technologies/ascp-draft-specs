@@ -38,7 +38,7 @@ That assignment has a purpose and a scope. The agent needs to know what you are 
 
 This is where the idea of joining ongoing work becomes especially useful. The agent's contribution belongs to an effort that can continue after its assignment ends. Others need to be able to find the result, understand why it matters, and build on it.
 
-These are **roles, rather than separate categories of products**. One system might help you organize your day and also carry out an assignment. The distinction helps explain what support is needed in each case.
+These are **roles, rather than separate categories of products**. One system might help you organize your day and also carry out an assignment. The distinction helps explain what support each role needs.
 
 ## Now put the three roles together
 
@@ -58,6 +58,8 @@ This gives us a reason to reconsider the desktop as a work environment. Native a
 
 What would it mean for them to take part in the same ongoing work? Could the environment carry more of the context we now assemble and explain ourselves, while letting us choose our tools and control what we share?
 
-These questions motivate what Reframe calls an **Organized Work Environment** [(OWE)](https://blog.reframetech.com/the-organized-work-environment-owe-finally-work-that-flows). They also connect to the **Agents Shared Cognition Protocol** [(ASCP)](https://blog.reframetech.com/introduction-to-the-agents-shared-cognition-protocol-ascp), our open protocol proposal for preserving shared context and coordination across people, agents, and applications.
+These questions motivate what Reframe calls an **Organized Work Environment** [(OWE)](https://blog.reframetech.com/the-organized-work-environment-owe-finally-work-that-flows). They also connect to the **Agents Shared Cognition Protocol** [(ASCP)](https://blog.reframetech.com/introduction-to-the-agents-shared-cognition-protocol-ascp), our proposed open protocol for preserving shared context and coordination across people, agents, and applications.
+
+A common work environment could help people and agents act more independently and autonomously while staying coordinated.
 
 Where do these three roles meet in your work, and which connections are you still having to carry yourself?
