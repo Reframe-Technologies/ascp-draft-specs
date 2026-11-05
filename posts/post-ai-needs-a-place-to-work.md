@@ -10,7 +10,7 @@ Consider three familiar uses of AI. An assistant helps you decide what needs att
 
 To understand those connections, it helps to distinguish three roles.
 
-## AI that helps me manage my work
+## Role 1: AI that helps me manage my work
 
 Some of the effort of working is keeping track of the work itself. What did I promise to follow up on? Where did I leave off? Has something changed that affects what I should do next?
 
@@ -20,7 +20,7 @@ Imagine returning from a meeting with several new requests. An assistant could h
 
 In this role, AI supports **your attention and direction across your work**, helping you stay oriented as you move among tasks, tools, and people.
 
-## AI inside the tools I use
+## Role 2: AI inside the tools I use
 
 A second role is easier to see within a particular application. A meeting app creates a summary. An image editor helps change a picture. A spreadsheet helps explain a set of numbers. A writing tool helps revise a document.
 
@@ -30,7 +30,7 @@ These capabilities can live in native applications on your computer or in web ap
 
 The meeting summary, for example, is useful inside the meeting app. It may also contain a decision that matters to someone preparing a budget elsewhere. **The output has a life beyond the tool that created it.**
 
-## AI I delegate work to
+## Role 3: Agents I delegate work to
 
 A third role appears when you give an agent an assignment to carry out. You might ask it to research suppliers, compare options, or investigate a problem.
 
@@ -40,9 +40,7 @@ This is where the idea of joining ongoing work becomes especially useful. The ag
 
 These are **roles, rather than separate categories of products**. One system might help you organize your day and also carry out an assignment. The distinction helps explain what support is needed in each case.
 
-## Who connects these parts of the work?
-
-Now put the three roles together.
+## Now put the three roles together
 
 Suppose a meeting ends with a decision to find a new supplier. The meeting app records that decision in its summary. Your assistant helps you recognize that the search needs attention this week. You ask a research agent to compare possible suppliers.
 
