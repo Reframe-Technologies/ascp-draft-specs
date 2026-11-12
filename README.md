@@ -1,6 +1,7 @@
 # Agents Shared Cognition Protocol (ASCP)
 
 ASCP is a draft protocol for coordination across humans, AI agents, and applications. It defines a common model for recording decisions, commitments, responsibilities, and their history across independent implementations.
+
 ## Why Coordination Matters
 
 People and AI agents can create documents, complete tasks, and share information. But working together also means setting goals, weighing options, making decisions, and accepting responsibilities. These acts of coordination help determine what the work means and what should happen next.
@@ -19,6 +20,7 @@ This fragmentation creates several problems:
 - Participants lack a shared history of who decided or accepted what
 - Authorship and authority are difficult to verify across implementations
 - Relationships between tasks, decisions, and responsibilities remain tied to application-specific models
+
 ## Approach
 
 ASCP represents coordination as **Artipoints**: immutable units of articulated meaning that participants can reference and relate over time. Authored contributions are preserved as signed records in append-only logs. The design combines:
@@ -27,6 +29,7 @@ ASCP represents coordination as **Artipoints**: immutable units of articulated m
 - Local-first replication with deterministic log convergence
 - Structured relationships between coordination elements
 - A common grammar and compatible semantic profiles for interpretation across implementations
+
 ## Repository Contents
 
 This repository contains early-stage specifications and is actively seeking technical review and implementation feedback.
@@ -43,9 +46,11 @@ This repository contains early-stage specifications and is actively seeking tech
 | Identity & Trust       | [ASCP Trust and Identity Architecture](./specs/ascp-trust-and-identity-architecture.md)        | Draft  |
 | Bootstrap              | [ASCP Bootstrap Process and Channel Discovery](./specs/ascp-bootstrap-process-and-channel.md)  | Draft  |
 | Profiles               | [ASCP Profile for Coordinated Work](./specs/ascp-profile-for-coordinated-work.md)              | Draft  |
+
 See [`specs/README.md`](./specs/README.md) for the complete index and recommended reading order.
 
 **Reference implementations** in Python and Rust are planned following specification stabilization.
+
 ## Architecture Overview
 
 ASCP uses a four-layer model:
@@ -57,6 +62,7 @@ ASCP uses a four-layer model:
 Channels scope the distribution of coordination history. Streams organize coherent threads of work, while Spaces provide broader organizational and accountability contexts.
 
 The protocol is transport-agnostic and designed for both centralized and peer-to-peer deployment.
+
 ## ASCP and Organized Work Environments
 
 An **Organized Work Environment (OWE)** is a proposed category of interactive computing environments designed around ongoing work, not just the applications and files used to carry it out. AI can help people notice changes, consider options, and clarify their intentions. People remain responsible for deciding what becomes an established decision or commitment. [Read the OWE Vision](https://reframetech.com/owe-vision).
@@ -64,6 +70,9 @@ An **Organized Work Environment (OWE)** is a proposed category of interactive co
 ASCP is not tied to a particular OWE or to Reframe's own software. An agent framework, business application, or MCP gateway could use ASCP to take part in coordination without becoming an OWE. Different developers could also build their own OWE experiences. ASCP provides a proposed open foundation for sharing coordination across these systems.
 
 ## Relationship to Existing Work
+
+ASCP is intended to complement existing communication and agent protocols. An MCP gateway, for example, could let agents read coordination history and contribute new coordination acts through their existing tools.
+
 | Protocol/System                  | Focus                                  | Relationship to ASCP                                                                 |
 | -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
 | **MCP** (Model Context Protocol) | Tool invocation, resource access       | Can expose ASCP context and coordination operations through tools and resources |
@@ -72,7 +81,8 @@ ASCP is not tied to a particular OWE or to Reframe's own software. An agent fram
 | **XMPP**                         | Instant messaging, presence            | Addresses messaging and presence; ASCP focuses on durable coordination across participants and applications |
 | **CRDTs** (e.g., Automerge)      | Conflict-free data replication         | Address replicated data convergence; ASCP also defines coordination representation and semantics |
 | **Git**                          | Version control for code               | Provides a useful analogy for preserved history; ASCP records coordination acts and relationships |
-ASCP is intended to complement existing communication and agent protocols. An MCP gateway, for example, could let agents read coordination history and contribute new coordination acts through their existing tools.
+
+
 ## Theoretical Foundations
 
 ASCP builds on research in:
@@ -81,6 +91,7 @@ ASCP builds on research in:
 - **Distributed Systems**: Operational transformation, CRDTs, eventual consistency models
 - **Discourse and Argumentation Theory**: Structured dialogue, speech acts, collaborative reasoning
 - **Cryptographic Identity**: Self-sovereign identity, capability-based security
+
 ## Background Reading
 
 These articles explain the coordination problem, the OWE vision, and the ideas behind ASCP:
@@ -95,9 +106,11 @@ These articles explain the coordination problem, the OWE vision, and the ideas b
 
 - [The Pathway to AGI isn't Intelligence, it's Context](https://blog.reframetech.com/the-pathway-to-agi-isnt-intelligence-its-shared-cognition) — An early exploration of context and shared cognition in human–AI collaboration.
 - [Building the Missing Cortex Layer](https://blog.reframetech.com/building-the-missing-cortex-layer) — An earlier framing of the infrastructure problem that led toward ASCP.
+
 ## Standardization Intent
 
 We intend to pursue standardization through the IETF once the protocol demonstrates viability through independent implementations and real-world deployment. This repository serves as the working space for specification development prior to formal Internet-Draft submission.
+
 ## Contributing and Feedback
 
 We are actively seeking input from:
@@ -113,6 +126,7 @@ Please open GitHub issues for technical questions, specification feedback, or im
 - Performance characteristics and scalability limits
 
 **Contact**: <ascp@reframetech.com>
+
 ## License and Governance
 
 Specifications are provided under terms consistent with IETF Trust Legal Provisions (TLP). Code components are BSD-2 licensed; reference implementations will be Apache-2.0. Upon Internet-Draft submission, specification text will fall under IETF Trust governance. Reframe Technologies stewards this work, but the protocol itself remains open and vendor-neutral.
